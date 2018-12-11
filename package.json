@@ -16,6 +16,9 @@
     "url": "https://gitlab.com/gagnew/dcp-client/issues"
   },
   "homepage": "https://gitlab.com/gagnew/dcp-client#README",
+  "dependencies": {
+    "xmlhttprequest": "^1.8.0"
+  },
   "devDependencies": {
     "dcp": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp.git",
     "webpack": "^4.27.1",
