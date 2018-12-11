@@ -14,6 +14,8 @@ webpack({
   if (error) {
     console.log(error)
   }
+  
+  console.log(stats.errors)
 
   console.log('Protocol Minified')
 })
@@ -30,12 +32,15 @@ webpack({
     console.log(error)
   }
 
+  console.log(stats.errors)
+
   console.log('Compute Minified')
 })
 
 webpack({
   mode: 'production',
   entry: './entry/bundle.js',
+  stats: 'errors-only',
   output: {
     filename: 'bundle.min.js',
     path: path.resolve(__dirname, destination)
@@ -44,6 +49,8 @@ webpack({
   if (error) {
     console.log(error)
   }
+
+  console.log(stats.errors)
 
   console.log('Both bundled')
 })

@@ -20,7 +20,7 @@
     "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
-    "dcp": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp.git",
+    "dcp": "file:C:/Users/User/Documents/GitLab/dcp-testing",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2"
   }
