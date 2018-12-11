@@ -14,8 +14,10 @@ webpack({
   if (error) {
     console.log(error)
   }
-  
-  console.log(stats.errors)
+
+  if (stats.hasErrors()) {
+    console.log(stats)
+  }
 
   console.log('Protocol Minified')
 })
@@ -32,7 +34,9 @@ webpack({
     console.log(error)
   }
 
-  console.log(stats.errors)
+  if (stats.hasErrors()) {
+    console.log(stats)
+  }
 
   console.log('Compute Minified')
 })
@@ -44,13 +48,20 @@ webpack({
   output: {
     filename: 'bundle.min.js',
     path: path.resolve(__dirname, destination)
+  },
+  resolve: {
+    alias: {
+      './node': path.resolve(__dirname, 'src/utilities/')
+    }
   }
 }, (error, stats) => {
   if (error) {
     console.log(error)
   }
 
-  console.log(stats.errors)
+  if (stats.hasErrors()) {
+    console.log(stats)
+  }
 
   console.log('Both bundled')
 })
