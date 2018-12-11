@@ -5,7 +5,7 @@ var destination = 'dist'
 
 webpack({
   mode: 'production',
-  entry: './entry/protocol.js',
+  entry: './node_modules/dcp/src/protocol.js',
   output: {
     filename: 'protocol.min.js',
     path: path.resolve(__dirname, destination)
@@ -20,7 +20,7 @@ webpack({
 
 webpack({
   mode: 'production',
-  entry: './entry/compute.js',
+  entry: './node_modules/dcp/src/compute.js',
   output: {
     filename: 'compute.min.js',
     path: path.resolve(__dirname, destination)
