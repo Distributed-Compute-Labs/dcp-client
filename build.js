@@ -43,10 +43,15 @@ webpack({
 
 webpack({
   mode: 'production',
-  entry: './entry/bundle.js',
+  entry: {
+    'bundle.min.js': [
+      path.resolve(__dirname, './node_modules/dcp/src/protocol.js'),
+      path.resolve(__dirname, './node_modules/dcp/src/compute.js')
+    ]
+  },
   stats: 'errors-only',
   output: {
-    filename: 'bundle.min.js',
+    filename: '[name]',
     path: path.resolve(__dirname, destination)
   },
   resolve: {
