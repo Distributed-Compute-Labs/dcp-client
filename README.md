@@ -4,7 +4,13 @@ Contains a built and minified version of the Compute and Protocol classes.
 
 Compute contains the protocol, so if you need the miner you only need compute.
 
-# Examples:
+# Install
+
+```
+    npm install dcp-client
+```
+
+# Usage Examples:
 
 nodejs server with protocol
 
