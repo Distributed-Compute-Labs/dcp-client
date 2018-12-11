@@ -1,0 +1,24 @@
+{
+  "name": "dcp-client",
+  "version": "1.0.0",
+  "description": "A packed client version of the DCP core libraries.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node ./build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gitlab.com/gagnew/dcp-client.git"
+  },
+  "author": "Kings Distributed Systems",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/gagnew/dcp-client/issues"
+  },
+  "homepage": "https://gitlab.com/gagnew/dcp-client#README",
+  "devDependencies": {
+    "dcp": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp.git",
+    "webpack": "^4.27.1",
+    "webpack-cli": "^3.1.2"
+  }
+}
