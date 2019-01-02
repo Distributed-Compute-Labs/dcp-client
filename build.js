@@ -9,6 +9,11 @@ webpack({
   output: {
     filename: 'protocol.min.js',
     path: path.resolve(__dirname, destination)
+  },
+  resolve: {
+    alias: {
+      '/node_modules': path.resolve(__dirname, 'node_modules')
+    }
   }
 }, (error, stats) => {
   if (error) {
@@ -28,6 +33,11 @@ webpack({
   output: {
     filename: 'compute.min.js',
     path: path.resolve(__dirname, destination)
+  },
+  resolve: {
+    alias: {
+      '/node_modules': path.resolve(__dirname, 'node_modules')
+    }
   }
 }, (error, stats) => {
   if (error) {
