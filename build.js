@@ -20,11 +20,11 @@ webpack({
     console.log(error)
   }
 
-  if (stats.hasErrors()) {
+  if (stats && stats.hasErrors()) {
     console.log(stats)
   }
 
-  if (error || stats.hasErrors()) {
+  if (error || (stats && stats.hasErrors())) {
     console.log('Errors occured while minifying protocol, assume it failed.')
     return
   }
@@ -49,11 +49,11 @@ webpack({
     console.log(error)
   }
 
-  if (stats.hasErrors()) {
+  if (stats && stats.hasErrors()) {
     console.log(stats)
   }
 
-  if (error || stats.hasErrors()) {
+  if (error || (stats && stats.hasErrors())) {
     console.log('Errors occured while minifying compute, assume it failed.')
     return
   }
