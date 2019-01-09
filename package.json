@@ -17,10 +17,11 @@
   },
   "homepage": "https://gitlab.com/gagnew/dcp-client#README",
   "dependencies": {
+    "bignumber.js": "^8.0.1",
     "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
-    "dcp": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp.git",
+    "dcp": "file:../dcp",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2"
   }
