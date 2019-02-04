@@ -43,7 +43,12 @@ webpack({
     alias: {
       '/node_modules': path.resolve(__dirname, 'node_modules')
     }
-  }
+  },
+  plugins: [
+    new webpack.IgnorePlugin({
+      resourceRegExp: /debug-worker/
+    })
+  ]
 }, (error, stats) => {
   if (error) {
     console.log(error)
