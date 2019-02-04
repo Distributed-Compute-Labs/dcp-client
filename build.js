@@ -43,6 +43,9 @@ webpack({
     alias: {
       '/node_modules': path.resolve(__dirname, 'node_modules')
     }
+  },
+  module: {
+    noParse: /debug-worker/
   }
 }, (error, stats) => {
   if (error) {
