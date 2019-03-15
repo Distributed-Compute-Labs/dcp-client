@@ -18,6 +18,7 @@
   "homepage": "https://gitlab.com/gagnew/dcp-client#README",
   "dependencies": {
     "bignumber.js": "^8.0.1",
+    "blueimp-md5-es6": "^2.7.4",
     "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
