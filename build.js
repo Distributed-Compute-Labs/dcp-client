@@ -2,6 +2,16 @@ const path = require('path')
 const webpack = require('webpack')
 
 var destination = 'dist'
+var modulePath = [ 'node_modules' ]
+var projectRoot = process.env.DCP_ROOT || __dirname
+
+if (process.env.NODE_PATH) {
+  process.env.NODE_PATH.split(/[:;]/).forEach(path => {
+    if (path.length) {
+      modulePath.unshift(path)
+    }
+  })
+}
 
 webpack({
   mode: 'production',
@@ -11,8 +21,9 @@ webpack({
     path: path.resolve(__dirname, destination)
   },
   resolve: {
+    modules: modulePath,
     alias: {
-      '/node_modules': path.resolve(__dirname, 'node_modules')
+      '/node_modules': path.resolve(projectRoot, 'node_modules')
     }
   }
 }, (error, stats) => {
@@ -40,8 +51,9 @@ webpack({
     path: path.resolve(__dirname, destination)
   },
   resolve: {
+    modules: modulePath,
     alias: {
-      '/node_modules': path.resolve(__dirname, 'node_modules')
+      '/node_modules': path.resolve(projectRoot, 'node_modules')
     }
   },
   plugins: [
