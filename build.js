@@ -3,7 +3,7 @@ const webpack = require('webpack')
 
 var destination = 'dist'
 var modulePath = [ 'node_modules' ]
-var projectRoot = process.env.DCP_ROOT || __dirname
+var project = { src_root: __dirname, build: 'release' } /* default project when running in dcp-client repo */
 
 if (process.env.NODE_PATH) {
   process.env.NODE_PATH.split(/[:;]/).forEach(path => {
@@ -13,8 +13,15 @@ if (process.env.NODE_PATH) {
   })
 }
 
+if (process.env.DCP_REPO_ROOT) {
+  /* dcp project - pull in configuration */
+  project.src_root = path.resolve(process.env.DCP_REPO_ROOT)
+  project = {...project, ...(JSON.parse(require('fs').readFileSync(path.join(project.src_root, 'etc', 'local-config.json'), 'utf-8'))) }
+}
+
 webpack({
-  mode: 'production',
+  mode: project.build === 'debug' ? 'development' : 'production',
+  optimization: { minimize: project.build !== 'debug' },
   entry: './node_modules/dcp/src/protocol.js',
   output: {
     filename: 'protocol.min.js',
@@ -23,7 +30,7 @@ webpack({
   resolve: {
     modules: modulePath,
     alias: {
-      '/node_modules': path.resolve(projectRoot, 'node_modules')
+      '/node_modules': path.resolve(project.src_root, 'node_modules')
     }
   }
 }, (error, stats) => {
@@ -44,7 +51,8 @@ webpack({
 })
 
 webpack({
-  mode: 'production',
+  mode: project.build === 'debug' ? 'development' : 'production',
+  optimization: { minimize: project.build !== 'debug' },
   entry: './node_modules/dcp/src/compute.js',
   output: {
     filename: 'compute.min.js',
@@ -53,7 +61,7 @@ webpack({
   resolve: {
     modules: modulePath,
     alias: {
-      '/node_modules': path.resolve(projectRoot, 'node_modules')
+      '/node_modules': path.resolve(project.src_root, 'node_modules')
     }
   },
   plugins: [
