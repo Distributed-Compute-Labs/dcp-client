@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "1.0.0",
+  "version": "2.3.1",
   "description": "A packed client version of the DCP core libraries.",
   "main": "index.js",
   "scripts": {
