@@ -300,7 +300,7 @@ exports.init = function (successHandler, errorHandler) {
   if (typeof successHandler === 'function' || typeof errorHandler === 'function')
     arguments.splice(0,1)
   else
-    succesHandler = false
+    successHandler = false
 
   if (typeof errorHandler === 'function')
     arguments.splice(0,1)
