@@ -95,10 +95,12 @@ function injectModule(id, exports) {
 /* Inject all properties of the bundle object as modules in the
  * native NodeJS module system.
  */
-Object.entries(loadBootstrapBundle()).forEach(entry => {
-  let [id, exports] = entry
-  injectModule(id, exports)
-})
+let bundle = loadBootstrapBundle()
+injectModule('dcp-xhr', bundle['dcp-xhr'])
+injectModule('dcp-url', bundle['dcp-url'])
+injectModule('dcp-bootstrap-build', bundle['dcp-build'])
+injectModule('dcp-config', bundle['dcp-config'])
+injectModule('protocol', bundle['protocol'])
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
  *  can include (for example) a text-rendered version of the remote 404 page.
@@ -177,7 +179,7 @@ function addConfig (existing, neo) {
  * either the API consumer or the scheduler; it is important that the wishes of the API consumer 
  * always take priority.
  *
- *  1 - load the local copy of the bundle
+ *  1 - load the local copy of the bundle (happens as side effect of initial require)
  *  2 - use this copy to plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
  *  3 - merge the passed-in configuration with the default configuration
  *  4 - use the config + environment + arguments to figure out where the scheduler is
@@ -188,35 +190,35 @@ function addConfig (existing, neo) {
  *  8 - activate either the local bundle or the remote bundle against a fresh sandbox using the
  *      latest config: this causes it to (unfortunately) cache configuration values like the location
  *      of the scheduler
+ *  9 - re-export the modules from the new bundle
  */
 exports.init = async function dcpClient$$init() {
   let dcpConfig = require('dcp-config')
-  let userConfig
+  let userConfig = { scheduler: {}, bundle: {} }
   let remoteConfigCode
   let finalBundleCode
-//  let URL = require('dcp-url').URL
+  let URL = require('dcp-url').URL
   
   /* Sort of polymorphic arguments: 'passed-in configuration' */
-  if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof URL) ) {
-    userConfig = { scheduler: { location: arguments[0] }, bundle: {} }
+  if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL) ) {
+    addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
   } else if (typeof arguments[0] === 'object') {
-    userConfig = arguments[0]
-  } else {
-    userConfig = { scheduler: {}, bundle: {} }
+    addConfig(userConfig, arguments[0])
   }
   if (arguments[1])
     userConfig.bundle.autoUpdate = !!arguments[1]
   if (arguments[2])
     userConfig.bundle.location = new URL(arguments[2])
 
-  global.XMLHttpRequest = require('dcp-xhr').XMLHttpRequest /* 2 */
+  /* 2 */
+  global.XMLHttpRequest = require('dcp-xhr').XMLHttpRequest
 
   /* 3 */
   dcpConfig.scheduler.location = new (require('dcp-url').URL)('https://scheduler.distributed.computer')
+  if (!dcpConfig.scheduler.configLocation)
+    dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
-  if (!dcpConfig.scheduler.configLocation)
-    dcpConfig.scheduler.configLocation = dcpConfig.scheduler.location.resolve('etc/dcp-config.js') /* 4 */
 
   /* 4 */
   if (process.env.DCP_SCHEDULER_LOCATION)
@@ -231,12 +233,16 @@ exports.init = async function dcpClient$$init() {
     userConfig.scheduler.location = new URL(userConfig.scheduler.location)
   if (userConfig.bundle && typeof userConfig.bundle.location === 'string')
     userConfig.bundle.location = new URL(userConfig.bundle.location)
-  
+  if (userConfig)
+    addConfig(dcpConfig, userConfig) 
+
   /* 5 */
   if (exports.debug)
     console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`)
   try {
     remoteConfigCode = await require('protocol').justFetch(dcpConfig.scheduler.configLocation)
+    if (remoteConfigCode.length === 0)
+      throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
   } catch(e) {
     if (exports.debug)
       console.log(justFetchPrettyError(e))
@@ -249,13 +255,15 @@ exports.init = async function dcpClient$$init() {
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp-url').patchup(dcpConfig)
   if (!dcpConfig.bundle.location)
-    dcpConfig.bundle.location = dcpConfig.portal.location.resolve('dcp-client-bundle.js')
+    dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
   if (userConfig)
     addConfig(dcpConfig, userConfig)
 
   /* 7 */
   if (dcpConfig.bundle.autoUpdate) {
     try {
+      if (exports.debug)
+        console.log(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`)
       finalBundleCode = await require('protocol').justFetch(dcpConfig.bundle.location.href)
     } catch(e) {
       if (exports.debug)
@@ -268,7 +276,34 @@ exports.init = async function dcpClient$$init() {
     
   /* 8 */
   if (finalBundleCode)
-    evalStringInSandbox(finalBundleCode, bundleSandbox, dcpConfig.bundle.location.href)
+    bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, dcpConfig.bundle.location.href)
   else
-    evalScriptInSandbox('/home/wes/git/dcp/build-system/dist/dcp-client-bundle.js', bundleSandbox)
+    bundle = evalScriptInSandbox('/home/wes/git/dcp/build-system/dist/dcp-client-bundle.js', bundleSandbox)
+
+  /* 9 */
+  Object.entries(bundle).forEach(entry => {
+    let [id, exports] = entry
+    injectModule(id, exports)
+  })
+}
+
+exports.init_noPromise = function (successHandler, errorHandler) {
+  arguments = Array.from(arguments)
+  if (typeof successHandler === 'function' && typeof errorHandler === 'function') {
+    arguments.splice(0,2)
+  } else {
+    successHandler = errorHandler = false
+  }
+  
+  exports.init.apply(null, arguments).then(
+    function dcpClient$$init_noPromise$then(){
+      if (successHandler)
+        successHandler()
+    }).catch(
+      function dcpClient$$init_noPromise$catch(e) {
+        if (errorHandler)
+          errorHandler(e)
+        else
+          throw e
+      })
 }
