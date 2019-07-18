@@ -67,7 +67,7 @@ function loadBootstrapBundle() {
 
   Object.assign(sandbox, bundleSandbox)
   sandbox.window = sandbox
-  return evalScriptInSandbox('/home/wes/git/dcp/build-system/dist/dcp-client-bundle.js', sandbox)
+  return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
 const injectedModules = {}
@@ -277,7 +277,7 @@ exports.pinit = async function dcpClient$$pinit() {
   if (finalBundleCode)
     bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, dcpConfig.bundle.location.href)
   else
-    bundle = evalScriptInSandbox('/home/wes/git/dcp/build-system/dist/dcp-client-bundle.js', bundleSandbox)
+    bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
 
   /* 9 */
   Object.entries(bundle).forEach(entry => {
