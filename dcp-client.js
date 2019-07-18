@@ -6,7 +6,7 @@
  *              same directory as this file, and inject the exported modules into the NodeJS 
  *              module environment. 
  *
- *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
+ *              During pinit(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
  *              from the local bundle, allowing us to immediately start using an Agent which 
  *              understands proxies and keepalive.
  *
@@ -19,6 +19,7 @@ const path = require('path')
 const distDir = path.resolve(path.dirname(module.filename), 'dist')
 const moduleSystem = require('module')
 const bundleSandbox = {
+  crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
   require: require,
   console: console,
   setInterval: setInterval,
@@ -60,7 +61,7 @@ function evalStringInSandbox(code, sandbox, filename) {
   return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
 }
 
-/** Load the bootstrap bundle - used to plumb in protocol.justFetch */
+/** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch */
 function loadBootstrapBundle() {
   let sandbox = {}
 
@@ -192,14 +193,14 @@ function addConfig (existing, neo) {
  *      of the scheduler
  *  9 - re-export the modules from the new bundle
  */
-exports.init = async function dcpClient$$init() {
+exports.pinit = async function dcpClient$$pinit() {
   let dcpConfig = require('dcp-config')
   let userConfig = { scheduler: {}, bundle: {} }
   let remoteConfigCode
   let finalBundleCode
   let URL = require('dcp-url').URL
   
-  /* Sort of polymorphic arguments: 'passed-in configuration' */
+  /* Sort out polymorphic arguments: 'passed-in configuration' */
   if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL) ) {
     addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
   } else if (typeof arguments[0] === 'object') {
@@ -270,8 +271,6 @@ exports.init = async function dcpClient$$init() {
         console.log(justFetchPrettyError(e))
       throw new Error(justFetchPrettyError(e, false))
     }
-  } else {
-    ;
   }
     
   /* 8 */
@@ -287,23 +286,38 @@ exports.init = async function dcpClient$$init() {
   })
 }
 
-exports.init_noPromise = function (successHandler, errorHandler) {
+/** 
+ * Initialize the DCP Client Bundle. Similar to pinit(), except we do not return a promise.
+ * 
+ * @param       successHandler  {function}      optional callback which is invoked when we have finished initialization
+ * @param       errorHandler    {function}      optional callback which is invoked when there was an error during initialization. 
+ * @throws if we have an error and errorHandler is undefined
+ * 
+ * @note        Once successHandler and errorHandler have been consumed, the remaining arguments are passed to pinit().
+ */
+exports.init = function (successHandler, errorHandler) {
   arguments = Array.from(arguments)
-  if (typeof successHandler === 'function' && typeof errorHandler === 'function') {
-    arguments.splice(0,2)
-  } else {
-    successHandler = errorHandler = false
-  }
-  
-  exports.init.apply(null, arguments).then(
-    function dcpClient$$init_noPromise$then(){
+  if (typeof successHandler === 'function' || typeof errorHandler === 'function')
+    arguments.splice(0,1)
+  else
+    succesHandler = false
+
+  if (typeof errorHandler === 'function')
+    arguments.splice(0,1)
+  else
+    errorHandler = false
+    
+  exports.pinit.apply(null, arguments).then(
+    function dcpClient$$init$then(){
       if (successHandler)
         successHandler()
-    }).catch(
-      function dcpClient$$init_noPromise$catch(e) {
-        if (errorHandler)
-          errorHandler(e)
-        else
-          throw e
-      })
+    }
+  ).catch(
+    function dcpClient$$init$catch(e) {
+      if (errorHandler)
+        errorHandler(e)
+      else
+        throw e
+    }
+  )
 }
