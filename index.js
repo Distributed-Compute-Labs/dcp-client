@@ -15,6 +15,7 @@
  */
 exports.debug = process.env.DCP_CLIENT_DEBUG
 const path = require('path')
+const fs = require('fs')
 const distDir = path.resolve(path.dirname(module.filename), 'dist')
 const moduleSystem = require('module')
 const bundleSandbox = {
@@ -25,7 +26,6 @@ const bundleSandbox = {
   URL: URL,
   dcpConfig: {
     scheduler: {
-      location: new URL('http://bootstrap.distributed.computer/')
     }, bank: {
       location: new URL('http://bootstrap.distributed.computer/')
     }, packageManager: {
@@ -36,14 +36,17 @@ const bundleSandbox = {
 }
 
 /** Evaluate a file in a sandbox without polluting the global object.
- *  @param      filename        {string}        The name of the file to evaluate, relative to
- *  @param      sandbox         A sandbox object, used for injecting 'global' symbols as needed
+ *  @param      filename        {string}    The name of the file to evaluate, relative to
+ *  @param      sandbox         {object}    A sandbox object, used for injecting 'global' symbols as needed
+ *  @param      olFlag          {boolean}   true if the file contains only an object literal
  */
-function evalScriptInSandbox(filename, sandbox) {
+function evalScriptInSandbox(filename, sandbox, olFlag) {
   var code
   var context = require('vm').createContext(sandbox)
   try {
-    code = require('fs').readFileSync(path.resolve(distDir, filename), 'utf-8')
+    code = fs.readFileSync(path.resolve(distDir, filename), 'utf-8')
+    if (olFlag)
+      code = '(' + code + ')'
   } catch(e) {
     if (exports.debug)
       console.log('evalScriptInSandbox Error:', e.message)
@@ -174,15 +177,45 @@ function addConfig (existing, neo) {
   }
 }
 
+function checkConfigFileSafePerms(fullPath) {
+  let newPath
+  let args = fullPath.split(path.sep)
+  
+  args[0] += path.sep
+  do
+  {
+    let check
+    check=path.resolve.apply(null, args)
+    if (fs.statSync(check).mode & 0o022)
+      throw new Error(`Config ${fullPath} insecure due to world- or group-writeable ${check}`)
+    args.pop()
+  } while(args.length)
+}
+
 /**
- * Initialize the dcp-client bundle for use by the compute API, etc.  
+ * Initialize the dcp-client bundle for use by the compute API, etc.
+ *
+ * @param       {string|URL object}     [url="https://scheduler.distribtued.computer"]
+ *                                      Location of scheduler, from whom we download
+ *                                      dcp-config.js, which in turn tells us where to
+ *                                      find the bundle.
+ * @param       {boolean}               [autoUpdate=false]
+ * @param       {string|URL object}     [bundleLocation]        The location of the autoUpdate
+ *                                      bundle; used to override the bunde.location in the
+ *                                      remote dcpConfig.
+ *//**
+ * Initialize the dcp-client bundle for use by the compute API, etc.
+ *
+ * @param       {object}                dcpConfig       a dcpConfig object which can have
+ *                                                      scheduler.location, bundle.location, bundle.autoUpdate
  */
 exports.pinit = async function dcpClient$$pinit() {
 /* The steps that are followed are in a very careful order; there are default configuration options 
  * which can be overridden by either the API consumer or the scheduler; it is important that the wishes 
  * of the API consumer always take priority.
  *
- *  1 - load the local copy of the bundle (happens as side effect of initial require)
+ *  0 - load the local copy of the bundle (happens as side effect of initial require)
+ *  1 - specify the default config by reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
  *  2 - use this copy to plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
  *  3 - merge the passed-in configuration with the default configuration
  *  4 - use the config + environment + arguments to figure out where the scheduler is
@@ -196,11 +229,24 @@ exports.pinit = async function dcpClient$$pinit() {
  *  9 - re-export the modules from the new bundle
  */
   let dcpConfig = require('dcp/dcp-config')
-  let userConfig = { scheduler: {}, bundle: {} }
   let remoteConfigCode
   let finalBundleCode
+  let userConfig = { scheduler: {}, bundle: {} }
+  let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
+  let homedirConfig
   let URL = require('dcp/dcp-url').URL
+
+  /* Fix all future files containing new URL() to use our class */
+  bundleSandbox.URL = URL
+  if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
+    require('dcp/dcp-url').patchup(dcpConfig)
   
+  /* 1 */
+  if (fs.existsSync(homedirConfigPath)) {
+    checkConfigFileSafePerms(homedirConfigPath)
+    homedirConfig = evalScriptInSandbox(homedirConfigPath, bundleSandbox, true)
+    addConfig(userConfig, homedirConfig)
+  }
   /* Sort out polymorphic arguments: 'passed-in configuration' */
   if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL) ) {
     addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
@@ -216,7 +262,9 @@ exports.pinit = async function dcpClient$$pinit() {
   global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
 
   /* 3 */
-  dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
+  addConfig(dcpConfig, userConfig)
+  if (!dcpConfig.scheduler.location)
+    dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
   if (!dcpConfig.scheduler.configLocation)
     dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
   if (userConfig)
@@ -238,6 +286,7 @@ exports.pinit = async function dcpClient$$pinit() {
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
 
+  console.log('XXX 5', dcpConfig.scheduler.location.href)
   /* 5 */
   if (exports.debug)
     console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`)
@@ -251,11 +300,10 @@ exports.pinit = async function dcpClient$$pinit() {
     throw new Error(justFetchPrettyError(e, false))
   }
 
+  console.log('XXX 6', dcpConfig.scheduler.location.href)
   /* 6 */
   bundleSandbox.window = bundleSandbox
   addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
-  if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
-    require('dcp/dcp-url').patchup(dcpConfig)
   if (!dcpConfig.bundle.location)
     dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
   if (userConfig)
