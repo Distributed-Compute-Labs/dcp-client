@@ -23,6 +23,8 @@ const bundleSandbox = {
   require: require,
   console: console,
   setInterval: setInterval,
+  setTimeout: setTimeout,
+  clearTimeout: clearTimeout,
   URL: URL,
   dcpConfig: {
     scheduler: {
