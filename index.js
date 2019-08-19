@@ -6,7 +6,7 @@
  *              same directory as this file, and inject the exported modules into the NodeJS 
  *              module environment. 
  *
- *              During pinit(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
+ *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
  *              from the local bundle, allowing us to immediately start using an Agent which 
  *              understands proxies and keepalive.
  *
@@ -211,7 +211,7 @@ function checkConfigFileSafePerms(fullPath) {
  * @param       {object}                dcpConfig       a dcpConfig object which can have
  *                                                      scheduler.location, bundle.location, bundle.autoUpdate
  */
-exports.pinit = async function dcpClient$$pinit() {
+exports.init = async function dcpClient$$init() {
 /* The steps that are followed are in a very careful order; there are default configuration options 
  * which can be overridden by either the API consumer or the scheduler; it is important that the wishes 
  * of the API consumer always take priority.
@@ -288,7 +288,6 @@ exports.pinit = async function dcpClient$$pinit() {
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
 
-  console.log('XXX 5', dcpConfig.scheduler.location.href)
   /* 5 */
   if (exports.debug)
     console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`)
@@ -302,7 +301,6 @@ exports.pinit = async function dcpClient$$pinit() {
     throw new Error(justFetchPrettyError(e, false))
   }
 
-  console.log('XXX 6', dcpConfig.scheduler.location.href)
   /* 6 */
   bundleSandbox.window = bundleSandbox
   addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
@@ -338,7 +336,8 @@ exports.pinit = async function dcpClient$$pinit() {
 }
 
 /** 
- * Initialize the DCP Client Bundle. Similar to pinit(), except we do not return a promise.
+ * Initialize the DCP Client Bundle. Similar to init(), except we do not return a promise; 
+ * instead, we invoke callbacks.
  * 
  * @param       successHandler  {function}      optional callback which is invoked when we have finished initialization
  * @param       errorHandler    {function}      optional callback which is invoked when there was an error during initialization. 
@@ -346,7 +345,7 @@ exports.pinit = async function dcpClient$$pinit() {
  * 
  * @note        Once successHandler and errorHandler have been consumed, the remaining arguments are passed to pinit().
  */
-exports.init = function (successHandler, errorHandler) {
+exports.initcb = function (successHandler, errorHandler) {
   arguments = Array.from(arguments)
   if (typeof successHandler === 'function' || typeof errorHandler === 'function')
     arguments.splice(0,1)
@@ -359,7 +358,7 @@ exports.init = function (successHandler, errorHandler) {
     errorHandler = false
 
   let stack = new Error().stack
-  exports.pinit.apply(null, arguments).then(
+  exports.init.apply(null, arguments).then(
     function dcpClient$$init$then(){
       if (successHandler)
         successHandler()
@@ -369,7 +368,7 @@ exports.init = function (successHandler, errorHandler) {
       if (errorHandler)
         errorHandler(e)
       else {
-        e.stack += new Error().stack + stack
+        e.stack += new Error().stack + '\n' + stack
         setImmediate(()=>{throw e})
       }
     }
