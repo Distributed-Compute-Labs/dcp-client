@@ -7,7 +7,7 @@
  * @author Wes Garland, wes@kingsds.network
  * @date   Aug 2019
  */
-async function start() {
+async function main() {
   const { protocol, compute } = dcp
   let job, results, startTime
 

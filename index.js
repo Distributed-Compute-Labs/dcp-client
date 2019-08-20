@@ -101,12 +101,15 @@ function injectModule(id, exports) {
  * native NodeJS module system.
  */
 let bundle = loadBootstrapBundle()
-injectModule('dcp/dcp-xhr', bundle['dcp-xhr'])
-injectModule('dcp/dcp-url', bundle['dcp-url'])
+injectModule('dcp/xhr', bundle['dcp-xhr'])
+injectModule('dcp/url', bundle['dcp-url'])
+injectModule('dcp/eth', bundle['dcp-url'])
+injectModule('dcp/wallet', bundle['keystore'])
 injectModule('dcp/bootstrap-build', bundle['dcp-build'])
 injectModule('dcp/build', bundle['dcp-build'])
 injectModule('dcp/dcp-config', bundle['dcp-config'])
 injectModule('dcp/protocol', bundle['protocol'])
+injectModule('dcp/compute', bundle['compute'])
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
  *  can include (for example) a text-rendered version of the remote 404 page.
@@ -236,12 +239,12 @@ exports.init = async function dcpClient$$init() {
   let userConfig = { scheduler: {}, bundle: {} }
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
-  let URL = require('dcp/dcp-url').URL
+  let URL = require('dcp/url').URL
 
   /* Fix all future files containing new URL() to use our class */
   bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
-    require('dcp/dcp-url').patchup(dcpConfig)
+    require('dcp/url').patchup(dcpConfig)
   
   /* 1 */
   if (fs.existsSync(homedirConfigPath)) {
@@ -261,12 +264,12 @@ exports.init = async function dcpClient$$init() {
     userConfig.bundle.location = new URL(arguments[2])
 
   /* 2 */
-  global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
+  global.XMLHttpRequest = require('dcp/xhr').XMLHttpRequest
 
   /* 3 */
   addConfig(dcpConfig, userConfig)
   if (!dcpConfig.scheduler.location)
-    dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
+    dcpConfig.scheduler.location = new (require('dcp/url').URL)('https://scheduler.distributed.computer')
   if (!dcpConfig.scheduler.configLocation)
     dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
   if (userConfig)
