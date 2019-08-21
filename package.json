@@ -1,29 +1,23 @@
 {
   "name": "dcp-client",
-  "version": "2.3.1",
-  "description": "A packed client version of the DCP core libraries.",
+  "version": "2.5.0",
+  "description": "Core libraries for accessing DCP network",
   "main": "index.js",
-  "scripts": {
-    "build": "node ./build.js"
-  },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@gitlab.com/gagnew/dcp-client.git"
+    "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
   },
   "author": "Kings Distributed Systems",
   "license": "ISC",
   "bugs": {
-    "url": "https://gitlab.com/gagnew/dcp-client/issues"
+    "url": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client/issues"
   },
-  "homepage": "https://gitlab.com/gagnew/dcp-client#README",
+  "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
   "dependencies": {
-    "bignumber.js": "^8.0.1",
-    "blueimp-md5-es6": "^2.7.4",
-    "xmlhttprequest": "^1.8.0"
+    "chalk": "^2.4.2",
+    "html-to-text": "^5.1.1",
+    "polyfill-crypto.getrandomvalues": "^1.0.0",
+    "xmlhttprequest-ssl": "https://github.com/wesgarland/node-XMLHttpRequest.git#b9fedb035e7a3850d31391a6b6cdcf6d0f340d15"
   },
-  "devDependencies": {
-    "dcp": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp.git",
-    "webpack": "^4.27.1",
-    "webpack-cli": "^3.1.2"
-  }
+  "devDependencies": {}
 }

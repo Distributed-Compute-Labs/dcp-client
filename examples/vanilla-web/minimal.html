@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- @file      events.html
+  --
+  -- Sample web page showing how to deploy a minimal DCP job.
+  -- 
+  -- @author Wes Garland, wes@kingsds.network
+  -- @date   Aug 2019
+  --
+  -->
+<head><meta charset="utf-8">
+<script src="https://scheduler.distributed.computer/etc/dcp-config.js"></script>
+<script src="https://cdn.distributed.computer/dcp-client.js"></script>
+<script>
+  async function start() {
+    const { compute } = dcp
+    let results = await compute.for(1, 10,
+                                    function(i) {
+                                      let result = i*3
+                                      console.log(`Calculated result for slice #${i}`)
+                                      progress(i/10)
+                                      return result
+                                    }).exec(compute.marketValue)
+    console.log(results)
+  }
+</script>
+</head>
+<body onload="start()">
+This is a minimal vanilla web dcp-client example. Look in your browser's console for output.
+</body>
+</html>
