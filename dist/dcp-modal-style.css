@@ -6259,6 +6259,38 @@
     .dcp-modal-container .table .thead-dark th {
       color: inherit;
       border-color: #dee2e6; } }
+  body:not(.night) .dcp-modal-container.day {
+    /* To select the 'or' message in the file input container*/ }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-header {
+      color: black;
+      background: #d0cfcf;
+      border-bottom: 1px solid black; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-header .close {
+      color: black; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-footer {
+      color: black;
+      background: #d0cfcf;
+      border-top: 1px solid black;
+      font-weight: 500; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-content {
+      background-color: grey;
+      color: black; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body {
+      background: white; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-loading {
+      background: white; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body input[type=file] {
+      color: black; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body button {
+      border: 1px solid #006b4b; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-footer button {
+      color: white; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body #drop-container {
+      background-color: initial; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body #drop-container #image-container {
+      color: #00000087; }
+    body:not(.night) .dcp-modal-container.day .dcp-modal-body #drop-container span:nth-child(3) {
+      color: #00000080; }
 
 .dcp-modal-container p.message {
   text-align: left;
