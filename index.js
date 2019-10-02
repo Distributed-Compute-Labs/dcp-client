@@ -1,13 +1,13 @@
 /**
- * @file        index.js        
+ * @file        index.js
  *              NodeJS entry point for the dcp-client package.
  *
- *              During module initialization, we load dist/dcp-client-bundle.js from the 
- *              same directory as this file, and inject the exported modules into the NodeJS 
- *              module environment. 
+ *              During module initialization, we load dist/dcp-client-bundle.js from the
+ *              same directory as this file, and inject the exported modules into the NodeJS
+ *              module environment.
  *
- *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
- *              from the local bundle, allowing us to immediately start using an Agent which 
+ *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest,
+ *              from the local bundle, allowing us to immediately start using an Agent which
  *              understands proxies and keepalive.
  *
  * @author      Wes Garland, wes@kingsds.network
@@ -101,6 +101,9 @@ function injectModule(id, exports) {
  * native NodeJS module system.
  */
 let bundle = loadBootstrapBundle()
+let nsMap = require('./ns-map')
+for (exp in nsMap)
+  console.log(exp)
 injectModule('dcp/xhr', bundle['dcp-xhr'])
 injectModule('dcp/url', bundle['dcp-url'])
 injectModule('dcp/eth', bundle['dcp-url'])
@@ -338,42 +341,4 @@ exports.init = async function dcpClient$$init() {
   })
 }
 
-/** 
- * Initialize the DCP Client Bundle. Similar to init(), except we do not return a promise; 
- * instead, we invoke callbacks.
- * 
- * @param       successHandler  {function}      optional callback which is invoked when we have finished initialization
- * @param       errorHandler    {function}      optional callback which is invoked when there was an error during initialization. 
- * @throws if we have an error and errorHandler is undefined
- * 
- * @note        Once successHandler and errorHandler have been consumed, the remaining arguments are passed to pinit().
- */
-exports.initcb = function (successHandler, errorHandler) {
-  arguments = Array.from(arguments)
-  if (typeof successHandler === 'function' || typeof errorHandler === 'function')
-    arguments.splice(0,1)
-  else
-    successHandler = false
-
-  if (typeof errorHandler === 'function')
-    arguments.splice(0,1)
-  else
-    errorHandler = false
-
-  let stack = new Error().stack
-  exports.init.apply(null, arguments).then(
-    function dcpClient$$init$then(){
-      if (successHandler)
-        successHandler()
-    }
-  ).catch(
-    function dcpClient$$init$catch(e) {
-      if (errorHandler)
-        errorHandler(e)
-      else {
-        e.stack += new Error().stack + '\n' + stack
-        setImmediate(()=>{throw e})
-      }
-    }
-  )
-}
+exports.initcb = require('./initCommon').initcb

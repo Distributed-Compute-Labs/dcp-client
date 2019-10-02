@@ -1,4 +1,10 @@
-module.declare(['./ns-map'], function cjs2ShimModule(require, exports, module) {
+/** 
+ *  @file       cjs2-init.js            dcp-client initialization code for CommonJS Modules/2.0 environments.
+ *  @author     Wes Garland, wes@kingsds.network
+ *  @date       Aug 2019
+ */
+
+module.declare(['./init-common', './ns-map'], function cjs2ShimModule(require, exports, module) {
   let realLoader = module.load
   require.paths.unshift('/webpack')
   
@@ -19,12 +25,27 @@ module.declare(['./ns-map'], function cjs2ShimModule(require, exports, module) {
     }
   }
 
-  console.log(require('./ns-map'))
-  module.provide(['./dist/dcp-client-bundle'], function() {
-    console.log('XXX hello')
-    //require('./dist/dcp-client-bundle')
-    module.provide(Object.keys(require('./ns-map')).map(key => '/webpack/' + key), function() {
-      console.log('XXX world')
+/**
+ * Initialize the dcp-client bundle for use by the compute API, etc.
+ *
+ * @note    This function currently does not support any arguments, however
+ *          future versions will largely mirror the NodeJS version found in
+ *          the index.js module.
+ */
+  exports.init = function cjs2Init$$init() {
+    var P = new Promise(function cjs2Init$$init$p(resolve, reject) {
+      module.provide(['./dist/dcp-client-bundle'], function() {
+        try {
+          module.provide(Object.keys(require('./ns-map')).map(key => '/webpack/' + key), function() {
+            resolve('initialized')
+          })
+        } catch(e) {
+          reject(e)
+        }
+      })
     })
-  })
+    return P
+  }
+
+  exports.initcb = require('./init-common').initcb
 })

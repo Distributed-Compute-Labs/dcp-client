@@ -5,17 +5,18 @@
  *  @date       Aug 2019
  */
 
-if (typeof dcpConfig === 'undefined') {
-  console.warn('Warning: dcpConfig is undefined')
-}
-
 if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
   /* CommonJS Modules/2.0 client */
-  require.paths.push('./node_modules')
-  module.declare(['./index'], function (require, exports, module) {
-    Object.assign(exports, require('./index'))
+  module.declare(['./cjs2-init'], function (require, exports, module) {
+    let other = require('./cjs2-init')
+    Object.assign(exports, other)
+    Object.setPrototypeOf(exports, Object.getPrototypeOf(other))
   })
 } else {
+  if (typeof dcpConfig === 'undefined') {
+    console.warn('Warning: dcpConfig is undefined')
+  }
+  
   /* Load dcp-client bundle, extract the exports from it, and attach them 
    * to the global dcp
    */
@@ -33,7 +34,7 @@ if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
         }
         bundleScript.onerror = function dcpClient$$loadErrorCB(ev) {
           let e = new Error("Could not load dcp-client bundle " + bundleScript.getAttribute('src') + ' (' + (typeof ev.message !== 'undefined' ? ev.message : "") +')')
-          retject(e)
+          reject(e)
         }
         bundleScript.onload = function dcpClient$$loadCB(ev) {
           window.dcp = bundleScript.exports
