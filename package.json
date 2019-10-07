@@ -21,5 +21,7 @@
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "xmlhttprequest-ssl": "https://github.com/wesgarland/node-XMLHttpRequest.git#b9fedb035e7a3850d31391a6b6cdcf6d0f340d15"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "webpack": "^4.41.0"
+  }
 }
