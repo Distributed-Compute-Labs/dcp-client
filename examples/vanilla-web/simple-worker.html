@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- @file      simple-worker.html
+  --
+  -- Sample web page showing how to implement a trivial DCP worker.
+  -- 
+  -- @author Wes Garland, wes@kingsds.network
+  -- @date   Aug 2019
+  --
+  -->
+<head><meta charset="utf-8">
+<script src="https://scheduler.distributed.computer/etc/dcp-config.js"></script>
+<script src="../../dcp-client.js"></script>
+<script>
+  function main() {
+    const { protocol, compute } = dcp
+    const numberOfWorkers = 4
+
+    let supervisor = compute.work(numberOfWorkers)
+    supervisor.on('readystatechange', function(ev) {
+      console.log('rsc', ev, this)
+    })
+    supervisor.on('payment', function(ev) {
+      console.log('dcc', ev, this)
+    })
+    supervisor.on('sandbox', function(sandbox) {
+      console.log(`Supervisor launched sandbox ${sandbox.serial}`, sandbox)
+      sandbox.on('ready', function(ev) {
+        console.log('sandbox ready', ev, this)
+      })
+      sandbox.on('taskStart', function(task) {
+        console.log(`Started task ${task.serial} for job ${task.job.publicName||""} ${task.job.publicDescription||""} ${task.job.publicLink||""}`)
+      })
+      sandbox.on('progress', function(ev) {
+        console.log('progress', ev, this)
+      })
+    })
+  }
+</script>
+</head>
+<body onload="main()">
+This is a minimal vanilla web DCP Worker example. Look in your browser's console for output.
+</body>
+</html>

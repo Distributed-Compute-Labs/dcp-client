@@ -1,19 +1,20 @@
 /**
- * @file        index.js        
+ * @file        index.js
  *              NodeJS entry point for the dcp-client package.
  *
- *              During module initialization, we load dist/dcp-client-bundle.js from the 
- *              same directory as this file, and inject the exported modules into the NodeJS 
- *              module environment. 
+ *              During module initialization, we load dist/dcp-client-bundle.js from the
+ *              same directory as this file, and inject the exported modules into the NodeJS
+ *              module environment.
  *
- *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest, 
- *              from the local bundle, allowing us to immediately start using an Agent which 
+ *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest,
+ *              from the local bundle, allowing us to immediately start using an Agent which
  *              understands proxies and keepalive.
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        July 2019
  */
 exports.debug = process.env.DCP_CLIENT_DEBUG
+const _initForTestHarnessSymbol = {}
 const path = require('path')
 const fs = require('fs')
 const distDir = path.resolve(path.dirname(module.filename), 'dist')
@@ -101,6 +102,7 @@ function injectModule(id, exports) {
  * native NodeJS module system.
  */
 let bundle = loadBootstrapBundle()
+let nsMap = require('./ns-map')
 injectModule('dcp/xhr', bundle['dcp-xhr'])
 injectModule('dcp/url', bundle['dcp-url'])
 injectModule('dcp/eth', bundle['dcp-url'])
@@ -241,6 +243,18 @@ exports.init = async function dcpClient$$init() {
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
   let URL = require('dcp/url').URL
+  let testHarnessMode = false
+
+  if (arguments[0] === _initForTestHarnessSymbol) {
+    /* Disable homedir config, remote code/config download in test harness mode */
+    arguments = Array.from(arguments)
+    remoteConfigCode = arguments.shift()
+    if (typeof remoteConfigCode === 'object') {
+      remoteConfigCode = JSON.stringify(remoteConfigCode)
+    }
+    testHarnessMode = true
+    homedirConfigPath = process.env["DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH"]
+  }
 
   /* Fix all future files containing new URL() to use our class */
   bundleSandbox.URL = URL
@@ -248,16 +262,18 @@ exports.init = async function dcpClient$$init() {
     require('dcp/url').patchup(dcpConfig)
   
   /* 1 */
-  if (fs.existsSync(homedirConfigPath)) {
+  if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
     checkConfigFileSafePerms(homedirConfigPath)
     homedirConfig = evalScriptInSandbox(homedirConfigPath, bundleSandbox, true)
     addConfig(userConfig, homedirConfig)
   }
   /* Sort out polymorphic arguments: 'passed-in configuration' */
-  if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL) ) {
-    addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
-  } else if (typeof arguments[0] === 'object') {
-    addConfig(userConfig, arguments[0])
+  if (arguments[0]) {
+    if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL)) {
+      addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
+    } else if (typeof arguments[0] === 'object') {
+      addConfig(userConfig, arguments[0])
+    }
   }
   if (arguments[1])
     userConfig.bundle.autoUpdate = !!arguments[1]
@@ -295,26 +311,28 @@ exports.init = async function dcpClient$$init() {
   /* 5 */
   if (exports.debug)
     console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`)
-  try {
-    remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
-    if (remoteConfigCode.length === 0)
-      throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
-  } catch(e) {
-    if (exports.debug)
-      console.log(justFetchPrettyError(e))
-    throw new Error(justFetchPrettyError(e, false))
+  if (!testHarnessMode) {
+    try {
+      remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
+      if (remoteConfigCode.length === 0)
+        throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
+    } catch(e) {
+      if (exports.debug)
+        console.log(justFetchPrettyError(e))
+      throw new Error(justFetchPrettyError(e, false))
+    }
   }
 
   /* 6 */
   bundleSandbox.window = bundleSandbox
   addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
-  if (!dcpConfig.bundle.location)
+  if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
     dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
   if (userConfig)
     addConfig(dcpConfig, userConfig)
 
   /* 7 */
-  if (dcpConfig.bundle.autoUpdate) {
+  if (!testHarnessMode && dcpConfig.bundle.autoUpdate && dcpConfig.bundle.location) {
     try {
       if (exports.debug)
         console.log(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`)
@@ -339,42 +357,20 @@ exports.init = async function dcpClient$$init() {
   })
 }
 
-/** 
- * Initialize the DCP Client Bundle. Similar to init(), except we do not return a promise; 
- * instead, we invoke callbacks.
- * 
- * @param       successHandler  {function}      optional callback which is invoked when we have finished initialization
- * @param       errorHandler    {function}      optional callback which is invoked when there was an error during initialization. 
- * @throws if we have an error and errorHandler is undefined
- * 
- * @note        Once successHandler and errorHandler have been consumed, the remaining arguments are passed to pinit().
+exports.initcb = require('./init-common').initcb
+
+/**
+ * Sync version of dcp-client.init() - intended primarily for test harnesses.
+ * This function does not download the configuration object from the scheduler,
+ * nor does it check for remote bundle updates.
+ *
+ * @param       config          The dcpConfig object which is normally downloaded from the scheduler
+ * @param       ...             Arguments to pass to init()
+ *
+ * @note This is an unofficial API and is subject to change without notice.
  */
-exports.initcb = function (successHandler, errorHandler) {
-  arguments = Array.from(arguments)
-  if (typeof successHandler === 'function' || typeof errorHandler === 'function')
-    arguments.splice(0,1)
-  else
-    successHandler = false
-
-  if (typeof errorHandler === 'function')
-    arguments.splice(0,1)
-  else
-    errorHandler = false
-
-  let stack = new Error().stack
-  exports.init.apply(null, arguments).then(
-    function dcpClient$$init$then(){
-      if (successHandler)
-        successHandler()
-    }
-  ).catch(
-    function dcpClient$$init$catch(e) {
-      if (errorHandler)
-        errorHandler(e)
-      else {
-        e.stack += new Error().stack + '\n' + stack
-        setImmediate(()=>{throw e})
-      }
-    }
-  )
+exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*, ... */) { 
+  let argv = Array.from(arguments)
+  argv.unshift(_initForTestHarnessSymbol)
+  exports.init.apply(null, argv)
 }
