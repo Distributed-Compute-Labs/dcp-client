@@ -38,6 +38,7 @@ if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
         }
         bundleScript.onload = function dcpClient$$loadCB(ev) {
           window.dcp = bundleScript.exports
+          window.dcp.setPlatform('vanilla-web')
           resolve('loaded bundle')
         }
         document.getElementsByTagName('head')[0].appendChild(bundleScript)

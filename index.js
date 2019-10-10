@@ -103,15 +103,19 @@ function injectModule(id, exports) {
  */
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
+/** @todo - rewrite the injectModule block in terms of nsMap */
 injectModule('dcp/xhr', bundle['dcp-xhr'])
 injectModule('dcp/url', bundle['dcp-url'])
 injectModule('dcp/eth', bundle['dcp-url'])
-injectModule('dcp/wallet', bundle['keystore'])
+injectModule('dcp/wallet', bundle['wallet'])
 injectModule('dcp/bootstrap-build', bundle['dcp-build'])
 injectModule('dcp/build', bundle['dcp-build'])
 injectModule('dcp/dcp-config', bundle['dcp-config'])
 injectModule('dcp/protocol', bundle['protocol'])
 injectModule('dcp/compute', bundle['compute'])
+injectModule('dcp/env', bundle['env'])
+
+require('dcp/env').setPlatform('nodejs')
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
  *  can include (for example) a text-rendered version of the remote 404 page.
