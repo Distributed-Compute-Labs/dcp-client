@@ -26,7 +26,8 @@ if (typeof module.declare === 'undefined') { /* cjs1 */
 module.declare([], function $$nsMap(require, exports, module) {
   exports['dcp/xhr'] = 'dcp-xhr'
   exports['dcp/url'] = 'dcp-url'
-  exports['dcp/eth'] = 'dcp-url'
+  exports['dcp/eth'] = 'dcp-eth'
+  exports['dcp/env'] = 'dcp-env'
   exports['dcp/wallet'] = 'wallet'
   exports['dcp/bootstrap-build'] = 'dcp-build'
   exports['dcp/build'] = 'dcp-build'
