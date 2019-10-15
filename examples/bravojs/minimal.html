@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- @file      minimal.html
+  --
+  -- Sample web page showing how to deploy a minimal DCP job with a client written
+  -- using BravoJS
+  -- 
+  -- @author Wes Garland, wes@kingsds.network
+  -- @date   Oct 2019
+  --
+  -->
+<head><meta charset="utf-8">
+<script src="../../../bravojs/bravo.js"></script>
+<script src="https://scheduler.distributed.computer/etc/dcp-config.js"></script>
+</head>
+<body onload="module.main.start()">
+  This is a minimal vanilla web dcp-client/BravoJS example. Look in your browser&apos;s console for output.
+<script>
+  module.declare(['../../dcp-client'], function(require, exports, module) {
+    exports.start = async function() {
+      await require('../../dcp-client').init()
+      const compute = require('dcp/compute')
+      let results = await compute.for(1, 10,
+                                      function(i) {
+                                        let result = i*3
+                                        console.log(`Calculated result for slice #${i}`)
+                                        progress(i/10)
+                                        return result
+                                      }).exec(compute.marketValue)
+      console.log(results)
+    }
+  })
+</script>
+</body>
+</html>

@@ -25,20 +25,20 @@ if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
       return await new Promise(function(resolve, reject) {
         var allScripts = document.getElementsByTagName('SCRIPT')
         var thisScript = allScripts[allScripts.length - 1]
-        var bundleScript = document.createElement("SCRIPT")
-        bundleScript.setAttribute("type", "text/javascript")
-        bundleScript.setAttribute("src", thisScript.src.replace('/dcp-client.js', '/dist/dcp-client-bundle.js'))
-        bundleScript.setAttribute("id", "_dcp_client_bundle")
+        var bundleScript = document.createElement('SCRIPT')
+        bundleScript.setAttribute('type', 'text/javascript')
+        bundleScript.setAttribute('src', thisScript.src.replace('/dcp-client.js', '/dist/dcp-client-bundle.js'))
+        bundleScript.setAttribute('id', '_dcp_client_bundle')
+        bundleScript.setAttribute('dcp-env', 'vanilla-web')
         bundleScript.onabort = function dcpClient$$loadAbortCB(ev) {
-          reject('aborted bundle load')
+          reject(new Error('aborted bundle load'))
         }
         bundleScript.onerror = function dcpClient$$loadErrorCB(ev) {
-          let e = new Error("Could not load dcp-client bundle " + bundleScript.getAttribute('src') + ' (' + (typeof ev.message !== 'undefined' ? ev.message : "") +')')
+          let e = new Error('Could not load dcp-client bundle ' + bundleScript.getAttribute('src') + ' (' + (typeof ev.message !== 'undefined' ? ev.message : '') +')')
           reject(e)
         }
         bundleScript.onload = function dcpClient$$loadCB(ev) {
           window.dcp = bundleScript.exports
-          window.dcp.setPlatform('vanilla-web')
           resolve('loaded bundle')
         }
         document.getElementsByTagName('head')[0].appendChild(bundleScript)

@@ -66,12 +66,15 @@ function evalStringInSandbox(code, sandbox, filename) {
   return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
 }
 
-/** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch */
+/** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch.
+ *  Runs in a different, but identical, sandbox as the config files and client code.
+ */
 function loadBootstrapBundle() {
   let sandbox = {}
 
   Object.assign(sandbox, bundleSandbox)
   sandbox.window = sandbox
+  
   return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
@@ -98,6 +101,8 @@ function injectModule(id, exports) {
   injectedModules[id] = true
 }
 
+injectModule('dcp/env-native', { platform: 'nodejs' })
+
 /* Inject all properties of the bundle object as modules in the
  * native NodeJS module system.
  */
@@ -106,16 +111,14 @@ let nsMap = require('./ns-map')
 /** @todo - rewrite the injectModule block in terms of nsMap */
 injectModule('dcp/xhr', bundle['dcp-xhr'])
 injectModule('dcp/url', bundle['dcp-url'])
-injectModule('dcp/eth', bundle['dcp-url'])
+injectModule('dcp/eth', bundle['dcp-eth'])
+injectModule('dcp/env', bundle['dcp-env'])
 injectModule('dcp/wallet', bundle['wallet'])
 injectModule('dcp/bootstrap-build', bundle['dcp-build'])
 injectModule('dcp/build', bundle['dcp-build'])
 injectModule('dcp/dcp-config', bundle['dcp-config'])
 injectModule('dcp/protocol', bundle['protocol'])
 injectModule('dcp/compute', bundle['compute'])
-injectModule('dcp/env', bundle['env'])
-
-require('dcp/env').setPlatform('nodejs')
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
  *  can include (for example) a text-rendered version of the remote 404 page.

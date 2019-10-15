@@ -6,8 +6,13 @@
 
 module.declare(['./init-common', './ns-map'], function cjs2ShimModule(require, exports, module) {
   let realLoader = module.load
+
+  function injectModule(moduleId, exports) { /* bravojs-specific */
+    bravojs.requireMemo['/webpack/' + moduleId] = exports
+  }
+  injectModule('dcp/env-native', { platform: 'bravojs' })
   require.paths.unshift('/webpack')
-  
+
   module.constructor.prototype.load = function(s,f) {
     let re = new RegExp('^/webpack/')
 
