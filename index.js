@@ -300,9 +300,11 @@ exports.init = async function dcpClient$$init() {
 
   /* 4 */
   if (process.env.DCP_SCHEDULER_LOCATION)
-    userConfig.scheduler.location = process.env.DCP_SCHEDULER_LOCATION
+    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
   if (process.env.DCP_SCHEDULER_CONFIGLOCATION)
     userConfig.scheduler.configLocation = process.env.DCP_SCHEDULER_CONFIGLOCATION
+  if (process.env.DCP_CONFIG_LOCATION)
+    userConfig.scheduler.configLocation = process.env.DCP_CONFIG_LOCATION
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
     userConfig.bundle.location = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i)
   if (process.env.DCP_BUNDLE_LOCATION)
@@ -329,9 +331,14 @@ exports.init = async function dcpClient$$init() {
     }
   }
 
+
   /* 6 */
   bundleSandbox.window = bundleSandbox
   addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
+  addConfig(dcpConfig, bundleSandbox.dcpConfig, true)
+  bundleSandbox.dcpConfig = dcpConfig /* assigning window.dcpConfig in remoteConfigCoode creates a new
+                                         dcpConfig in the bundle - put it back */
+
   if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
     dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
   if (userConfig)
@@ -355,12 +362,17 @@ exports.init = async function dcpClient$$init() {
     bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, dcpConfig.bundle.location.href)
   else
     bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
+  if (process.env.DCP_SCHEDULER_LOCATION)
+    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
 
   /* 9 */
   Object.entries(bundle).forEach(entry => {
     let [id, exports] = entry
-    injectModule('dcp/' + id, exports)
+    if (id !== 'dcp-config')
+      injectModule('dcp/' + id, exports)
   })
+
+  addConfig(require('dcp/dcp-config'), dcpConfig)
 }
 
 exports.initcb = require('./init-common').initcb
