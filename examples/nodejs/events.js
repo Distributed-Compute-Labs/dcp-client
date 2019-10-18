@@ -1,3 +1,7 @@
+#! /usr/bin/env node
+
+global.Promise = Promise = require('./promiseDebug').hook()
+
 /**
  * @file        events.js
  *              Sample node application showing how to deploy a DCP job whilst receiving
@@ -8,7 +12,7 @@
  * @date   Aug 2019
  */
 async function main() {
-  const { protocol, compute } = dcp
+  const compute = require('dcp/compute')
   let job, results, startTime
 
   job = compute.for([["red", "green", "yellow", "blue", "brown", "orange", "pink"]],
