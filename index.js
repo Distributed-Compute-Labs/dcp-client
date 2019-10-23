@@ -108,17 +108,10 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
  */
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
-/** @todo - rewrite the injectModule block in terms of nsMap */
-injectModule('dcp/xhr', bundle['dcp-xhr'])
-injectModule('dcp/url', bundle['dcp-url'])
-injectModule('dcp/eth', bundle['dcp-eth'])
-injectModule('dcp/env', bundle['dcp-env'])
-injectModule('dcp/wallet', bundle['wallet'])
-injectModule('dcp/bootstrap-build', bundle['dcp-build'])
-injectModule('dcp/build', bundle['dcp-build'])
-injectModule('dcp/dcp-config', bundle['dcp-config'])
-injectModule('dcp/protocol', bundle['protocol'])
-injectModule('dcp/compute', bundle['compute'])
+
+for (let prop in nsMap) {
+  injectModule(prop, bundle[nsMap[prop]])
+}
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
  *  can include (for example) a text-rendered version of the remote 404 page.
@@ -269,9 +262,21 @@ exports.init = async function dcpClient$$init() {
   
   /* 1 */
   if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
+    let code
+    
     checkConfigFileSafePerms(homedirConfigPath)
-    homedirConfig = evalScriptInSandbox(homedirConfigPath, bundleSandbox, true)
-    addConfig(userConfig, homedirConfig)
+    code = fs.readFileSync(homedirConfigPath, 'utf-8')
+
+    if (code.match(/^\s*{/)) {
+      homedirConfig = evalScriptInSandbox(homedirConfigPath, bundleSandbox, true)
+      addConfig(userConfig, homedirConfig)
+    } else {
+      let configSandbox = {}
+      configSandbox.console = console
+      Object.assign(configSandbox, bundleSandbox)
+      Object.assign(configSandbox, dcpConfig)
+      evalStringInSandbox(code, configSandbox, homedirConfigPath)
+    }
   }
   /* Sort out polymorphic arguments: 'passed-in configuration' */
   if (arguments[0]) {
@@ -330,7 +335,6 @@ exports.init = async function dcpClient$$init() {
       throw new Error(justFetchPrettyError(e, false))
     }
   }
-
 
   /* 6 */
   bundleSandbox.window = bundleSandbox
