@@ -15,7 +15,7 @@ async function main() {
   const compute = require('dcp/compute')
   let job, results, startTime
 
-  job = compute.for([["red", "green", "yellow", "blue", "brown", "orange", "pink"]],
+  job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
                     function(colour) {
                       console.log(colour)
                       progress()
