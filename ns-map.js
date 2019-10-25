@@ -30,8 +30,8 @@ module.declare([], function $$nsMap(require, exports, module) {
   exports['dcp/eth']            = 'dcp-eth'
   exports['dcp/env']            = 'dcp-env'
   exports['dcp/wallet']         = 'wallet'
-  exports['dcp/bootstrap-build']= 'dcp-bootstrap-build'
-  exports['dcp/build']          = 'dcp-bootstrap-build' /* overridden when new version loaded */
+  exports['dcp/bootstrap-build']= 'dcp-build'
+  exports['dcp/build']          = 'dcp-build' /* overridden when new version loaded */
   exports['dcp/dcp-config' ]    = 'dcp-config'
   exports['dcp/protocol' ]      = 'protocol'
   exports['dcp/compute' ]       = 'compute'

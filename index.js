@@ -109,8 +109,12 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
 
-for (let prop in nsMap) {
-  injectModule(prop, bundle[nsMap[prop]])
+for (let moduleId in nsMap) {
+  let exports = bundle[nsMap[moduleId]]
+
+  if (!exports)
+    throw new Error(`Bundle is missing exports for module ${moduleId}`)
+  injectModule(moduleId, exports)
 }
 
 /** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
