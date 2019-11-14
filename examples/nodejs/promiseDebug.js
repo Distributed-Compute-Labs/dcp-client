@@ -9,7 +9,7 @@
  *   This module needs to be initialized from any Promise-use module
  *   whose promises we need to intercept.  Typical initialization:
  *
- *      Promise = require("promiseDebug").init(Promise)
+ *      global.Promise = Promise = require('/path/to/promiseDebug').hook()
  *
  *  *note* -    run node with --trace-warnings to see full stack traces for warnings
  *
