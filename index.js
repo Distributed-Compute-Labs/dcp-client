@@ -6,27 +6,37 @@
  *              same directory as this file, and inject the exported modules into the NodeJS
  *              module environment.
  *
- *              During init(), we wire up require('dcp-xhr') to provide global.XMLHttpRequest,
+ *              During init(), we wire up require('dcp/dcp-xhr') to provide global.XMLHttpRequest,
  *              from the local bundle, allowing us to immediately start using an Agent which
  *              understands proxies and keepalive.
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        July 2019
  */
-exports.debug = process.env.DCP_CLIENT_DEBUG || ''
+exports.debug = false
 
 function debugging(what) {
-  if (typeof exports.debug === 'boolean')
-    return exports.debug;
-  if (!exports.debug)
-    return false;
-  switch(exports.debug) {
+  const debugSyms = [exports.debug || '', process.env.DCP_CLIENT_DEBUG].join(',')
+  
+  if (debugging.cache[what] === debugSyms)
+     return debugging.cache[what] || false;
+
+  if (typeof debugSyms === 'boolean')
+    return (debugging.cache[what] = debugSyms);
+
+  if (!debugSyms)
+    return (debugging.cache[what] = false);
+
+  switch(debugSyms) {
     case '*':
+    case 'dcp-client':
     case 'verbose':
-      return true;
+      return (debugging.cache[what] = true);
   }
-  return what ? !!exports.debug.match('\\b' + what + '(\\b|,)') : !!exports.debug
+
+  return !!(debugging.cache[what] = (what ? debugSyms.match('\\b' + what + '(\\b|,)') : exports.debug))
 }
+debugging.cache = {}
 
 const _initForTestHarnessSymbol = {}
 const path = require('path')
@@ -93,11 +103,11 @@ function loadBootstrapBundle() {
 }
 
 const injectedModules = {}
-const resolveFilenameReal = moduleSystem._resolveFilename;
+const resolveFilenamePrevious = moduleSystem._resolveFilename;
 moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilenameShim(moduleIdentifier) { 
   if (injectedModules.hasOwnProperty(moduleIdentifier))
     return moduleIdentifier;
-  return resolveFilenameReal.apply(null, arguments)
+  return resolveFilenamePrevious.apply(null, arguments)
 }
 /** 
  * Inject an initialized module into the native NodeJS module system. 
@@ -105,7 +115,9 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
  * @param       id              {string}        module identifier
  * @param       moduleExports   {object}        the module's exports object
  */
-function injectModule(id, moduleExports) {
+function injectModule(id, moduleExports, clobber) {
+  if (!clobber && typeof moduleSystem._cache[id] !== 'undefined')
+    throw new Error(`Module ${id} has already been injected`);
   moduleSystem._cache[id] = new (moduleSystem.Module)
   moduleSystem._cache[id].id = id
   moduleSystem._cache[id].parent = module
@@ -264,7 +276,7 @@ exports.init = async function dcpClient$$init() {
   let userConfig = { scheduler: {}, bundle: {} }
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
-  let URL = require('dcp/url').URL
+  let URL = require('dcp/dcp-url').URL
   let testHarnessMode = false
 
   if (arguments[0] === _initForTestHarnessSymbol) {
@@ -281,7 +293,7 @@ exports.init = async function dcpClient$$init() {
   /* Fix all future files containing new URL() to use our class */
   bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
-    require('dcp/url').patchup(dcpConfig)
+    require('dcp/dcp-url').patchup(dcpConfig)
   
   /* 1 */
   if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
@@ -315,12 +327,12 @@ exports.init = async function dcpClient$$init() {
     userConfig.bundle.location = new URL(arguments[2])
 
   /* 2 */
-  global.XMLHttpRequest = require('dcp/xhr').XMLHttpRequest
+  global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
 
   /* 3 */
   addConfig(dcpConfig, userConfig)
   if (!dcpConfig.scheduler.location)
-    dcpConfig.scheduler.location = new (require('dcp/url').URL)('https://scheduler.distributed.computer')
+    dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
   if (!dcpConfig.scheduler.configLocation)
     dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
   if (userConfig)
@@ -392,7 +404,7 @@ exports.init = async function dcpClient$$init() {
   Object.entries(bundle).forEach(entry => {
     let [id, moduleExports] = entry
     if (id !== 'dcp-config') {
-      injectModule('dcp/' + id, moduleExports)
+      injectModule('dcp/' + id, moduleExports, typeof nsMap['dcp/' + id] !== 'undefined')
     }
   })
 
@@ -401,7 +413,7 @@ exports.init = async function dcpClient$$init() {
     debugging() && console.log('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(nsMap['dcp/dcp-config'], global.dcpConfig) /* in case anybody has internal references - should props be proxies? /wg nov 2019 */
     bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
-    injectModule('dcp/dcp-config', global.dcpConfig)
+    injectModule('dcp/dcp-config', global.dcpConfig, true)
   }
 
   return bundleSandbox.dcpConfig

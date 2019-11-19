@@ -47,7 +47,6 @@ async function main() {
 
   job._generator.public = { name: 'events example, nodejs' };
   
-  console.log(' - Executing job')
   await job.exec(compute.marketValue)
   console.log(results)
 }

@@ -13,8 +13,9 @@
 <head><meta charset="utf-8">
 <link rel="stylesheet" type="text/css" href="./events.css">
 <script src="https://scheduler.distributed.computer/etc/dcp-config.js"></script>
-<script src="http://scheduler.staging.office.kingsds.network/etc/dcp-config.js"></script>
-<script src="../../dcp-client.js"></script>
+<script src="https://portal.distributed.computer/dcp-client/dcp-client.js"></script>
+<!--script src="http://scheduler.staging.office.kingsds.network/etc/dcp-config.js"></script-->
+<!--script src="../../dcp-client.js"></script-->
 <script>
   async function start() {
     const { protocol, compute } = dcp
@@ -65,7 +66,6 @@
     el.innerHTML += '<li>Executing job<ul id="readyStateList">'
     rsl = document.getElementById('readyStateList')
     await job.exec(compute.marketValue)
-    console.log(results)
   }
 </script>
 </head>
