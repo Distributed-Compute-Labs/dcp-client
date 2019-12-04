@@ -21,7 +21,7 @@
     let el = document.getElementById('eventList')
     let pretty = document.getElementById('pretty')
     
-    job = compute.for([["red", "green", "yellow", "blue", "brown", "orange", "pink"]],
+    job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
                       function(colour) {
                         console.log(colour);
                         progress();
