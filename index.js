@@ -135,14 +135,6 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
  */
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
-injectModule('dcp/xhr', bundle['dcp-xhr'])
-injectModule('dcp/url', bundle['dcp-url'])
-injectModule('dcp/eth', bundle['dcp-url'])
-injectModule('dcp/wallet', bundle['keystore'])
-injectModule('dcp/dcp-config', bundle['dcp-config'])
-injectModule('dcp/protocol', bundle['protocol'])
-injectModule('dcp/compute', bundle['compute'])
-injectModule('dcp/generator', bundle['generator'])
 
 debugging('modules') && console.log('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 for (let moduleId in nsMap) {
