@@ -1,3 +1,7 @@
+#! /usr/bin/env node
+
+global.Promise = Promise = require('./promiseDebug').hook()
+
 /**
  * @file        events.js
  *              Sample node application showing how to deploy a DCP job whilst receiving
@@ -8,10 +12,10 @@
  * @date   Aug 2019
  */
 async function main() {
-  const { protocol, compute } = dcp
+  const compute = require('dcp/compute')
   let job, results, startTime
 
-  job = compute.for([["red", "green", "yellow", "blue", "brown", "orange", "pink"]],
+  job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
                     function(colour) {
                       console.log(colour)
                       progress()
@@ -43,7 +47,6 @@ async function main() {
 
   job._generator.public = { name: 'events example, nodejs' };
   
-  console.log(' - Executing job')
   await job.exec(compute.marketValue)
   console.log(results)
 }

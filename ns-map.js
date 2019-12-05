@@ -24,13 +24,19 @@ if (typeof module.declare === 'undefined') { /* cjs1 */
 }
 
 module.declare([], function $$nsMap(require, exports, module) {
-  exports['dcp/xhr'] = 'dcp-xhr'
-  exports['dcp/url'] = 'dcp-url'
-  exports['dcp/eth'] = 'dcp-url'
-  exports['dcp/wallet'] = 'keystore'
-  exports['dcp/bootstrap-build'] = 'dcp-build'
-  exports['dcp/build'] = 'dcp-build'
-  exports['dcp/dcp-config' ] = 'dcp-config'
-  exports['dcp/protocol' ] = 'protocol'
-  exports['dcp/compute' ] = 'compute'
-})
+/* LHS: where symbols appear      RHS: where they come from in dcp-client-bundle-src.js */      
+  exports['dcp/bootstrap-build']= 'dcp-build'
+  exports['dcp/build']          = 'dcp-build' /* overridden when new version loaded */
+  exports['dcp/dcp-config' ]    = 'dcp-config'
+
+  for (moduleIdentifier of [
+    "dcp-xhr",
+    "dcp-url",
+    "dcp-env",
+    "dcp-events",
+    "eth",
+    "wallet",
+    "protocol",
+    "compute",
+  ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
+}); /* end of module */

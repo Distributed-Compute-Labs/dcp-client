@@ -94,9 +94,8 @@ dcp/build           | Object containing version information, etc. of the running
 dcp/dcp-config      | The running configuration object (result of merging various options to `init()`)
 dcp/protocol        | The underlying protocol implementation
 dcp/bootstrap-build | Same as dcp/build, but for the version that loaded the running bundle
-dcp/xhr             | An implementation of XMLHttpRequest which understands http, https, and keepalive using the W3C API
-dcp/url             | An implementation of the W3C URL class that also adds a resolve() method like NodeJS's implementation
-dcp/eth             | A helper library for working with PrivateKey and Address objects (used by Wallet API)
+dcp/dcp-xhr         | An implementation of XMLHttpRequest which understands http, https, and keepalive using the W3C API
+dcp/dcp-url         | An implementation of the W3C URL class that also adds a resolve() method like NodeJS's implementation
 dcp/serialize       | A space-efficient serialization library which understands recursive object graphs, Typed Arrays, sparse Arrays, and more.
 
 # Working with DCP-Client

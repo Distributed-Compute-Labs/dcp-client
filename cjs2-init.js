@@ -6,8 +6,13 @@
 
 module.declare(['./init-common', './ns-map'], function cjs2ShimModule(require, exports, module) {
   let realLoader = module.load
+
+  function injectModule(moduleId, exports) { /* bravojs-specific */
+    bravojs.requireMemo['/webpack/' + moduleId] = exports
+  }
+  injectModule('dcp/env-native', { platform: 'bravojs' })
   require.paths.unshift('/webpack')
-  
+
   module.constructor.prototype.load = function(s,f) {
     let re = new RegExp('^/webpack/')
 
@@ -37,6 +42,7 @@ module.declare(['./init-common', './ns-map'], function cjs2ShimModule(require, e
       module.provide(['./dist/dcp-client-bundle'], function() {
         try {
           module.provide(Object.keys(require('./ns-map')).map(key => '/webpack/' + key), function() {
+            require('dcp/env').setPlatform(bravojs ? "bravojs" : "cjs2-generic")
             resolve('initialized')
           })
         } catch(e) {
