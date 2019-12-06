@@ -13,6 +13,8 @@ global.Promise = Promise = require('./promiseDebug').hook()
  */
 async function main() {
   const compute = require('dcp/compute')
+  const wallet  = require('dcp/wallet')
+
   let job, results, startTime
 
   job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
@@ -45,8 +47,11 @@ async function main() {
            console.log(` * Wow! ${ev.result} is such a pretty colour!`);
          })
 
-  job._generator.public = { name: 'events example, nodejs' };
-  
+  job.public.name = 'events example, nodejs';
+  job.public.description = 'DCP-Client Example examples/node/events.js';
+
+  let ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
+  job.setPaymentAccountKeystore(ks);
   await job.exec(compute.marketValue)
   console.log(results)
 }
