@@ -370,6 +370,7 @@ exports.init = async function dcpClient$$init() {
   }
 
   /* 6 */
+  bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
   bundleSandbox.window = bundleSandbox
   addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
   addConfig(dcpConfig, bundleSandbox.dcpConfig, true)
