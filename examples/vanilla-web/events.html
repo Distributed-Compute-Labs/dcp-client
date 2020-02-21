@@ -61,7 +61,11 @@
              console.log('received result', ev)
            })
 
-    job._generator.public = { name: 'events example' };
+    job.public = {
+      name: 'events example, vanilla-web',
+      description: 'dcp-client sample code examples/vanilla-web/events.html',
+      link: 'https://www.npmjs.com/package/dcp-client'
+    }
     
     el.innerHTML += '<li>Executing job<ul id="readyStateList">'
     rsl = document.getElementById('readyStateList')
