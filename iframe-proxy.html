@@ -1,0 +1,23 @@
+<html><head></head>
+<script>
+async function go() {
+  window.addEventListener('message', function(ev) { console.log('inner got message', ev) }, false)
+  const params = new URLSearchParams(window.location.search)
+  const relativePath = params.get("relative-url")
+  if (relativePath.indexOf("./") !== 0)
+    throw new Error(`Relative path for iframe proxy must start with './', got: ${relativePath}`)
+  let content = await (await fetch(relativePath)).text()
+  // Fill html with stuff we want??
+  const langCode = params.get("lang").slice(0,2);
+  try {
+    translations = await (await fetch(`./i18n/${langCode}.json`)).json()  
+  } catch (error) {
+    translations = await (await fetch(`./i18n/en.json`)).json()
+  }
+  content = content.replace(/{{[^}]*}}/g, (match) => translations[match.slice(2,-2)])
+  window.parent.postMessage(content, '*')
+}
+</script>
+<body onload="go();">
+</body>
+</html>
