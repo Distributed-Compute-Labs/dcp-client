@@ -1,4 +1,4 @@
-{ let currentScript = typeof document !== 'undefined' && document.currentScript;   if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {     module.declare(function (require, exports, module) {       Object.assign(exports, currentScript.exports)     })   } /******/ (function(modules) { // webpackBootstrap
+/******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
 /******/
@@ -4783,4 +4783,4 @@ eval("module.exports = require(\"fs\");\n\n//# sourceURL=webpack:///external_%22
 
 /***/ })
 
-/******/ });}
+/******/ });
