@@ -33,7 +33,6 @@
 
     let otherLang;
     if (langCode !== 'en') {
-```.
       try {
         otherLang = await (await fetch(`./i18n/${langCode}.json`)).json();
       } catch (error) {
