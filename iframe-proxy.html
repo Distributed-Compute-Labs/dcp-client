@@ -32,7 +32,8 @@
     const english = await (await fetch(`./i18n/en.json`)).json();
 
     let otherLang;
-    if (langCode !== 'eng') {
+    if (langCode !== 'en') {
+```.
       try {
         otherLang = await (await fetch(`./i18n/${langCode}.json`)).json();
       } catch (error) {
