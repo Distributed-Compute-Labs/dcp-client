@@ -1,0 +1,115 @@
+#! /bin/bash
+#
+# @file         build.sh        Rebuild the dcp-client bundle
+#                               Usage: build/bundle.sh <path to dcp repo>
+# @author       Wes Garland, wes@kingsds.network
+# @date         Mar 2020
+#
+
+myDir="`dirname \`realpath $0\``"
+[ -f "${myDir}/etc/config.cache" ] && . "${myDir}/etc/config.cache" ]
+
+usage()
+{
+cat <<EOHELP
+$0 - Rebuild the DCP-Client Bundle
+Copyright (c) 2020 Kings Distributed Systems. All Rights Reserved.
+
+Usage: $0 [path to dcp repo] [[--options] ... ]
+Where: 
+  --help                      Shows this help
+  --dcp=<dir>                 Sets the DCP source directory
+  --build=<debug|release>     Sets the DCP build type
+  --install-flags=<flags>     Sets extra flags used by dcp/install.sh
+Note: Options will be cached as future invocations' defaults.
+EOHELP
+}
+
+BUNDLE_TMP="`mktemp -d --suffix=.dcpClientBuild`"
+trap "rm -rf \"${BUNDLE_TEMP}\"" EXIT
+
+if [ "$1" ] && [ -d "$1" ]; then
+  DCP_SRC="$1"
+  shift
+fi
+
+while getopts "h-:" OPTION; do
+  if [ "$OPTION" = "-" ]; then
+    if [[ "$OPTARG" =~ (^[a-z0-9-]+)=(.*) ]]; then
+      OPTION="${BASH_REMATCH[1]}"
+      OPTARG="${BASH_REMATCH[2]}"
+    else
+      OPTION="${OPTARG}"
+      OPTARG=""
+    fi
+  fi
+
+  OPTFILES="`eval echo \"${OPTARG}\"`"
+  [ -f "$OPTFILES" ] && OPTFILE="$OPTFILES" || OPTFILE=""
+
+  case $OPTION in
+    h|help)
+      usage
+      exit 1
+      ;;
+    dcp)
+      DCP_SRC="${OPTARG}"
+      ;;
+    install-flags)
+      DCP_INSTALL_FLAGS="${OPTARG}"
+      ;;
+    d|debug)
+      echo "Debug mode: will not remove ${BUNDLE_TMP}"
+      DEBUG=1
+      ;;
+    build)
+      echo "Setting DCP build type to ${OPTARG}"
+      DCP_BUILD="${OPTARG}"
+      ;;
+    *)
+      echo "Unrecognized option: $OPTION"
+      exit 2
+      ;;
+  esac
+done
+
+DCP_SRC="`eval echo $DCP_SRC`"
+DCP_SRC="`realpath \"$DCP_SRC\"`"
+
+if [ ! "$DCP_SRC" ] || [ ! -d "$DCP_SRC" ]; then
+  echo "Could not locate DCP repo. Once specified, it will be cached for future runs."
+  echo "See $0 --help for more information."
+fi >/dev/stderr
+
+echo "Building bundle from DCP in ${DCP_SRC}"
+
+# Write cache
+[ -d "${myDir}/etc" ] || mkdir -p "${myDir}/etc"
+cat > "${myDir}/etc/config.cache" << EOF
+DCP_SRC="${DCP_SRC}"
+DCP_INSTALL_FLAGS="${DCP_INSTALL_FLAGS}"
+DCP_BUILD="${DCP_BUILD}"
+EOF
+
+# Write install.sh override files
+cat > "${BUNDLE_TMP}/local-config.incl" <<EOF
+SRC_DIR="${DCP_SRC}"
+DCP_ROOT="${BUNDLE_TMP}"
+BUILD="${DCP_BUILD}"
+DCP_LOCAL_CONFIG_JSON="${BUNDLE_TMP}/local-config.json"
+EOF
+
+cat > "${BUNDLE_TMP}/local-config.json" <<EOF
+{"dcp_root": "${BUNDLE_TMP}", "generated": "`date` by `id -un` on `hostname`", "build": "${DCP_BUILD}"}
+EOF
+
+echo "Building DCP Client Bundle"
+NO_LOG=1 SKIP_SUDO_CHECK=1 DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl" "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} dcp-client
+
+[ "$?" = "0" ] || exit 3
+
+echo
+echo "Importing DCP Client Bundle"
+cd "${myDir}/.."
+(cd "${BUNDLE_TMP}/www/docs-node_modules/dcp-client/" && find dist -type f | tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
+echo "Done."
