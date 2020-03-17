@@ -19,7 +19,7 @@
     let schedulerDcpConfig;
     let schedulerBaseHref = (localDcpConfig && localDcpConfig.scheduler && localDcpConfig.scheduler.location && localDcpConfig.scheduler.location.href)
                          || thisScript.getAttribute('scheduler') && thisScript.getAttribute('scheduler').replace(/([^/])$/, '$1/')
-                         || thisScript.src.replace('/dcp-client.js$', '/');
+                         || thisScript.src.replace(/\/dcp-client\/dcp-client.js$/, '/')
 
     /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
     function loadConfig() {
