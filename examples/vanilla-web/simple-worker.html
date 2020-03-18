@@ -9,36 +9,39 @@
   --
   -->
 <head><meta charset="utf-8">
-<script src="/etc/dcp-config.js"></script>
-<script src="/dcp-client/dcp-client.js"></script>
-<script>
-  function main() {
-    const { protocol, compute } = dcp
-    const numberOfWorkers = 4
+<script src="../../dcp-client.js" scheduler="http://scheduler.devserver.office.kingsds.network/" XXXscheduler="https://scheduler.distributed.computer/"></script>
+  <script>
+  const { protocol, compute, wallet } = dcp;
+  const numberOfSandboxes = 1;
 
-    let supervisor = compute.work(numberOfWorkers)
-    supervisor.on('readystatechange', function(ev) {
-      console.log('rsc', ev, this)
-    })
+  async function startWorker() {
+    let supervisor = compute.work(numberOfSandboxes, (await wallet.get()).address );
+    supervisor.on('readystatechange', function(ev) { console.log('readyState:', ev, this) });
     supervisor.on('payment', function(ev) {
-      console.log('dcc', ev, this)
-    })
-    supervisor.on('sandbox', function(sandbox) {
-      console.log(`Supervisor launched sandbox ${sandbox.serial}`, sandbox)
+      if (ev.accepted)
+        console.log(`You earned ${ev.payment} dcc`);
+      else
+        console.log('The result you computed was not accepted');
+    });
+                  
+    supervisor.on('sandbox', function(sandbox) { 
+      console.log(`Supervisor launched sandbox ${sandbox && sandbox.serial}`, sandbox);
       sandbox.on('ready', function(ev) {
         console.log('sandbox ready', ev, this)
-      })
+      });
+
       sandbox.on('taskStart', function(task) {
         console.log(`Started task ${task.serial} for job ${task.job.publicName||""} ${task.job.publicDescription||""} ${task.job.publicLink||""}`)
-      })
+      });
+      
       sandbox.on('progress', function(ev) {
         console.log('progress', ev, this)
-      })
-    })
+      });
+    });
   }
 </script>
 </head>
-<body onload="main()">
+<body onload="startWorker();">
 This is a minimal vanilla web DCP Worker example. Look in your browser's console for output.
 </body>
 </html>
