@@ -1,7 +1,0 @@
-{
-  "keystore_title": "密钥库上载",
-  "keystore_prompt": "该应用程序想使用您的DCP密钥库。 请上载密钥库文件。",
-  "password": "密码",
-  "password_prompt": "请输入您的密码。",
-  "submit": "提交"
-}
