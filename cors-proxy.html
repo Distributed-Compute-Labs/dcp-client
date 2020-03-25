@@ -12,20 +12,16 @@
   -- @date      Mar 2020
   -->
 <!--  Instructions:
-  --    Set this html as the src of an iframe in order to
-  -- load files relative to it without triggering cross-origin
-  -- checks. The `src` property must include the `relative-url`
-  -- param in order for this proxy to fetch anything.
+  --  -------------
+  --  Set this html as the src of an iframe in order to
+  --  load files relative to it without triggering cross-origin
+  --  checks. The `src` property must include the `relative-url`
+  --  param in order for this proxy to fetch anything.
   --
   --  Example src: //mycdn.kittens.org/cors-proxy.html?relative-url=.%2Fpath%2Fto%2Fresource.js
   --
   --  Note that relative paths must start with a ./ (where %2F is slash).
-  --
-  -- This particular implementation of the cors-proxy pattern also supports
-  -- a `lang` query parameter which may be provided by `navigator.language`. It
-  -- will attempt to find a translation in the request language and fallback to
-  -- english for any unknown keys.
- -->
+  -->
   <script>
   /** Validate the path which is being proxied. The supplied rule will only
    *  allow the proxy to access files in the dcp-client folder and its 
@@ -58,23 +54,7 @@
     // relative-url
     const relativePath = validatePath(params.get("relative-url"));
   
-    // lang
-    const langCode = params.get("lang").slice(0,2);
-    const rawContent = await (await fetch(relativePath)).text();
-    const english = await (await fetch(`./i18n/en.json`)).json();
-
-    let otherLang;
-    if (langCode !== 'en') {
-      try {
-        otherLang = await (await fetch(`./i18n/${langCode}.json`)).json();
-      } catch (error) {
-        otherLang = {};
-      }
-    }
-    // Fall back to english
-    const translations = {...english, ...otherLang};
-
-    // sub out {{}} contents
+    // fetch the content with our XSS creds and post back to outer document
     const content = rawContent.replace(/{{[^}]*}}/g, (match) => translations[match.slice(2,-2)]);
     window.parent.postMessage(content, '*');
   }
