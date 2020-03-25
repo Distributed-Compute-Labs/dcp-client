@@ -111,5 +111,6 @@ NO_LOG=1 SKIP_SUDO_CHECK=1 DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.i
 echo
 echo "Importing DCP Client Bundle"
 cd "${myDir}/.."
-(cd "${BUNDLE_TMP}/www/docs-node_modules/dcp-client/" && find dist -type f | tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
+git ls-tree --full-tree -r --name-only HEAD dist |\
+(cd "${BUNDLE_TMP}/www/docs-node_modules/dcp-client/" && tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
 echo "Done."
