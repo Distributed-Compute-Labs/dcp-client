@@ -27,14 +27,37 @@
   -- english for any unknown keys.
  -->
   <script>
+  /** Validate the path which is being proxied. The supplied rule will only
+   *  allow the proxy to access files in the dcp-client folder and its 
+   *  sub-folders.
+   *
+   *  @param       path      {string}        The local resource we will proxy
+   *                                         over iframe.onmessage to avoid
+   *                                         the need for CORS configuration.
+   */
+  function validatePath(path) {
+    if (path.match('^' + window.location.protocol)) {
+      /* path is a URI - make it a path */
+      url = new URL(path);
+      if (url.origin !== window.location.origin)
+        throw new Error('Cannot proxy to foreign origin');
+      let dotPath = window.location.pathname.replace(RegExp('/[^/]*$'), '/');
+      path = url.pathname.replace(RegExp('^' + dotPath), './');
+    }
+    if (!path.match(RegExp('^\./')))
+      throw new Error(`Relative path for iframe proxy must start with './', got: "${path}"`);
+    if (path.match(RegExp('/\.\./')))
+      throw new Error('Relative path for iframe proxy may not include parent directory');
+
+    return path;
+  }
+
   async function go() {
     const params = new URLSearchParams(window.location.search);
 
     // relative-url
-    const relativePath = params.get("relative-url");
-    if (relativePath.indexOf("./") !== 0)
-      throw new Error(`Relative path for iframe proxy must start with './', got: "${relativePath}"`);
-
+    const relativePath = validatePath(params.get("relative-url"));
+  
     // lang
     const langCode = params.get("lang").slice(0,2);
     const rawContent = await (await fetch(relativePath)).text();
