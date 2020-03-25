@@ -2,7 +2,7 @@
 <html lang="en-CA">
   <head><meta charset="utf-8">
 <!-- 
-  -- @file      iframe-proxy.html       A client-side proxy for local content; used
+  -- @file      cors-proxy.html         A client-side proxy for local content; used
   --                                    to work around CORS-limitations, especially 
   --                                    on platforms where the web server cannot be
   --                                    configured to send permissive CORS headers
@@ -17,11 +17,11 @@
   -- checks. The `src` property must include the `relative-url`
   -- param in order for this proxy to fetch anything.
   --
-  --  Example src: //mycdn.kittens.org/iframe-proxy.html?relative-url=.%2Fpath%2Fto%2Fresource.js
+  --  Example src: //mycdn.kittens.org/cors-proxy.html?relative-url=.%2Fpath%2Fto%2Fresource.js
   --
   --  Note that relative paths must start with a ./ (where %2F is slash).
   --
-  -- This particular implementation of the iframe-proxy pattern also supports
+  -- This particular implementation of the cors-proxy pattern also supports
   -- a `lang` query parameter which may be provided by `navigator.language`. It
   -- will attempt to find a translation in the request language and fallback to
   -- english for any unknown keys.
