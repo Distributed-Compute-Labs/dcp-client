@@ -1,7 +1,0 @@
-{
-  "keystore_title": "Keystore File Upload",
-  "keystore_prompt": "This application would like to use your DCP Keystore. Please upload a keystore file.",
-  "password": "Password",
-  "password_prompt": "Please enter your password.",
-  "submit": "Submit"
-}
