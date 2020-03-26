@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+  <head><meta charset="utf-8">
+<!-- 
+  -- @file      cors-proxy.html         A client-side proxy for local content; used
+  --                                    to work around CORS-limitations, especially 
+  --                                    on platforms where the web server cannot be
+  --                                    configured to send permissive CORS headers
+  --                                    for static content.
+  --
+  -- @author    KC Erb, kcerb@kingsds.network
+  -- @date      Mar 2020
+  -->
+<!--  Instructions:
+  --  -------------
+  --  Set this html as the src of an iframe in order to
+  --  load files relative to it without triggering cross-origin
+  --  checks. The `src` property must include the `relative-url`
+  --  param in order for this proxy to fetch anything.
+  --
+  --  Example src: //mycdn.kittens.org/cors-proxy.html?relative-url=.%2Fpath%2Fto%2Fresource.js
+  --
+  --  Note that relative paths must start with a ./ (where %2F is slash).
+  -->
+  <script>
+  /** Validate the path which is being proxied. The supplied rule will only
+   *  allow the proxy to access files in the dcp-client folder and its 
+   *  sub-folders.
+   *
+   *  @param       path      {string}        The local resource we will proxy
+   *                                         over iframe.onmessage to avoid
+   *                                         the need for CORS configuration.
+   */
+  function validatePath(path) {
+    if (path.match('^' + window.location.protocol)) {
+      /* path is a URI - make it a path */
+      url = new URL(path);
+      if (url.origin !== window.location.origin)
+        throw new Error('Cannot proxy to foreign origin');
+      let dotPath = window.location.pathname.replace(RegExp('/[^/]*$'), '/');
+      path = url.pathname.replace(RegExp('^' + dotPath), './');
+    }
+    if (!path.match(RegExp('^\./')))
+      throw new Error(`Relative path for iframe proxy must start with './', got: "${path}"`);
+    if (path.match(RegExp('/\.\./')))
+      throw new Error('Relative path for iframe proxy may not include parent directory');
+
+    return path;
+  }
+
+  async function go() {
+    const params = new URLSearchParams(window.location.search);
+
+    // relative-url
+    const relativePath = validatePath(params.get("relative-url"));
+  
+    // fetch the content with our XSS creds and post back to outer document
+    const content = rawContent.replace(/{{[^}]*}}/g, (match) => translations[match.slice(2,-2)]);
+    window.parent.postMessage(content, '*');
+  }
+  </script></head>
+  <body onload="go();"></body>
+</html>
