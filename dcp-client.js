@@ -77,8 +77,27 @@
           bundleScript.removeAttribute('onready');
         };
     }
+
+    /* Load the modal stylesheet
+     *  Add our favicon (unless they've already got one)
+     */
+    function loadLinks () {
+      const head = document.getElementsByTagName('head')[0];
+      let styleLink = document.createElement('link');
+      styleLink.rel = 'stylesheet';
+      styleLink.href = thisScript.src.replace('/dcp-client.js', '/templates/dcp-modal.css');
+      head.prepend(styleLink);
+
+      if (document.querySelector("link[rel*='icon']")) return
+      let faviconLink = document.createElement('link');
+      faviconLink.type = 'image/x-icon';
+      faviconLink.rel = 'shortcut icon';
+      faviconLink.href = thisScript.src.replace('/dcp-client.js', '/favicon.ico');
+      head.appendChild(faviconLink);
+    }
   }
 
   loadConfig();
   loadBundle();
+  loadLinks();
 })();
