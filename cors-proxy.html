@@ -55,7 +55,7 @@
     const relativePath = validatePath(params.get("relative-url"));
   
     // fetch the content with our XSS creds and post back to outer document
-    const content = rawContent.replace(/{{[^}]*}}/g, (match) => translations[match.slice(2,-2)]);
+    const content = await (await fetch(relativePath)).text();
     window.parent.postMessage(content, '*');
   }
   </script></head>
