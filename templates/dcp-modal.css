@@ -44,6 +44,16 @@
   box-sizing: border-box;
 }
 
+.dcp-modal-remember {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  font-size: 0.65rem;
+  line-height: 3.9;
+  color: rgba(0,0,0,.8);
+  box-sizing: border-box;
+}
+
 .dcp-modal-close {
   background: transparent;
   border: 0;
