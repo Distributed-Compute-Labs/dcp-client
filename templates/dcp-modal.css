@@ -21,6 +21,7 @@
   background-color: #fff;
   padding: 30px;
   max-width: 500px;
+  min-width: 250px;
   max-height: 100vh;
   border-radius: 4px;
   overflow-y: auto;
@@ -43,6 +44,16 @@
   box-sizing: border-box;
 }
 
+.dcp-modal-remember {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  font-size: 0.65rem;
+  line-height: 3.9;
+  color: rgba(0,0,0,.8);
+  box-sizing: border-box;
+}
+
 .dcp-modal-close {
   background: transparent;
   border: 0;
@@ -55,6 +66,17 @@
   margin-bottom: 2rem;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
+}
+
+.dcp-modal-logo-link {
+  display: block;
+  position: relative;
+  bottom: 4px;
+  width: 40px;
+  height: 40px;
+  background: url(../assets/dcp-logo.png);
+  background-size: 40px;
+  float: right;
 }
 
 .dcp-modal-btn {

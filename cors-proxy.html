@@ -50,8 +50,6 @@
 
   async function go() {
     const params = new URLSearchParams(window.location.search);
-
-    // relative-url
     const relativePath = validatePath(params.get("relative-url"));
   
     // fetch the content with our XSS creds and post back to outer document
