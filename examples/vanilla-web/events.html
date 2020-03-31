@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <!-- @file      events.html
-  --
-  -- Sample web page showing how to deploy a DCP job whilst receiving
-  -- events describing the current state of the job, processing results
-  -- as they are received, and so on.
-  -- 
-  -- @author Wes Garland, wes@kingsds.network
-  -- @date   Aug 2019
-  --
+  -
+  -  Sample web page showing how to deploy a DCP job whilst receiving
+  -  events describing the current state of the job, processing results
+  -  as they are received, and so on.
+  - 
+  -  @author Wes Garland, wes@kingsds.network
+  -  @date   Aug 2019
+  -
   -->
 <head><meta charset="utf-8">
 <link rel="stylesheet" type="text/css" href="./events.css">
-<script src="/etc/dcp-config.js"></script>
-<script src="/dcp-client/dcp-client.js"></script>
+<script src="../../dcp-client.js" scheduler="https://scheduler.distributed.computer/"></script>
 <script>
   async function start() {
     const { protocol, compute } = dcp
+
     let job, results, startTime
     let el = document.getElementById('eventList')
     let pretty = document.getElementById('pretty')
