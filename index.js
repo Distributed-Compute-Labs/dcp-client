@@ -319,6 +319,11 @@ exports.init = async function dcpClient$$init() {
       addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
     } else if (typeof arguments[0] === 'object') {
       addConfig(userConfig, arguments[0])
+    } else if (Array.isArray(arguments[0])) {
+      const { scheduler } = require('dcp/dcp-cli').argv;
+      if (scheduler) {
+        userConfig.scheduler.location = new URL(scheduler);
+      }
     }
   }
   if (arguments[1])
