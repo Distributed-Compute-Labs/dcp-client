@@ -13,6 +13,8 @@
  *  @date       Aug 2019
  */
 (function namespaceIIFE() {
+  var _dcpConfig = typeof dcpConfig === 'object' ? dcpConfig : undefined;
+  
   if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
     /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
     module.declare(['./cjs2-init'], function (require, exports, module) {
@@ -23,23 +25,40 @@
   } else {
     let allScripts = document.getElementsByTagName('SCRIPT');
     let thisScript = allScripts[allScripts.length - 1];
-    let localDcpConfig = typeof dcpConfig === 'object' ? dcpConfig : {};
-    let schedulerDcpConfig;
-    let schedulerBaseHref = (localDcpConfig && localDcpConfig.scheduler && localDcpConfig.scheduler.location && localDcpConfig.scheduler.location.href)
-                         || thisScript.getAttribute('scheduler') && thisScript.getAttribute('scheduler').replace(/([^/])$/, '$1/')
-                         || thisScript.src.replace(/\/dcp-client\/dcp-client.js$/, '/');
+    let thisScriptURL = new URL(thisScript.src)
+    let schedulerURL;
+    let dcpConfigHref;
+
+    if (_dcpConfig && _dcpConfig.scheduler && _dcpConfig.scheduler.location && _dcpConfig.scheduler.location.href)
+      schedulerURL = new URL(_dcpConfig.scheduler.location.href);
+    else if (thisScript.getAttribute('scheduler'))
+      schedulerURL = new URL(thisScript.getAttribute('scheduler'));
+
+    if (schedulerURL)
+      dcpConfigHref = schedulerURL.origin + schedulerURL.pathname + 'etc/dcp-config.js' + (schedulerURL.search || thisScriptURL.search);
+    else
+      dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
 
     /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
     function loadConfig() {
       var configScript = document.createElement('SCRIPT');
       configScript.setAttribute('type', 'text/javascript');
-      configScript.setAttribute('src', schedulerBaseHref + 'etc/dcp-config.js');
+      configScript.setAttribute('src', dcpConfigHref);
       configScript.setAttribute('id', '_dcp_config');
-      document.write(configScript.outerHTML + `<script>Object.assign(dcpConfig, JSON.parse('${JSON.stringify(localDcpConfig)}'));</scr` + `ipt>`);
+      if (_dcpConfig) { /* Preserve local configuration as overrides */
+        if (!thisScript.id)
+          thisScript.id='_dcp_client_loader';
+        thisScript.localDcpConfig = _dcpConfig;
+        document.write(configScript.outerHTML +
+                       `<script>Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);</scr`+`ipt>`
+                      );
+      } else {
+        document.write(configScript.outerHTML);
+      }
       configScript = document.getElementById(configScript.id);
       configScript.onerror = function(e) {
         alert('Error DCP-1001: Could not load or parse scheduler configuration from URL ("' + configScript.getAttribute('src') + '")');
-        console.log('dcpConfig load error: ', e);
+        console.error('dcpConfig load error: ', e);
       };
     }
     
@@ -73,7 +92,7 @@
       bundleScript = document.getElementById('_dcp_client_bundle');
       if (bundleScript)
         bundleScript.onerror = function(e) {
-          console.log('Bundle load error:', e);
+          console.error('Bundle load error:', e);
           bundleScript.removeAttribute('onready');
         };
     }
