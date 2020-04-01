@@ -33,6 +33,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     "dcp-xhr",
     "dcp-url",
     "dcp-env",
+    "dcp-cli",
     "dcp-events",
     "eth",
     "wallet",
