@@ -27,17 +27,19 @@
     let thisScript = allScripts[allScripts.length - 1];
     let thisScriptURL = new URL(thisScript.src)
     let schedulerURL;
-    let dcpConfigHref;
+    let dcpConfigHref = thisScript.getAttribute('dcpConfig');
 
     if (_dcpConfig && _dcpConfig.scheduler && _dcpConfig.scheduler.location && _dcpConfig.scheduler.location.href)
       schedulerURL = new URL(_dcpConfig.scheduler.location.href);
     else if (thisScript.getAttribute('scheduler'))
       schedulerURL = new URL(thisScript.getAttribute('scheduler'));
 
-    if (schedulerURL)
-      dcpConfigHref = schedulerURL.origin + schedulerURL.pathname + 'etc/dcp-config.js' + (schedulerURL.search || thisScriptURL.search);
-    else
-      dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
+    if (!dcpConfigHref) {
+      if (schedulerURL)
+        dcpConfigHref = schedulerURL.origin + schedulerURL.pathname + 'etc/dcp-config.js' + (schedulerURL.search || thisScriptURL.search);
+      else
+        dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
+    }
 
     /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
     function loadConfig() {
@@ -45,13 +47,19 @@
       configScript.setAttribute('type', 'text/javascript');
       configScript.setAttribute('src', dcpConfigHref);
       configScript.setAttribute('id', '_dcp_config');
-      if (_dcpConfig) { /* Preserve local configuration as overrides */
+      if (_dcpConfig || schedulerURL) { /* Preserve local configuration as overrides */
+        let html = '';
         if (!thisScript.id)
           thisScript.id='_dcp_client_loader';
-        thisScript.localDcpConfig = _dcpConfig;
-        document.write(configScript.outerHTML +
-                       `<script>Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);</scr`+`ipt>`
-                      );
+        html += configScript.outerHTML + '\n<script>';
+        if (_dcpConfig) {
+          thisScript.localDcpConfig = _dcpConfig;
+          html += `Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);`;
+        }
+        if (schedulerURL)
+          html += `dcpConfig.scheduler.location=new URL("${schedulerURL}");`;
+        html += '</scr'+'ipt>\n';
+        document.write(html);
       } else {
         document.write(configScript.outerHTML);
       }
