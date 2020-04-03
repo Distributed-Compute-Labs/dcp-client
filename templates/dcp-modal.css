@@ -117,6 +117,21 @@
   color: #fff;
 }
 
+.dcp-modal-btn-positive {
+  background-color: #444;
+  color: #fff;
+  margin: 0px 0.5em 0px 0.5em;
+
+}
+
+.dcp-modal-btn-negative {
+  background-color: #fff;
+  color: #444;
+  border: solid 1px gray;
+  margin: 0px 0.5em 0px 0.5em;
+
+}
+
 
 
 /**************************\
@@ -169,4 +184,18 @@
 .dcp-slide .dcp-modal-container,
 .dcp-slide .dcp-modal-overlay {
   will-change: transform;
+}
+
+.dcp-modal .dcp-modal-footer {
+  display: flex;
+}
+
+.dcp-modal .dcp-buttons-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.dcp-platform-win {
+  flex-direction: row-reverse;
 }
