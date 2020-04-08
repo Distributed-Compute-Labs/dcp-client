@@ -1,0 +1,29 @@
+/** @file       events.css
+ *              Support for events.html
+ *  @author     Wes Garland, wes@kingsds.network
+ *  @date       Aug 2019
+ */
+HTML, BODY {
+  font-family: Arial, Helvetica;
+  font-size: 16px;
+}
+
+DIV#pretty {
+  border: 1px solid #333;
+  width: 30em;
+  height: 30em;
+  display: flex;
+  margin: auto;
+  top: 1em;
+  right: 1em;
+  background: white;
+}
+
+DIV#pretty > DIV {
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
