@@ -12,7 +12,7 @@ const SCHEDULER_URLS =  new URL('https://scheduler.distributed.computer') ;
 async function main() {
   const compute = require('dcp/compute');
 
-  let job = compute.for(1, 2,
+  let job = compute.for(1, 10,
                       function(i) {
                         progress(0);
                         let sum = 0;
