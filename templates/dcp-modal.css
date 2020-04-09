@@ -62,8 +62,7 @@
 .dcp-modal-header .dcp-modal-close:before { content: "\2715"; }
 
 .dcp-modal-content {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
+  margin: 1rem 0;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
 }
@@ -71,7 +70,6 @@
 .dcp-modal-logo-link {
   display: block;
   position: relative;
-  bottom: 4px;
   width: 40px;
   height: 40px;
   background: url(../assets/dcp-logo.png);
@@ -115,6 +113,21 @@
 .dcp-modal-btn-primary {
   background-color: #444;
   color: #fff;
+}
+
+.dcp-modal-btn-positive {
+  background-color: #444;
+  color: #fff;
+  margin: 0px 0.5em 0px 0.5em;
+
+}
+
+.dcp-modal-btn-negative {
+  background-color: #fff;
+  color: #444;
+  border: solid 1px gray;
+  margin: 0px 0.5em 0px 0.5em;
+
 }
 
 
@@ -169,4 +182,22 @@
 .dcp-slide .dcp-modal-container,
 .dcp-slide .dcp-modal-overlay {
   will-change: transform;
+}
+
+.dcp-modal .dcp-modal-footer {
+  display: flex;
+}
+
+.dcp-modal .dcp-buttons-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.dcp-modal .dcp-platform-win  button[name="positive"] {
+  order: 0;
+}
+
+.dcp-modal .dcp-platform-win  button[name="negative"] {
+  order: 1;
 }
