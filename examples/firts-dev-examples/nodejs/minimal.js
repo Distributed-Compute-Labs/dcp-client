@@ -4,8 +4,6 @@
  *
  *            Sample NodeJS application showing how to deploy a minimal DCP job.
  * 
- *            To use DCP from NodeJS, you can install DCP Client from our GitLab repository
- *            with npm i git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git
  *            Note: You need to provide a folder '.dcp' in your home directory and put 
  *            your keystore file there. Then, rename it to default.keystore .
  * 
