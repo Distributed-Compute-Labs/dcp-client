@@ -1,5 +1,5 @@
 {
-    "name": "dcp-nodejs-test",
+    "name": "dcp-example-nodejs",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
