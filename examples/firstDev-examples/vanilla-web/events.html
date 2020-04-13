@@ -24,46 +24,51 @@
     let pretty = document.getElementById('pretty');
     
     job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
-                      function(colour) {
-                        progress(0);
-                        let sum = 0;
-                        for (let i =0; i < 10000000; i++) {
-                          sum += Math.random();
-                          progress(i/10000000);
-                        }
-                        return colour;
-                      })
+      function(colour) {
+        progress(0);
+        let sum = 0;
+        for (let i =0; i < 10000000; i++) {
+          sum += Math.random();
+          progress(i/10000000);
+        }
+        return colour;
+      }
+    )
               
     job.on('accepted',
-           function(ev) {
-             console.log(`job ${this.id} accepted by scheduler`);
-             el.innerHTML += `<li>Job accepted by scheduler, waiting for results`;
-             el.innerHTML += `<li>Job has id <tt>${this.id}</tt>`;
-             startTime = Date.now();
-           })
+      function(ev) {
+        console.log(`job ${this.id} accepted by scheduler`);
+        el.innerHTML += `<li>Job accepted by scheduler, waiting for results</li>`;
+        el.innerHTML += `<li>Job has id <tt>${this.id}</tt></li>`;
+        startTime = Date.now();
+      }
+    )
 
     job.on('complete',
-           function(ev) {
-             console.log('job finished running', ev);
-             el.innerHTML += `<li>Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s`;
-             pretty.style.backgroundColor = '';
-           })
+      function(ev) {
+        console.log('job finished running', ev);
+        el.innerHTML += `<li>Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s </li>`;
+        pretty.style.backgroundColor = '';
+      }
+    )
 
     job.on('readystatechange',
-           function(arg) {
-             if (this.id)
-               console.log(`job ${this.id} entered ready state ${arg}; is currently in ready state ${this.readyState}`);
-             else
-               console.log(`new job entered ready state ${arg}; is currently in ready state ${this.readyState}`);
-             rsl.innerHTML += '<li>' + arg;
-           })
+      function(arg) {
+        if (this.id)
+          console.log(`job ${this.id} entered ready state ${arg}; is currently in ready state ${this.readyState}`);
+        else
+          console.log(`new job entered ready state ${arg}; is currently in ready state ${this.readyState}`);
+        rsl.innerHTML += '<li>' + arg + '</li>';
+      }
+    )
            
     job.on('result',
-           function(ev) {
-             el.innerHTML += `<li>Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s`;
-             pretty.style.backgroundColor = ev.result;
-             console.log('received result', ev);
-           })
+      function(ev) {
+        el.innerHTML += `<li>Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s </li>`;
+        pretty.style.backgroundColor = ev.result;
+        console.log('received result', ev);
+      }
+    )
 
     job.public = {
       name: 'events example, vanilla-web',
@@ -71,7 +76,7 @@
       link: 'https://www.npmjs.com/package/dcp-client'
     }
     
-    el.innerHTML += '<li>Executing job<ul id="readyStateList">';
+    el.innerHTML += '<li>Executing job<ul id="readyStateList"> </li>';
     rsl = document.getElementById('readyStateList');
     await job.exec(compute.marketValue);
   }

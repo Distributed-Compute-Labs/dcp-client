@@ -12,40 +12,44 @@
  */
 
 
-const SCHEDULER_URLS =  new URL('https://scheduler.distributed.computer') ;
+const SCHEDULER_URL =  new URL('https://scheduler.distributed.computer') ;
 
 async function main() {
   const compute = require('dcp/compute');
   let job, results, startTime;
 
   job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
-                    function(colour) {
-                        progress(0);
-                        let sum = 0;
-                        for (let i =0; i < 10000000; i++) {
-                          progress(i / 10000000);
-                          sum += Math.random();
-                        }
-                      return colour
-                    })
+    function(colour) {
+        progress(0);
+        let sum = 0;
+        for (let i =0; i < 10000000; i++) {
+          progress(i / 10000000);
+          sum += Math.random();
+        }
+      return colour
+    }
+  )
 
   job.on('accepted',
-        function(ev) {
-          console.log(` - Job accepted by scheduler, waiting for results`);
-          console.log(` - Job has id ${this.id}`)
-          startTime = Date.now()
-        })
+    function(ev) {
+      console.log(` - Job accepted by scheduler, waiting for results`);
+      console.log(` - Job has id ${this.id}`)
+      startTime = Date.now()
+    }
+  )
 
   job.on('readystatechange',
-        function(arg) {
-        console.log(`new ready state: ${arg}`);
-        })
+    function(arg) {
+    console.log(`new ready state: ${arg}`);
+    }
+  )
 
   job.on('result',
-        function(ev) {
-          console.log(` - Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s`);
-          console.log(` * Wow! ${ev.result} is such a pretty colour!`);
-        })
+    function(ev) {
+      console.log(` - Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s`);
+      console.log(` * Wow! ${ev.result} is such a pretty colour!`);
+    }
+  )
 
   job.public.name = 'events example, nodejs';
   results = await job.exec(compute.marketValue);
@@ -54,4 +58,4 @@ async function main() {
   console.log(`Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s`);
 }
 
-require('dcp-client').init(SCHEDULER_URLS, true).then(main);
+require('dcp-client').init(SCHEDULER_URL, true).then(main);

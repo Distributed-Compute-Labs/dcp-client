@@ -16,15 +16,17 @@
   async function start() {
     const { compute } = dcp;
     let job = compute.for(1, 10,
-                          function(i) {
-                            progress(0);
-                            let sum = 0;
-                            for (let i =0; i < 10000000; i++) {
-                              sum += Math.random();
-                              progress(i/10000000);
-                            }
-                            return i*3
-                          })
+      function(i) {
+        progress(0);
+        let sum = 0;
+        for (let i =0; i < 10000000; i++) {
+          sum += Math.random();
+          progress(i/10000000);
+        }
+        return i*3
+      }
+    )
+    
     job.on('result',function(ev) {
       console.log('received result', ev.result);
     }) 
