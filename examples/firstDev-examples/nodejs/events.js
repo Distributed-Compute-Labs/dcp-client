@@ -4,11 +4,11 @@
  *              events describing the current state of the job, processing results
  *              as they are received, and so on.
  * 
- *              Note: You need to provide a folder '.dcp' in your home directory and put 
- *              your keystore file there. Then, rename it to default.keystore .
+ *              Note: Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *              When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  *
- * @author Wes Garland, wes@kingsds.network
- * @date   Aug 2019, April 2020
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2019, April 2020
  */
 
 
