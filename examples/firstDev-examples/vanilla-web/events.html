@@ -76,7 +76,7 @@
       link: 'https://www.npmjs.com/package/dcp-client'
     }
     
-    el.innerHTML += '<li>Executing job<ul id="readyStateList"> </li>';
+    el.innerHTML += '<li>Executing job<ul id="readyStateList"></ul></li>';
     rsl = document.getElementById('readyStateList');
     await job.exec(compute.marketValue);
   }
