@@ -25,7 +25,7 @@ Note: Options will be cached as future invocations' defaults.
 EOHELP
 }
 
-BUNDLE_TMP="`mktemp -d --suffix=.dcpClientBuild`"
+BUNDLE_TMP="`mktemp -dt XXXXX.dcpClient`"
 [ "$DEBUG_BUNDLE" ] || trap "rm -rf \"${BUNDLE_TMP}\"" EXIT
 
 if [ "$1" ] && [ -d "$1" ]; then

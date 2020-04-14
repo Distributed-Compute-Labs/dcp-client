@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- @file      events.html
+  -
+  -  Sample web page showing how to deploy a DCP job whilst receiving
+  -  events describing the current state of the job, processing results
+  -  as they are received, and so on.
+  - 
+  -  https://jsfiddle.net/KingsDistributedSystems/58e6up4b/
+  -
+  -  @author Wes Garland, wes@kingsds.network
+  -  @date   Aug 2019, April 2020
+  -
+  -->
+<head version='1c1e62d32e1b6da4ced32b7d0e7ff9180abc21fb'><meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="./events.css">
+<script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+<script>
+  async function start() {
+    const { compute } = dcp;
+    let job, results, startTime;
+
+    let el = document.getElementById('eventList');
+    let pretty = document.getElementById('pretty');
+    
+    job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
+      function(colour) {
+        progress(0);
+        let sum = 0;
+        for (let i =0; i < 10000000; i++) {
+          sum += Math.random();
+          progress(i/10000000);
+        }
+        return colour;
+      }
+    )
+              
+    job.on('accepted',
+      function(ev) {
+        console.log(`job ${this.id} accepted by scheduler`);
+        el.innerHTML += `<li>Job accepted by scheduler, waiting for results</li>`;
+        el.innerHTML += `<li>Job has id <tt>${this.id}</tt></li>`;
+        startTime = Date.now();
+      }
+    )
+
+    job.on('complete',
+      function(ev) {
+        console.log('job finished running', ev);
+        el.innerHTML += `<li>Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s </li>`;
+        pretty.style.backgroundColor = '';
+      }
+    )
+
+    job.on('readystatechange',
+      function(arg) {
+        if (this.id)
+          console.log(`job ${this.id} entered ready state ${arg}; is currently in ready state ${this.readyState}`);
+        else
+          console.log(`new job entered ready state ${arg}; is currently in ready state ${this.readyState}`);
+        rsl.innerHTML += '<li>' + arg + '</li>';
+      }
+    )
+           
+    job.on('result',
+      function(ev) {
+        el.innerHTML += `<li>Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s </li>`;
+        pretty.style.backgroundColor = ev.result;
+        console.log('received result', ev);
+      }
+    )
+
+    job.public = {
+      name: 'events example, vanilla-web',
+      description: 'dcp-client sample code examples/vanilla-web/events.html',
+      link: 'https://www.npmjs.com/package/dcp-client'
+    }
+    
+    el.innerHTML += '<li>Executing job<ul id="readyStateList"></ul></li>';
+    rsl = document.getElementById('readyStateList');
+    await job.exec(compute.marketValue);
+  }
+</script>
+</head>
+<body onload="start()">
+  <h2>This is a vanilla web dcp-client example which uses events.</h2>
+  <div style="width: 100%;">
+    <div id="pretty"><div>ooooh, pretty!</div></div>
+  </div>
+  <div id="eventDiv">
+    <ul id="eventList"></ul>
+  </div>
+</body>
+</html>
