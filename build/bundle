@@ -1,11 +1,14 @@
 #! /bin/bash
 #
-# @file         build.sh        Rebuild the dcp-client bundle
+# @file         build.sh        Rebuild the dcp-client bundle without affecting
+#				the intermediate files in the dcp repo.
+#
 #                               Usage: build/bundle.sh <path to dcp repo>
-# @author       Wes Garland, wes@kingsds.network
-# @date         Mar 2020
+#
+# @author Wes Garland, wes@kingsds.network @date Mar 2020
 #
 
+# portable implementation of linux realpath
 realpath()
 {
   (
@@ -40,6 +43,7 @@ Note: Options will be cached as future invocations' defaults.
 EOHELP
 }
 
+# Main program entry point
 BUNDLE_TMP="`mktemp -dt XXXXX.dcpClient`"
 [ "$DEBUG_BUNDLE" ] || trap "rm -rf \"${BUNDLE_TMP}\"" EXIT
 
@@ -87,7 +91,7 @@ while getopts "dh-:" OPTION; do
       DEBUG_BUNDLE=1
       ;;
     build)
-      echo "Setting DCP build type to ${OPTARG}"
+      [ "$DCP_BUILD" != "$OPTARGS" ] && echo "Setting DCP build type to ${OPTARG}"
       DCP_BUILD="${OPTARG}"
       ;;
     *)
@@ -119,7 +123,7 @@ EOF
 # Create staging folder so we don't make changes in dcp repo dist
 BUNDLE_TMP="`mktemp -d -t XXXXX.dcpClientBuild`"
 [ "$DEBUG_BUNDLE" ] || trap "rm -rf \"${BUNDLE_TMP}\"" EXIT
-[ "$DEBUG_BUNDLE" ] && trap "echo 'Debug Mode: left \"$BUNDLE_TMP\" behind.'"
+[ "$DEBUG_BUNDLE" ] && trap "echo 'Debug Mode: left \"$BUNDLE_TMP\" behind.'" EXIT
 mkdir -p "${BUNDLE_TMP}/dist" || exit $?
 
 # Write install.sh override files
@@ -141,18 +145,21 @@ EOJS
 
 SKIP_SUDO_CHECK=1 DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl" "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} dcp-client
 
-[ "$?" = "0" ] || exit 3
+EXIT_CODE="$?"
+if [ "$EXIT_CODE" != "0" ]; then
+  echo "Error: ${DCP_SRC}/install.sh failed with code $EXIT_CODE. Stop." >&2
+  exit 3
+fi
 
 echo
 echo "Importing DCP Client Bundle"
 cd "${myDir}/.."
 [ "$?" = "0" ] || exit 4
 [ "${DEBUG}" ] || [ "${BUNDLE_DEBUG}" ] && find "${BUNDLE_TMP}" -ls
-exit 0
+
+# Copy all generated files tracked by the repo into this repo
 git ls-tree --full-tree -r --name-only HEAD dist |\
-mkdir /tmp/q
-cp -rp ${BUNDLE_TMP} /tmp/q
-(cd "${BUNDLE_TMP}/node_modules/dcp-client/" && tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
+(cd "${BUNDLE_TMP}" && tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
 STATUS=$?
 echo "Done."
 exit $STATUS
