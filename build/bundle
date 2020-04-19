@@ -128,6 +128,7 @@ mkdir -p "${BUNDLE_TMP}/dist" || exit $?
 
 # Write install.sh override files
 cat > "${BUNDLE_TMP}/local-config.incl" <<EOF
+echo " . Loading DCP local-config extras for dcp-client build/bundle" >&2
 SRC_DIR="${DCP_SRC}"
 DCP_ROOT="${BUNDLE_TMP}"
 BUILD="${DCP_BUILD}"
@@ -148,9 +149,9 @@ if [ ! -d "${DCP_SRC}/node_modules" ]; then
   exit 97
 fi
 
-NO_LOG=1\
-SKIP_SUDO_CHECK=1\
-DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl"\
+NO_LOG=1 \
+SKIP_SUDO_CHECK=1 \
+DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl" \
   "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} dcp-client
 
 EXIT_CODE="$?"
