@@ -3,6 +3,9 @@
   "version": "3.0.0",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
+  "scripts": {
+    "build": "./build/bundle"
+  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
@@ -16,6 +19,7 @@
   "dependencies": {
     "chalk": "^2.4.2",
     "ethereumjs-util": "^6.2.0",
+    "ethereumjs-wallet": "^0.6.3",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "md5": "^2.2.1",
