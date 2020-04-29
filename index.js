@@ -114,6 +114,9 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
  *
  * @param       id              {string}        module identifier
  * @param       moduleExports   {object}        the module's exports object
+ * @param       clobber         {boolean}       inject on top of an existing module identifier
+ *                                              if there is a collsion.
+ * @throw Error if there is a collision and clobber is not truey.
  */
 function injectModule(id, moduleExports, clobber) {
   if (!clobber && typeof moduleSystem._cache[id] !== 'undefined')
@@ -423,6 +426,17 @@ exports.init = async function dcpClient$$init() {
     bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
     injectModule('dcp/dcp-config', global.dcpConfig, true)
   }
+
+  Object.defineProperty(exports, 'distDir', {
+    value: function dcpClient$$distDir$getter() {
+      return distDir;
+    },
+    configurable: false,
+    writable: false,
+    enumerable: false
+  })
+
+  injectModule('dcp/client', exports);
 
   return bundleSandbox.dcpConfig
 }
