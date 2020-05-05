@@ -38,6 +38,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     "dcp-events",
     "eth",
     "wallet",
+    "protocol",
     "protocol-v4",
     "bank-util",
     "compute",
