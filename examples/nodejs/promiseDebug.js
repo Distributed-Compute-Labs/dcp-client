@@ -4,7 +4,7 @@
  *  A module to make promises a bit easier to debug on Node.js.
  *  This module is disabled when any of these conditions are true:
  *   - bluebird not installed
- *   - process.env.DCP_PROMISE_DEBUG is not "falsey"
+ *   - process.env.DCP_PROMISE_DEBUG is "falsey"
  *
  *   This module needs to be initialized from any Promise-use module
  *   whose promises we need to intercept.  Typical initialization:

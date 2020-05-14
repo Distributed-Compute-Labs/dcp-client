@@ -52,8 +52,8 @@ async function main() {
 
   let ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
   job.setPaymentAccountKeystore(ks);
-  await job.exec(compute.marketValue)
-  console.log(results)
+  results = await job.exec(compute.marketValue)
+  console.log('results=', Array.from(results));
 }
 
 require('dcp-client').init().then(main).finally(() => setImmediate(process.exit))
