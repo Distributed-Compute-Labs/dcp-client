@@ -1,3 +1,4 @@
+
 /**
  * @file        index.js
  *              NodeJS entry point for the dcp-client package.
@@ -16,25 +17,24 @@
 exports.debug = false
 
 function debugging(what) {
-  const debugSyms = [exports.debug || '', process.env.DCP_CLIENT_DEBUG].join(',')
+  const debugSyms = []
+        .concat((exports.debug || '').split(','))
+        .concat((process.env.DCP_CLIENT_DEBUG || '').split(','))
+        .filter((a) => !!a);
   
-  if (debugging.cache[what] === debugSyms)
-     return debugging.cache[what] || false;
+  if (typeof debugging.cache[what] === 'boolean') /* cache hit */
+    return debugging.cache[what];
 
-  if (typeof debugSyms === 'boolean')
-    return (debugging.cache[what] = debugSyms);
-
-  if (!debugSyms)
-    return (debugging.cache[what] = false);
-
-  switch(debugSyms) {
-    case '*':
-    case 'dcp-client':
-    case 'verbose':
-      return (debugging.cache[what] = true);
+  if (-1 !== debugSyms.indexOf('*') ||
+      -1 !== debugSyms.indexOf(what) ||
+      -1 !== debugSyms.indexOf('dcp-client') ||
+      -1 !== debugSyms.indexOf('verbose')) {
+    debugging.cache[what] = true;
+  } else {
+    debugging.cache[what] = false;
   }
 
-  return !!(debugging.cache[what] = (what ? debugSyms.match('\\b' + what + '(\\b|,)') : exports.debug))
+  return debugging.cache[what];
 }
 debugging.cache = {}
 
@@ -128,6 +128,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
   injectedModules[id] = true
+
   debugging('modules') && console.log(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
@@ -144,7 +145,6 @@ for (let moduleId in nsMap) {
   let moduleExports = bundle[nsMap[moduleId]]
   if (!moduleExports)
     throw new Error(`Bundle is missing exports for module ${moduleId}`)
-
   injectModule(moduleId, moduleExports)
 }
 
