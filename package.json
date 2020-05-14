@@ -1,8 +1,11 @@
 {
   "name": "dcp-client",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
+  "scripts": {
+    "build": "./build/bundle"
+  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
@@ -17,12 +20,13 @@
     "@dolsem/node-inspect": "^1.11.6",
     "chalk": "^2.4.2",
     "ethereumjs-util": "^6.2.0",
+    "ethereumjs-wallet": "^0.6.3",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
     "node-localstorage": "^2.1.5",
-    "password-prompt": "git+https://github.com/wesgarland/password-prompt.git",
+    "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "xmlhttprequest-ssl": "https://github.com/wesgarland/node-XMLHttpRequest.git#b9fedb035e7a3850d31391a6b6cdcf6d0f340d15",
     "yargs": "^15.3.1"
