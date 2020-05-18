@@ -25,15 +25,17 @@
     "html-to-text": "^5.1.1",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
+    "niim": "^1.11.6-i",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
     "xmlhttprequest-ssl": "https://github.com/wesgarland/node-XMLHttpRequest.git#b9fedb035e7a3850d31391a6b6cdcf6d0f340d15",
     "yargs": "^15.3.1"
   },
   "devDependencies": {
     "@babel/core": "^7.8.7",
-    "babel-loader": "^8.0.6",
-    "webpack": "^4.41.0"
+    "babel-loader": "^8.0.6"
   }
 }
