@@ -13,7 +13,8 @@
  * @author      Wes Garland, wes@kingsds.network
  * @date        July 2019
  */
-exports.debug = false
+exports.debug = false;
+let initFinish = false;
 
 function debugging(what) {
   const debugSyms = [exports.debug || '', process.env.DCP_CLIENT_DEBUG].join(',')
@@ -105,8 +106,12 @@ function loadBootstrapBundle() {
 const injectedModules = {}
 const resolveFilenamePrevious = moduleSystem._resolveFilename;
 moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilenameShim(moduleIdentifier) { 
-  if (injectedModules.hasOwnProperty(moduleIdentifier))
+  if (injectedModules.hasOwnProperty(moduleIdentifier)) {
+    if (!initFinish){
+      if( moduleIdentifier === 'dcp/compute') throw new Error(`module ${moduleIdentifier} cannot be required until the dcp-client::init() promise has been resolved.`);
+    }
     return moduleIdentifier;
+  }
   return resolveFilenamePrevious.apply(null, arguments)
 }
 /** 
@@ -423,7 +428,7 @@ exports.init = async function dcpClient$$init() {
     bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
     injectModule('dcp/dcp-config', global.dcpConfig, true)
   }
-
+  initFinish = true;
   return bundleSandbox.dcpConfig
 }
 
