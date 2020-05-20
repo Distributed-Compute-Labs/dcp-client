@@ -42,5 +42,6 @@ module.declare([], function $$nsMap(require, exports, module) {
     "protocol-v4",
     "bank-util",
     "compute",
+    "worker",
   ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
 }); /* end of module */
