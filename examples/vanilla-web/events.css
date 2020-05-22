@@ -12,7 +12,8 @@ DIV#pretty {
   border: 1px solid #333;
   width: 30em;
   height: 30em;
-  position: fixed;
+  display: flex;
+  margin: auto;
   top: 1em;
   right: 1em;
   background: white;
