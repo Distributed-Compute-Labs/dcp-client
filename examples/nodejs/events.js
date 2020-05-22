@@ -1,19 +1,19 @@
+#! /usr/bin/env node
 /**
  * @file        events.js
  *              Sample node application showing how to deploy a DCP job whilst receiving
  *              events describing the current state of the job, processing results
  *              as they are received, and so on.
- * 
+ *
  *              Note: Your keystore should be placed in your home directory in .dcp/default.keystore.
  *              When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        Aug 2019, April 2020
  */
-
-
 const SCHEDULER_URL =  new URL('https://scheduler.distributed.computer') ;
 
+/** Main program entry point */
 async function main() {
   const compute = require('dcp/compute');
   let job, results, startTime;
@@ -54,8 +54,9 @@ async function main() {
   job.public.name = 'events example, nodejs';
   results = await job.exec(compute.marketValue);
   results = await results.values();
-  
+
   console.log(`Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s`);
 }
 
+/* Initialize DCP Client and run main() */
 require('dcp-client').init(SCHEDULER_URL, true).then(main);
