@@ -77,7 +77,7 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
     if (olFlag)
       code = '(' + code + ')'
   } catch(e) {
-    debugging() && console.log('evalScriptInSandbox Error:', e.message);
+    debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
       return {}
     throw e
@@ -130,7 +130,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
   injectedModules[id] = true
-  debugging('modules') && console.log(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
+  debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
 injectModule('dcp/env-native', { platform: 'nodejs' })
@@ -141,7 +141,7 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
 
-debugging('modules') && console.log('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
+debugging('modules') && console.debug('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 for (let moduleId in nsMap) {
   let moduleExports = bundle[nsMap[moduleId]]
   if (!moduleExports)
@@ -159,7 +159,7 @@ for (let moduleId in nsMap) {
  *                              the response included html content (eg a 404 page), it is 
  *                              rendered to text in this string.
  */
-function justFetchPrettyError(error, useChalk) {
+exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, useChalk) {
   let chalk, message, headers={}
 
   if (!error.request || !error.request.status)
@@ -369,15 +369,15 @@ exports.init = async function dcpClient$$init() {
     addConfig(dcpConfig, userConfig) 
 
   /* 5 */
-  debugging() && console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
+  debugging() && console.debug(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
   if (!testHarnessMode) {
     try {
       remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
       if (remoteConfigCode.length === 0)
         throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
     } catch(e) {
-      debugging() && console.log(justFetchPrettyError(e))
-      throw new Error(justFetchPrettyError(e, false))
+      debugging() && console.error(exports.justFetchPrettyError(e))
+      throw new Error(exports.justFetchPrettyError(e, false))
     }
   }
 
@@ -397,11 +397,11 @@ exports.init = async function dcpClient$$init() {
   /* 7 */
   if (!testHarnessMode && dcpConfig.bundle.autoUpdate && dcpConfig.bundle.location) {
     try {
-      debugging() && console.log(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
+      debugging() && console.debug(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
       finalBundleCode = await require('dcp/protocol').justFetch(dcpConfig.bundle.location.href)
     } catch(e) {
-      debugging() && console.log(justFetchPrettyError(e))
-      throw new Error(justFetchPrettyError(e, false))
+      debugging() && console.error(exports.justFetchPrettyError(e))
+      throw new Error(exports.justFetchPrettyError(e, false))
     }
   }
     
@@ -413,7 +413,7 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_SCHEDULER_LOCATION)
     userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
   /* 9 */
-  debugging('modules') && console.log('Begin phase 2 module injection');
+  debugging('modules') && console.debug('Begin phase 2 module injection');
   Object.entries(bundle).forEach(entry => {
     let [id, moduleExports] = entry
     if (id !== 'dcp-config') {
@@ -423,7 +423,7 @@ exports.init = async function dcpClient$$init() {
 
   addConfig(dcpConfig, require('dcp/dcp-config'))
   if (global.dcpConfig) {
-    debugging() && console.log('Dropping bundle dcp-config in favour of global dcpConfig')
+    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(nsMap['dcp/dcp-config'], global.dcpConfig) /* in case anybody has internal references - should props be proxies? /wg nov 2019 */
     bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
     injectModule('dcp/dcp-config', global.dcpConfig, true)
@@ -443,6 +443,7 @@ exports.initcb = require('./init-common').initcb
  * @param       ...             Arguments to pass to init()
  *
  * @note This is an unofficial API and is subject to change without notice.
+ * @note This is also used by bin/dcp-net in support of exports.initSync().
  */
 exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*, ... */) { 
   let argv = Array.from(arguments)
