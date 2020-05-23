@@ -1,0 +1,34 @@
+#! /usr/bin/env node
+/**
+ * @file        download        Program to download a URL and send it to stdout.  Used to implement
+ *                              dcp-client's initSync() method.
+ *
+ * @author      Wes Garland, wes@kingsds.netework
+ * @date        May 2020
+ */
+async function main(argv) {
+  var data;
+  var url;
+
+  for (let i=0; i < argv.length; i++) {
+    if (argv[i] === '--quiet') {
+      argv.splice(i--,1);
+      console.log = console.debug = function(){};
+    }
+  }
+  url = argv[argv.length - 1];
+  
+  const dcpClient = require('..');
+  dcpClient._initForTestHarness();
+
+  try {
+    data = await require('dcp/protocol').justFetch(url);
+    process.stdout.write(data);
+  } catch(e) {
+    console.error(dcpClient.justFetchPrettyError(e))
+    process.exit(1);
+  }
+}
+
+
+main.call(null, process.argv.slice(1)).finally(() => setImmediate(process.exit));
