@@ -98,20 +98,33 @@ let { compute } = require('dcp-client').init(URL('https://scheduler.distributed.
 ### Additional Functionality
 In addition to exporting the key APIs, when running dcp-client from NodeJS, the following modules are automatically injected into the NodeJS module memo, so that they can be used in `require()` statements:
 
-Module              | Description 
-:------------------ | :----------------
-dcp/compute         | The Compute API
-dcp/wallet          | The Wallet API
-dcp/build           | Object containing version information, etc. of the running bundle
-dcp/dcp-config      | The running configuration object (result of merging various options to `init()`)
-dcp/protocol        | The underlying protocol implementation
-dcp/bootstrap-build | Same as dcp/build, but for the version that loaded the running bundle
-dcp/xhr             | An implementation of XMLHttpRequest which understands http, https, and keepalive using the W3C API
-dcp/url             | An implementation of the W3C URL class that also adds a resolve() method like NodeJS's implementation
-dcp/eth             | A helper library for working with PrivateKey and Address objects (used by Wallet API)
-dcp/serialize       | A space-efficient serialization library which understands recursive object graphs, Typed Arrays, sparse Arrays, and more.
+Module         | Description 
+:------------- | :----------------
+dcp/compute    | The Compute API
+dcp/dcp-build  | Object containing version information, etc. of the running bundle
+dcp/dcp-cli    | Provides a standard set of DCP cli options and related utility functions via yargs
+dcp/dcp-events | Provides classes related to cross-platform event emitting
+dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
+dcp/wallet     | The Wallet API
+dcp/worker     | The Worker API
 
 ## Working with DCP-Client
+
+### General Use
+
+**Node** - After calling `init` (see examples below), modules can be `require`d using the module name that follows the initial `dcp/`.
+
+```javascript
+await require('dcp-events').init;
+const { EventEmitter } = require('dcp-events');
+```
+
+**Web** - After the `dcp-client` script tag is loaded (see examples below), modules are available as properties of a global `dcp` symbol.
+
+```javascript
+const { EventEmitter } = dcp['dcp-events'];
+```
+
 ### examples/bravojs
 The examples in this directory shows how to use DCP from a web page using the BravoJS module system and no special web server. The usage is virtually identical to NodeJS, except that your web page must include a *main module* which is a SCRIPT tag with a `module.declare` declaration.
 
