@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.0.3-a",
+  "version": "3.0.3-b",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
   "scripts": {
