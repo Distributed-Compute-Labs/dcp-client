@@ -14,7 +14,7 @@
  * @date        July 2019
  */
 exports.debug = false;
-let initFinish = false;
+let initFinish = false; /* flag to help us detect use of Compute API before init promise resolves */
 
 function debugging(what) {
   const debugSyms = [exports.debug || '', process.env.DCP_CLIENT_DEBUG].join(',')
@@ -40,6 +40,7 @@ function debugging(what) {
 debugging.cache = {}
 
 const _initForTestHarnessSymbol = {}
+const _initForSyncSymbol = {};
 const path = require('path')
 const fs = require('fs')
 const distDir = path.resolve(path.dirname(module.filename), 'dist')
@@ -77,7 +78,7 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
     if (olFlag)
       code = '(' + code + ')'
   } catch(e) {
-    debugging() && console.log('evalScriptInSandbox Error:', e.message);
+    debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
       return {}
     throw e
@@ -86,9 +87,25 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
   return require('vm').runInContext(code, context, filename, 0) // eslint-disable-line
 }
 
+/** Evaluate code in a secure sandbox; in this case, the code is the configuration
+ *  file, and the sandbox is a special container with limited objects that we setup
+ *  during config file processing.
+ *
+ *  @param      code     {string}        The code to eval
+ *  @param      context  {object}        An object that has been initialized as a context
+ *                                       that will act like the context's global object
+ *  @param      filename {string}        The name of the file we're evaluating for stack-
+ *                                       trace purposes.
+ */
 function evalStringInSandbox(code, sandbox, filename) {
+  var _initFinish = initFinish;
   var context = require('vm').createContext(sandbox)
-  return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
+  var ret
+
+  initFinish = true; /* Allow us to eval require("dcp/compute"); from config */
+  ret = require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
+  initFinish = _initFinish;
+  return ret;
 }
 
 /** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch.
@@ -130,7 +147,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
   injectedModules[id] = true
-  debugging('modules') && console.log(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
+  debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
 injectModule('dcp/env-native', { platform: 'nodejs' })
@@ -141,7 +158,7 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 let bundle = loadBootstrapBundle()
 let nsMap = require('./ns-map')
 
-debugging('modules') && console.log('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
+debugging('modules') && console.debug('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 for (let moduleId in nsMap) {
   let moduleExports = bundle[nsMap[moduleId]]
   if (!moduleExports)
@@ -159,14 +176,14 @@ for (let moduleId in nsMap) {
  *                              the response included html content (eg a 404 page), it is 
  *                              rendered to text in this string.
  */
-function justFetchPrettyError(error, useChalk) {
+exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, useChalk) {
   let chalk, message, headers={}
 
   if (!error.request || !error.request.status)
     return error.message
 
   if (typeof useChalk === 'undefined')
-    useChalk = require('tty').isatty(0)
+    useChalk = require('tty').isatty(0) || process.env.FORCE_COLOR;
   chalk = new require('chalk').constructor({enabled: useChalk})
 
   error.request.getAllResponseHeaders().replace(/\r/g,'').split('\n').forEach(function(line) {
@@ -276,14 +293,15 @@ exports.init = async function dcpClient$$init() {
  *  9 - re-export the modules from the new bundle
  */
   let dcpConfig = require('dcp/dcp-config')
-  let remoteConfigCode
+  let remoteConfigCode = false;
   let finalBundleCode
   let userConfig = { scheduler: {}, bundle: {} }
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
   let URL = require('dcp/dcp-url').URL
   let testHarnessMode = false
-
+  let initSyncMode = false;
+  
   if (arguments[0] === _initForTestHarnessSymbol) {
     /* Disable homedir config, remote code/config download in test harness mode */
     arguments = Array.from(arguments)
@@ -293,13 +311,17 @@ exports.init = async function dcpClient$$init() {
     }
     testHarnessMode = true
     homedirConfigPath = process.env["DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH"]
+  } else if (arguments[0] === _initForSyncSymbol) {
+    initSyncMode = true;
+    arguments = Array.from(arguments);
+    arguments.shift();
   }
-
+  
   /* Fix all future files containing new URL() to use our class */
   bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(dcpConfig)
-  
+
   /* 1 */
   if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
     let code
@@ -369,22 +391,26 @@ exports.init = async function dcpClient$$init() {
     addConfig(dcpConfig, userConfig) 
 
   /* 5 */
-  debugging() && console.log(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
-  if (!testHarnessMode) {
+  if (!testHarnessMode && !initSyncMode) {
     try {
+      debugging() && console.debug(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
       remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
-      if (remoteConfigCode.length === 0)
-        throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
     } catch(e) {
-      debugging() && console.log(justFetchPrettyError(e))
-      throw new Error(justFetchPrettyError(e, false))
+      debugging() && console.error(exports.justFetchPrettyError(e))
+      throw new Error(exports.justFetchPrettyError(e, false))
     }
+  } else if (initSyncMode) {
+    debugging() && console.debug(` * Blocking while loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
+    remoteConfigCode = fetchSync(dcpConfig.scheduler.configLocation);
   }
+  if (remoteConfigCode !== false && remoteConfigCode.length === 0)
+    throw new Error('Configuration is empty at ' + dcpConfig.scheduler.configLocation.href)
 
   /* 6 */
   bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
   bundleSandbox.window = bundleSandbox
-  addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation))
+  if (remoteConfigCode)
+    addConfig(dcpConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, dcpConfig.scheduler.configLocation));
   addConfig(dcpConfig, bundleSandbox.dcpConfig, true)
   bundleSandbox.dcpConfig = dcpConfig /* assigning window.dcpConfig in remoteConfigCoode creates a new
                                          dcpConfig in the bundle - put it back */
@@ -396,15 +422,20 @@ exports.init = async function dcpClient$$init() {
 
   /* 7 */
   if (!testHarnessMode && dcpConfig.bundle.autoUpdate && dcpConfig.bundle.location) {
-    try {
-      debugging() && console.log(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
-      finalBundleCode = await require('dcp/protocol').justFetch(dcpConfig.bundle.location.href)
-    } catch(e) {
-      debugging() && console.log(justFetchPrettyError(e))
-      throw new Error(justFetchPrettyError(e, false))
+    if (initSyncMode) {
+      debugging() && console.debug(` * Blocking to load autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
+      finaleBundleCode = fetchSync(dcpConfig.bundle.location.href);
+    } else {
+      try {
+        debugging() && console.debug(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
+        finalBundleCode = await require('dcp/protocol').justFetch(dcpConfig.bundle.location.href);
+      } catch(e) {
+        debugging() && console.error(exports.justFetchPrettyError(e));
+        throw new Error(exports.justFetchPrettyError(e, false));
+      }
     }
   }
-    
+
   /* 8 */
   if (finalBundleCode)
     bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, dcpConfig.bundle.location.href)
@@ -413,7 +444,7 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_SCHEDULER_LOCATION)
     userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
   /* 9 */
-  debugging('modules') && console.log('Begin phase 2 module injection');
+  debugging('modules') && console.debug('Begin phase 2 module injection');
   Object.entries(bundle).forEach(entry => {
     let [id, moduleExports] = entry
     if (id !== 'dcp-config') {
@@ -423,19 +454,20 @@ exports.init = async function dcpClient$$init() {
 
   addConfig(dcpConfig, require('dcp/dcp-config'))
   if (global.dcpConfig) {
-    debugging() && console.log('Dropping bundle dcp-config in favour of global dcpConfig')
+    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(nsMap['dcp/dcp-config'], global.dcpConfig) /* in case anybody has internal references - should props be proxies? /wg nov 2019 */
     bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
     injectModule('dcp/dcp-config', global.dcpConfig, true)
   }
+
   initFinish = true;
-  return bundleSandbox.dcpConfig
+  return makeInitReturnObject();
 }
 
 exports.initcb = require('./init-common').initcb
 
 /**
- * Sync version of dcp-client.init() - intended primarily for test harnesses.
+ * Sync version of dcp-client.init() - intended only for test harnesses.
  * This function does not download the configuration object from the scheduler,
  * nor does it check for remote bundle updates.
  *
@@ -448,4 +480,65 @@ exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*,
   let argv = Array.from(arguments)
   argv.unshift(_initForTestHarnessSymbol)
   exports.init.apply(null, argv)
+}
+
+/**
+ * Sync version of dcp-client.init().
+ *
+ * @returns dcpConfig
+ */
+exports.initSync = function dcpClient$$initSync() {
+  let argv = Array.from(arguments);
+  argv.unshift(_initForSyncSymbol);
+  exports.init.apply(null, argv);
+
+  return makeInitReturnObject();
+}
+
+/** Fetch a web resource from the server, blocking the event loop. Used by initSync() to
+ *  fetch the remote scheduler's configuration and optionally its autoUpdate bundle. The
+ *  download program displays HTTP-level errors on stderr, so we simply inhert and let it
+ *  push the detailed error reporting to the user.
+ *
+ *  @param      url     {string | instance of dcp/dcp-url.URL}          The URL to fetch; http and https are supported.
+ *  @returns    {string} containing the result body.
+ *
+ *  @throws if there was an error, including HTTP 404 etc.
+ */
+function fetchSync(url) {
+  const child_process = require('child_process');
+  var child;
+  var args = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
+  var output = '';
+  var env = { FORCE_COLOR: 1 };
+  
+  if (typeof url !== 'string')
+    url = url.href;
+  args.push(url);
+
+  child = child_process.spawnSync(args[0], args.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  if (child.status !== 0)
+    throw new Error(`Child process returned exit code ${child.status}`);
+
+  return child.stdout.toString('utf-8');
+}
+
+/** Factory function which returns an object which is all of the dcp/ modules exported into
+ *  node's module space via the namespace-mapping (ns-map) module. These all original within
+ *  the dcp-client bundle in dist/, or the remote scheduler's bundle if autoUpdate was enabled.
+ *
+ *  This is the return value from initSync() and the promise resolution value for init().
+ */
+function makeInitReturnObject() {
+  var o = {};
+  var nsMap = require('./ns-map');
+  
+  for (let moduleIdentifier in nsMap) {
+    if (!nsMap.hasOwnProperty(moduleIdentifier))
+      continue;
+    if (moduleIdentifier.startsWith('dcp/'))
+      o[moduleIdentifier.slice(4)] = require(moduleIdentifier);
+  }
+
+  return o;
 }
