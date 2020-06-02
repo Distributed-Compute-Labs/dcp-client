@@ -120,7 +120,7 @@ function loadBootstrapBundle() {
   return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
-const injectedModules = {}
+const injectedModules = {};
 const resolveFilenamePrevious = moduleSystem._resolveFilename;
 moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilenameShim(moduleIdentifier) { 
   if (injectedModules.hasOwnProperty(moduleIdentifier)) {
@@ -149,7 +149,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].exports = moduleExports
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
-  injectedModules[id] = true
+  injectedModules[id] = true;
   debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
@@ -486,19 +486,15 @@ exports.initcb = require('./init-common').initcb
  *
  * @note This is an unofficial API and is subject to change without notice.
  */
-exports._initForTestHarness = function dcpClient$$_initForTestHarness(pathToDcpBin, /* ... */) { 
-  const child_process = require('child_process');
-  var child;
-  var childArgv = [ process.execPath, require('path').resolve(pathToDcpBin, 'get-config-value.js'), '--all' ];
-  var initArgv = Array.from(arguments);
-
-  child = child_process.spawnSync(childArgv[0], childArgv.slice(1), { shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
-  if (child.status !== 0)
-    throw new Error(`Child process returned exit code ${child.status}`);
-  config = eval('(' + child.stdout.toString('utf-8') + ')');
-  global.dcpConfig = require('dcp/config').load(config || {});
-  initArgv[0]=_initForTestHarnessSymbol;
-  exports.init.apply(null, initArgv);
+exports._initForTestHarness = function dcpClient$$_initForTestHarness(dcpConfig) {
+  var dcp;
+  
+  exports.init(_initForTestHarnessSymbol);
+  dcp = makeInitReturnObject();
+  function setConfig(dcpConfig) {
+    injectModule('dcp/dcp-config', dcpConfig, true);
+  }
+  return { dcp, setConfig };
 }
 
 /**
@@ -509,6 +505,7 @@ exports._initForTestHarness = function dcpClient$$_initForTestHarness(pathToDcpB
 exports.initSync = function dcpClient$$initSync() {
   let argv = Array.from(arguments);
   argv.unshift(_initForSyncSymbol);
+  initFinish = true;
   exports.init.apply(null, argv);
 
   return makeInitReturnObject();
@@ -551,7 +548,7 @@ function fetchSync(url) {
 function makeInitReturnObject() {
   var o = {};
   var nsMap = require('./ns-map');
-  
+
   for (let moduleIdentifier in nsMap) {
     if (!nsMap.hasOwnProperty(moduleIdentifier))
       continue;
