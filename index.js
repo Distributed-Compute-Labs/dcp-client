@@ -484,15 +484,21 @@ exports.initcb = require('./init-common').initcb
  * This function does not download the configuration object from the scheduler,
  * nor does it check for remote bundle updates.
  *
- * @param       config          The dcpConfig object which is normally downloaded from the scheduler
- * @param       ...             Arguments to pass to init()
- *
  * @note This is an unofficial API and is subject to change without notice.
  */
-exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*, ... */) { 
-  let argv = Array.from(arguments)
-  argv.unshift(_initForTestHarnessSymbol)
-  exports.init.apply(null, argv)
+exports._initForTestHarness = function dcpClient$$_initForTestHarness(pathToDcpBin, /* ... */) { 
+  const child_process = require('child_process');
+  var child;
+  var childArgv = [ process.execPath, require('path').resolve(pathToDcpBin, 'get-config-value.js'), '--all' ];
+  var initArgv = Array.from(arguments);
+
+  child = child_process.spawnSync(childArgv[0], childArgv.slice(1), { shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  if (child.status !== 0)
+    throw new Error(`Child process returned exit code ${child.status}`);
+  config = eval('(' + child.stdout.toString('utf-8') + ')');
+  global.dcpConfig = require('dcp/config').load(config || {});
+  initArgv[0]=_initForTestHarnessSymbol;
+  exports.init.apply(null, initArgv);
 }
 
 /**
@@ -521,15 +527,15 @@ exports.initSync = function dcpClient$$initSync() {
 function fetchSync(url) {
   const child_process = require('child_process');
   var child;
-  var args = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
+  var argv = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
   if (typeof url !== 'string')
     url = url.href;
-  args.push(url);
+  argv.push(url);
 
-  child = child_process.spawnSync(args[0], args.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
 
