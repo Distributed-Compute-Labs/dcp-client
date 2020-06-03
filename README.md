@@ -7,7 +7,7 @@ This is the official client library for DCP, the Distributed Compute Protocol.  
 ### Implementation Status
 DCP is currently (May 2020) in testing for a limited set of developers under our Early Developer Preview program.  If you would like to be part of our *First Dev* cohort, visit https://dcp.dev/ and sign up!
 
-**Note:** This document discusses [BravoJS](https://gitlab.com/Distributed-Compute-Protocol/dcp-client), however BravoJS support is not ready at this time. It will be finished during the Early Developer Preview, in time for our general public release; the documentation is geared toward that release.
+**Note:** This document discusses [BravoJS](https://gitlab.com/Distributed-Compute-Protocol/dcp-client), however, BravoJS support is not ready at this time. It will be finished during the Early Developer Preview, in time for our general public release; the documentation is geared toward that release.
 
 ### Supported Platforms
 The DCP-Client code can be made to run in nearly any JavaScript environment which supports ES5 and XMLHttpRequest.  Our officially-supported platforms are
@@ -33,7 +33,7 @@ To use DCP from NodeJS, you need to `npm i dcp-client` from your project's sourc
 If you are a Node developer looking to get started quickly, there is a sample project template on GitHub that might interest you at https://github.com/wesgarland/dcp-client.
 
 ### Vanilla-Web
-To use the DCP Client library from a plain vanilla web platform, you must make the contents of the npm package visible to your web application, or our use our CDN. Distributed Compute Labs hosts the latest version of the library at https://cdn.distributed.computer/dcp-client/dcp-client.js.
+To use the DCP Client library from a plain vanilla web platform, you must make the contents of the npm package visible to your web application, or use our CDN. Distributed Compute Labs hosts the latest version of the library at https://cdn.distributed.computer/dcp-client/dcp-client.js.
 
 If you are a web developer looking to get started quickly, there are is a sample project on JS Fiddle that might interest you at https://jsfiddle.net/KingsDistributedSystems/58e6up4b/
 
@@ -46,7 +46,7 @@ To use the DCP Client library with BravoJS, you must make the bundle and the loa
 ## DCP-Client API
 While methods of initializing dcp-client vary somewhat from platform to platform or framework to framework (see below), after initializing, you will have a way to access the key exports of the dcp-client library:
 1. `compute` - Compute API; `compute.run`, `compute.for`, etc.
-2. `wallet` - Wallet API; used to manipulate data types related to cryptographic authorization, authentication and access control
+2. `wallet` - Wallet API; used to manipulate data types related to cryptographic authorization, authentication, and access control
 3. `worker` - Worker API; used for creating embedded Workers on the web or in NodeJS
 4. `dcp-config` - a configuration object which can override various core options, such as the location of a local HTTP proxy; the initial default is downloaded from `protocol://location.of.scheduler/etc/dcp-config`
 5. A global symbol, XMLHttpRequest, which understands HTTP, HTTPS, and HTTP-KeepAlive.  This is the native implementation on the browser platforms and polyfilled in NodeJS via the `dcp-xhr` module. The polyfill includes deep network-layer debugging hooks.
@@ -61,16 +61,16 @@ A plain configuration object with the following properties is compatible with th
 |property path|meaning|default|
 |:--|:--|:--|
 |scheduler.location|instance of URL which describes the location of your scheduler.|https://scheduler.distributed.computer/|
-|autoUpdate|`true` to download the latest version of the webpack bundle and use (eval) that code to implement<br>the protocol which accesses the scheduler, bank, etc. Otherwise, the bundle  which shipped with the dcp-client npm package is used.|`false`|
-|bundle.location|an instance of URL or a filename which describes the location of the code bundle, overriding whatever the default location.
+|autoUpdate|`true` to download the latest version of the webpack bundle and use (eval) that code to implement<br>the protocol which accesses the scheduler, bank, etc. Otherwise, the bundle which shipped with the dcp-client npm package is used.|`false`|
+|bundle.location|an instance of URL or a filename that describes the location of the code bundle, overriding whatever the default location.
 
 #### String
 If you pass a string to `init`, it will be treated as a filename; the contents of this file will be evaluated and the result will be used as the configuration object.
 
-**Note:** filenames in this API are resolved relative to the calling module's location; all files are assume to contain UTF-8 text.
+**Note:** filenames in this API are resolved relative to the calling module's location; all files are assumed to contain UTF-8 text.
 
 #### Object which is an instance of URL
-If the first argument object is an instance of URL, the URL will be treated as the location of the scheduler, the second  parameter will be treated as the value of `autoUpdate`, and the third parameter will be treated as the value of `bundle.location`.
+If the first argument object is an instance of URL, the URL will be treated as the location of the scheduler, the second parameter will be treated as the value of `autoUpdate`, and the third parameter will be treated as the value of `bundle.location`.
 
 #### Local Defaults
 In addition to application-specified options, users of NodeJS applications may add a local configuration file to override any baked-in defaults.  This file is located in `~/.dcp/dcp-client/dcp-config.js`, and should contain a JavaScript object literal in the UTF-8 character set.
@@ -97,7 +97,7 @@ Module         | Description
 :------------- | :----------------
 dcp/compute    | The Compute API
 dcp/dcp-build  | Object containing version information, etc. of the running bundle
-dcp/dcp-cli    | Provides a standard set of DCP cli options and related utility functions via yargs
+dcp/dcp-cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
 dcp/dcp-events | Provides classes related to cross-platform event emitting
 dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
 dcp/wallet     | The Wallet API
@@ -121,7 +121,7 @@ const { EventEmitter } = dcp['dcp-events'];
 ```
 
 ### examples/bravojs
-The examples in this directory shows how to use DCP from a web page using the BravoJS module system and no special web server. The usage is virtually identical to NodeJS, except that your web page must include a *main module* which is a SCRIPT tag with a `module.declare` declaration.
+The examples in this directory show how to use DCP from a web page using the BravoJS module system and no special web server. The usage is virtually identical to NodeJS, except that your web page must include a *main module* which is a SCRIPT tag with a `module.declare` declaration.
 
 ####  Abbreviated Examples
 ```javascript
@@ -137,7 +137,7 @@ module.declare(["dcp-client/index"], function(require, exports, module) {
 ```
 
 ### examples/vanilla-web
-The example in this directory shows how to use DCP from a web page with no module system at all. Configuration is performed by loading a dcp-config file from your preferred scheduler, overriding options in the global `dcpConfig` as needed, and then loading the dcp-client.js bundle, which immediately initializes the API.  DCP libraries are exported via the global symbol `dcp`, since there is no module system in this environment.
+The example in this directory shows how to use DCP from a web page with no module system at all. Configuration is performed by loading a dcp-config file from your preferred scheduler, overriding options in the global `dcpConfig` as needed, and then loading the dcp-client.js bundle, which immediately initializes the API.  DCP libraries are exported via the global symbol `dcp` since there is no module system in this environment.
 
 ```javascript
 const { compute } = dcp
@@ -159,11 +159,11 @@ console.log(results)
 
 ## Executing Jobs
 
-At its core, a job can be thought of as an input set, an a Work function; executing a job yields an output set. 
+At its core, a job can be thought of as an input set, a Work function; executing a job yields an output set. 
 
 Jobs (job handles) are generally created with the `compute.for` function, which is described in detail in the Compute API documentation. To execute the job, we invoke the `exec()` method of the job handle.
 
-An input set can be described with arguments to `compute.for()` with RangeObject notation, or passed directly .as an enumerable object (such as an array or function* generator).
+An input set can be described with arguments to `compute.for()` with `RangeObject` notation or passed directly as an enumerable object (such as an array or function* generator).
 
 ### Examples
 run Work on the whole numbers between 1 and 10:
@@ -175,13 +175,13 @@ run Work on the numbers 6, 9, 12, 15:
 job = compute.for(6, 16, 3, Work)
 ```
 
-run Work on the colours red, green, and blue:
-```javascript if you want to see where I'm going in terms of near-term deliverabl
+run Work on the colors red, green, and blue:
+```javascript
 job = compute.for(["red", "green" "blue"], Work)
 ```
 
 ### Limitations to Consider
-The Work function must be either a string, or stringifyable via `toString()`.  This means that native functions (i.e. Node functions written in C++) cannot be used for Work.   Additionally, the function must be completely defined and not a closure, since stringification cannot take the closure environment into account. A rule of thumb is that if you cannot `eval()` it, you cannot distribute it.
+The Work function must be either a string or stringifyable via `toString()`.  This means that native functions (i.e. Node functions written in C++) cannot be used for Work.   Additionally, the function must be completely defined and not a closure, since stringification cannot take the closure environment into account. A rule of thumb is that if you cannot `eval()` it, you cannot distribute it.
 
 ## Exposed APIs
 The DCP Client bundle comes with a number of DCP APIs exposed for use in your own programs.
@@ -241,26 +241,26 @@ A JavaScript program which includes a Supervisor and one or more Sandboxes
   - a standalone Worker operating on Google's v8 engine
 
 #### Sandbox
-A component of a Worker, used to execute arbitrary JavaScript code in a secure environment.  Currently implemented by the DistributedWorker class (whose name will change some day).  Generally speaking, we use one Sandbox per CPU core, although we might use more in order to work around system scheduler deficiencies, network overhead, etc.   Sandboxes in the web browser are implemented using window.Worker().
+A component of a Worker used to execute arbitrary JavaScript code in a secure environment.  Currently implemented by the DistributedWorker class (whose name will change someday).  Generally speaking, we use one Sandbox per CPU core, although we might use more in order to work around system scheduler deficiencies, network overhead, etc.   Sandboxes in the web browser are implemented using `window.Worker()`.
 
 #### Supervisor
 The component of a Worker which communicates with the Scheduler and Sandboxen.
 
 ### Concepts
 #### Job
-The collection consisting of an input set, Work Function and result setup.  Referred to in early versions of the Compute API (incorrectly) as a Generator.
+The collection consisting of an input set, Work Function, and result setup.  Referred to in early versions of the Compute API (incorrectly) as a Generator.
 
 #### Slice
-A unit of work, represented as source code plus data and meta data, which has a single entry point and return type.  Each Slice in a Job corresponds to exactly one element in the Job's input set.
+A unit of work, represented as source code plus data and metadata, which has a single entry point and return type.  Each Slice in a Job corresponds to exactly one element in the Job's input set.
 
 #### Task
 A unit of work which is composed of one or more slices, which can be executed by a single worker.  Each Slice of each Task will be from the same Job.
 
 #### Work or Work Function
-A function which is executed once per Slice for a given Job, accepting the input datum and returning a result which is added to the result set.
+A function that is executed once per Slice for a given Job, accepting the input datum and returning a result which is added to the result set.
 
 #### Module
-A unit of source code which can be used by, but addressed independently of, a Work Function. Compute API modules are similar to CommonJS modules.
+A unit of source code that can be used by, but addressed independently of, a Work Function. Compute API modules are similar to CommonJS modules.
 
 #### Package
 A group of related modules
@@ -269,13 +269,13 @@ A group of related modules
 A parallel supercomputer consisting of one or more schedulers and workers.  When used as a proper noun, the distributed computer being discussed is the one hosted at https://portal.distributed.computer/
 
 #### Bank Account
-A ledger which acts a repository for DCC which is not on the block chain.  The Bank can move DCC between Bank Accounts much more quickly than it can move DCC between Addresses on the Ethereum block chain network.  Meta data attached to bank accounts can restrict certain operations, such as ear-marking funds for use only by job deployment.
+A ledger that acts as a repository for DCC which is not on the blockchain.  The Bank can move DCC between Bank Accounts much more quickly than it can move DCC between Addresses on the Ethereum blockchain network.  Metadata attached to bank accounts can restrict certain operations, such as ear-marking funds for use only by job deployment.
 
 #### Address
-A unique identifier in DCP which can be used as a Bank Account identifier (account number) or Address on the Ethereum network.
+A unique identifier in DCP that can be used as a Bank Account identifier (account number) or Address on the Ethereum network.
 
 #### Wallet
-In the general (blockchain) sense, a wallet is a piece of software that allows the user to interact with the greater economy as a whole.  So as your actual wallet in your pocket has your cash and credit cards and you access your wallet in order to make a purchase and keep records (by pulling out  cash or cards, and stuffing receipts back in), a blockchain wallet performs a similar function in that it gives you a place to store your private keys (your money), it provides a balance of what all those moneys add up to, it provides a way to receive moneys and send moneys, and provides a record of all those sends and receives. Most blockchain wallets provide at least 3 basic functions
+In the general (blockchain) sense, a wallet is a piece of software that allows the user to interact with the greater economy as a whole.  So as your actual wallet in your pocket has your cash and credit cards and you access your wallet in order to make a purchase and keep records (by pulling out cash or cards, and stuffing receipts back in), a blockchain wallet performs a similar function in that it gives you a place to store your private keys (your money), it provides a balance of what all those moneys add up to, it provides a way to receive moneys and send moneys, and provides a record of all those sends and receives. Most blockchain wallets provide at least 3 basic functions
 1. generate and stores your public/private key pairs
 2. allow you to use those key pairs through transactions (allows you to craft and transmit transactions to the peers)
 3. keep a record of the transactions
@@ -286,13 +286,13 @@ Additionally, most of the current crypto wallets (such as Bitcoin core) provide 
 The Distributed.Computer acts as a Wallet; the platform exposes Wallet-related functionality both via software APIs and the portal web site.
  - Public/private key pairs are generated via the portal, wallet API, and command-line utilities
  - Public/private key pairs are stored in the database as passphrase-protected Keystores
- - Public/private key pairs stored in the Distributed.Computer Wallet can be retrieved via the portal webite
+ - Public/private key pairs stored in the Distributed.Computer Wallet can be retrieved via the portal website
 
 #### Keystore
-A data structure which stores an encrypted key pair (address + private key). Generally speaking, the keystore will be encrypted with a passphrase.
+A data structure that stores an encrypted key pair (address + private key). Generally speaking, the keystore will be encrypted with a passphrase.
 
 ### Keystore File
-A file which stores a JSON-encoded Keystore.
+A file that stores a JSON-encoded Keystore.
 
 <!--stackedit_data:
 eyJoaXN0b3J5IjpbMTI4MjIwNDkxMCwxMDIwNjY0NTcyLC02MD
