@@ -2,13 +2,6 @@
 
 This is the official client library for DCP, the Distributed Compute Protocol.  This library allows client applications to communicate with the Scheduler, Bank, and other parts of a DCP network. This library is redistributable and may be included with other programs under the terms of the MIT license. 
 
-## Record of Issue
-
-Date        |  Author          | Change
------------ | ---------------- | ---------------------------------------------
-Aug 20 2019 | Wes Garland      | Internal Draft
-May 22 2020 | Wes Garland      | Early Developer Preview Release
-
 ## Release Notes
 
 ### Implementation Status
@@ -51,16 +44,15 @@ To host the bundle on your own server, simply acquire the dcp-client package and
 To use the DCP Client library with BravoJS, you must make the bundle and the loader visible to your web application. 
 
 ## DCP-Client API
-While methods of initializing dcp-client vary somewhat from platform to platform or framework to framework, at the end of the initializing, you will have a way to access the key exports of the dcp-client library:
+While methods of initializing dcp-client vary somewhat from platform to platform or framework to framework (see below), after initializing, you will have a way to access the key exports of the dcp-client library:
 1. `compute` - Compute API; `compute.run`, `compute.for`, etc.
 2. `wallet` - Wallet API; used to manipulate data types related to cryptographic authorization, authentication and access control
-3. `protocol` - Protocol API; direct access to lower-level details of DCP
-4. `worker` - Worker API; used for creating embedded Workers on the web or in NodeJS
-5. `dcp-config` - a configuration object which can override various core options, such as the location of a local HTTP proxy; the initial default is downloaded from `protocol://location.of.scheduler/etc/dcp-config`
-6. A global symbol, XMLHttpRequest, which understands HTTP, HTTPS, and HTTP-KeepAlive.  This is the native implementation on the browser platforms and polyfilled in NodeJS via the `dcp-xhr` module. The polyfill includes deep network-layer debugging hooks.
+3. `worker` - Worker API; used for creating embedded Workers on the web or in NodeJS
+4. `dcp-config` - a configuration object which can override various core options, such as the location of a local HTTP proxy; the initial default is downloaded from `protocol://location.of.scheduler/etc/dcp-config`
+5. A global symbol, XMLHttpRequest, which understands HTTP, HTTPS, and HTTP-KeepAlive.  This is the native implementation on the browser platforms and polyfilled in NodeJS via the `dcp-xhr` module. The polyfill includes deep network-layer debugging hooks.
 
-### init() - NodeJS, BravoJS 
- From your NodeJS application, you can then invoke `require('dcp-client').init()` or `require('dcp-client').initcb()`, which initializes the dcp-client library.
+### init() and initSync() - CommonJS 
+From your NodeJS application (or any other using the CommonJS `require` function), you can invoke `require('dcp-client').init()` which initializes the dcp-client library. This function returns a promise that, once resolved, signals that the DCP modules have been injected into the NodeJS module memo (more about DCP modules below). Alternatively, you may call `initSync` with the same arguments and behavior as `init` except that the initialization is performed synchronously.
 
 The `init` function takes zero or more arguments, allowing the developer to create an object which overrides the various DCP defaults; in particular, the location of the scheduler and the name of the code bundle which is executed to provide the APIs.   This object has the same "shape" as the `dcpConfig` export from the library, and this is no coincidence: *any* parameter specified in the configuration will override the same-pathed property provided by the scheduler's configuration object that lives at `etc/dcp-config.js` relative to the scheduler's location.
 
@@ -86,13 +78,16 @@ In addition to application-specified options, users of NodeJS applications may a
 ### Abbreviated Examples
 ```javascript
 /* Use the default scheduler */
-let { compute } = require('dcp-client').init()
+await require('dcp-client').init();
+let { compute } = require('dcp/compute');
 
 /* Preferences are stored in my-dcp-config.js */
-let { compute } = require('dcp-client').init('my-dcp-config.js')
+await require('dcp-client').init('my-dcp-config.js');
+let { compute } = require('dcp/compute');
 
 /* Use an alternate scheduler */
-let { compute } = require('dcp-client').init(URL('https://scheduler.distributed.computer'))
+await require('dcp-client').init(URL('https://scheduler.distributed.computer'));
+let { compute } = require('dcp/compute');
 ```
 
 ### Additional Functionality
