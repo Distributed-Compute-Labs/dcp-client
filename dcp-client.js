@@ -122,9 +122,8 @@
       faviconLink.href = thisScript.src.replace('/dcp-client.js', '/favicon.ico');
       head.appendChild(faviconLink);
     }
+    loadConfig();
+    loadBundle();
+    loadLinks();
   }
-
-  loadConfig();
-  loadBundle();
-  loadLinks();
 })();
