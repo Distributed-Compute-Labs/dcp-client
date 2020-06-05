@@ -110,8 +110,8 @@ dcp/worker     | The Worker API
 **Node** - After calling `init` (see examples below), modules can be `require`d using the module name that follows the initial `dcp/`.
 
 ```javascript
-await require('dcp-events').init;
-const { EventEmitter } = require('dcp-events');
+await require('dcp-client').init();
+const { EventEmitter } = require('dcp/dcp-events');
 ```
 
 **Web** - After the `dcp-client` script tag is loaded (see examples below), modules are available as properties of a global `dcp` symbol.
@@ -140,21 +140,20 @@ module.declare(["dcp-client/index"], function(require, exports, module) {
 The example in this directory shows how to use DCP from a web page with no module system at all. Configuration is performed by loading a dcp-config file from your preferred scheduler, overriding options in the global `dcpConfig` as needed, and then loading the dcp-client.js bundle, which immediately initializes the API.  DCP libraries are exported via the global symbol `dcp` since there is no module system in this environment.
 
 ```javascript
-const { compute } = dcp
-let job = compute.for(...)```javascript
-job.on("ENOFUNDS", (fundsRequired, slice, stage) => {
-  console.log(`escrow ran out of money at stage '${stage}'`)
-  console.log('slice profile is: ', slice.profile)
-  job.escrow(fundsRequired, slice)
-  job.resume()
-})
-```
-let results = await job.exec(compute.marketValue)
-console.log(results)
-```
-```javascript
 <!-- use an alternate scheduler -->
 <SCRIPT id='dcp-client' src="/path/dcp-client/index.js" scheduler="https://myscheduler.com/"></SCRIPT>
+```
+
+```javascript
+const { compute } = dcp;
+let job = compute.for(...);
+job.on("ENOFUNDS", (fundsRequired) => {
+  job.escrow(fundsRequired);
+  job.resume();
+})
+
+let results = await job.exec(compute.marketValue);
+console.log(results);
 ```
 
 ## Executing Jobs
