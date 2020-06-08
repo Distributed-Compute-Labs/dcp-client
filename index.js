@@ -293,11 +293,12 @@ exports.init = async function dcpClient$$init() {
  *      latest config: this causes it to (unfortunately) cache configuration values like the location
  *      of the scheduler
  *  9 - re-export the modules from the new bundle
+ * 10 - load and cache identity & bank keystores if they are provided and config.parseArgv is true
  */
   let dcpConfig = require('dcp/dcp-config')
   let remoteConfigCode = false;
   let finalBundleCode
-  let userConfig = { scheduler: {}, bundle: {} }
+  let userConfig = { scheduler: {}, bundle: {}, parseArgv: true }
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
   let URL = require('dcp/dcp-url').URL
@@ -346,13 +347,6 @@ exports.init = async function dcpClient$$init() {
   if (arguments[0]) {
     if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL)) {
       addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
-    } else if (Array.isArray(arguments[0])) {
-      // don't enable help output for init
-      const argv = require('dcp/dcp-cli').base().help(false).argv;
-      const { scheduler } = argv;
-      if (scheduler) {
-        userConfig.scheduler.location = new URL(scheduler);
-      }
     } else if (typeof arguments[0] === 'object') {
       addConfig(userConfig, arguments[0]);
     }
@@ -375,6 +369,14 @@ exports.init = async function dcpClient$$init() {
     addConfig(dcpConfig, userConfig) 
 
   /* 4 */
+  if (userConfig.parseArgv) {
+    // don't enable help output for init
+    const argv = require('dcp/dcp-cli').base().help(false).argv;
+    const { scheduler } = argv;
+    if (scheduler) {
+      userConfig.scheduler.location = new URL(scheduler);
+    }
+  }
   if (process.env.DCP_SCHEDULER_LOCATION)
     userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
   if (process.env.DCP_SCHEDULER_CONFIGLOCATION)
@@ -445,6 +447,7 @@ exports.init = async function dcpClient$$init() {
     bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
   if (process.env.DCP_SCHEDULER_LOCATION)
     userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+
   /* 9 */
   debugging('modules') && console.debug('Begin phase 2 module injection');
   Object.entries(bundle).forEach(entry => {
@@ -472,6 +475,27 @@ exports.init = async function dcpClient$$init() {
   })
 
   injectModule('dcp/client', exports);
+  
+  /* 10 */
+  if (dcpConfig.parseArgv) {
+    const dcpCli = require('dcp/dcp-cli');
+    // don't enable help output for init
+    const argv = dcpCli.base().help(false).argv;
+    const { help, identity, identityFile, defaultBankAccount, defaultBankAccountFile } = argv;
+
+    if (!help) {
+      const wallet = require('dcp/wallet');
+      if (identity || identityFile) {
+        const idKs = await dcpCli.getIdentityKeystore();
+        wallet.addId(idKs);
+      }
+
+      if (defaultBankAccount || defaultBankAccountFile) {
+        const bankKs = await dcpCli.getAccountKeystore();
+        wallet.add(bankKs);
+      }
+    }
+  }
 
   initFinish = true;
   return makeInitReturnObject();
