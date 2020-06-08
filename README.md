@@ -148,13 +148,15 @@ The example in this directory shows how to use DCP from a web page with no modul
 const { compute } = dcp;
 let job = compute.for(...);
 job.on("ENOFUNDS", (fundsRequired) => {
-  job.escrow(fundsRequired);
+  await job.escrow(fundsRequired);
   job.resume();
 })
 
 let results = await job.exec(compute.marketValue);
 console.log(results);
 ```
+
+**Note** For the first-dev release, terms like `compute.marketValue` and the value of DCC are not tied to anything. It's a placeholder for testing/experimental purposes. The MVP release will include an implementation of the costing and metering algorithms fundamental to tying DCC balance to actual work done.
 
 ## Executing Jobs
 
