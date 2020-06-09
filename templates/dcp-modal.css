@@ -77,6 +77,16 @@
   float: right;
 }
 
+.dcp-modal-content > p {
+  margin-bottom: 0;
+}
+
+#dcp-modal-password-create-matching-error {
+  font-size: 0.65em;
+  text-align: right;
+  color: red;
+}
+
 .dcp-modal-btn {
   font-size: .875rem;
   padding-left: 1rem;
@@ -130,6 +140,10 @@
 
 }
 
+.invisible {
+  visibility: hidden;
+}
+/* on blur */
 
 
 /**************************\
