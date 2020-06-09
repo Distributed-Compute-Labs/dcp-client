@@ -55,7 +55,10 @@ async function main() {
   results = await job.exec(compute.marketValue);
   results = await results.values();
 
-  console.log(`Job Finished, total runtime = ${Math.round((Date.now() - startTime) / 100)/10}s`);
+  let ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
+  job.setPaymentAccountKeystore(ks);
+  results = await job.exec(compute.marketValue)
+  console.log('results=', Array.from(results));
 }
 
 /* Initialize DCP Client and run main() */

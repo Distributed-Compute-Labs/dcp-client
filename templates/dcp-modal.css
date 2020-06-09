@@ -3,6 +3,7 @@
 \**************************/
 .dcp-modal {
   font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+  font-size: 16px;
 }
 
 .dcp-modal-overlay {
@@ -20,8 +21,8 @@
 .dcp-modal-container {
   background-color: #fff;
   padding: 30px;
-  max-width: 500px;
-  min-width: 250px;
+  max-width: 50%;
+  min-width: 16em;
   max-height: 100vh;
   border-radius: 4px;
   overflow-y: auto;
@@ -201,3 +202,39 @@
 .dcp-modal .dcp-platform-win  button[name="negative"] {
   order: 1;
 }
+
+/** Rules which affect the behaviour of alert dialogs
+ *  based on whether or not their messages are instanceof Error
+ */
+#dcp-modal-alert.exception #dcp-modal-alert-message {
+  white-space: nowrap;
+  margin-right: 2em;    
+}
+
+#dcp-modal-alert .dcp-bug-icon,
+#dcp-modal-alert .dcp-stack-trace {
+  display: none;
+}
+
+#dcp-modal-alert.exception .dcp-bug-icon {
+  padding-right: 0.35em;
+  display: inline-block;
+  float: right;
+  text-decoration: none;
+}
+
+#dcp-modal-alert.exception .dcp-stack-trace {
+  text-align: right;
+  font-size: 0.8em;
+  padding-right: 0.35em;
+}
+
+#dcp-modal-alert.exception .dcp-stack-trace {
+  display: none;
+  max-height: 10em;
+}
+
+#dcp-modal-alert.exception.dcp-show-stack .dcp-stack-trace {
+  display: initial;
+}
+

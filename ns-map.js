@@ -24,24 +24,52 @@ if (typeof module.declare === 'undefined') { /* cjs1 */
 }
 
 module.declare([], function $$nsMap(require, exports, module) {
-/* LHS: where symbols appear      RHS: where they come from in dcp-client-bundle-src.js */      
+  var moduleIdentifier;
+  
+  /* LHS: where symbols appear      RHS: where they come from in dcp-client-bundle-src.js */      
   exports['dcp/bootstrap-build']= 'dcp-build'
   exports['dcp/build']          = 'dcp-build' /* overridden when new version loaded */
   exports['dcp/dcp-config' ]    = 'dcp-config'
 
   for (moduleIdentifier of [
-    "dcp-xhr",
-    "dcp-url",
-    "dcp-env",
-    "dcp-cli",
-    "dot-dcp-dir",
-    "dcp-events",
-    "eth",
-    "wallet",
-    "protocol",
-    "protocol-v4",
-    "bank-util",
-    "compute",
+    'compute',
+    'wallet',
+    'protocol',
+    'protocol-v4',
+    'client-modal',
+    'bank-util',
+    'dcp-xhr',
+    'dcp-env',
+    'dcp-url',
+    'dcp-cli',
+    'dcp-timers',
+    'dot-dcp-dir',
+    'dcp-events',
+    'eth',
+    'serialize',
+    'job',
+    'rangeobject',
+    'stats',
+    'standard-objects',
     "worker",
   ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
+
+  /* Provide internal copies of third-party npm libraries when external (native?) copies not available */
+  for (moduleIdentifier of [
+    'ethereumjs-util',
+    'ethereumjs-wallet',
+    'ethereumjs-tx',
+    'bignumber.js',
+    'socket.io-client',
+  ]) {
+    try {
+      require.resolve(moduleIdentifier);
+    } catch(e) {
+      if (e.code === 'MODULE_NOT_FOUND')
+        exports[moduleIdentifier] = moduleIdentifier;
+      else
+        throw e;
+    }
+  }
+  
 }); /* end of module */

@@ -44,9 +44,6 @@ EOHELP
 }
 
 # Main program entry point
-BUNDLE_TMP="`mktemp -dt XXXXX.dcpClient`"
-[ "$DEBUG_BUNDLE" ] || trap "rm -rf \"${BUNDLE_TMP}\"" EXIT
-
 if [ "$1" ] && [ -d "$1" ]; then
   _DCP_SRC="$1"
   shift
