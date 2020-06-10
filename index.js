@@ -1,3 +1,4 @@
+
 /**
  * @file        index.js
  *              NodeJS entry point for the dcp-client package.
@@ -17,25 +18,24 @@ exports.debug = false;
 let initFinish = false; /* flag to help us detect use of Compute API before init promise resolves */
 
 function debugging(what) {
-  const debugSyms = [exports.debug || '', process.env.DCP_CLIENT_DEBUG].join(',')
+  const debugSyms = []
+        .concat((exports.debug || '').split(','))
+        .concat((process.env.DCP_CLIENT_DEBUG || '').split(','))
+        .filter((a) => !!a);
   
-  if (debugging.cache[what] === debugSyms)
-     return debugging.cache[what] || false;
+  if (typeof debugging.cache[what] === 'boolean') /* cache hit */
+    return debugging.cache[what];
 
-  if (typeof debugSyms === 'boolean')
-    return (debugging.cache[what] = debugSyms);
-
-  if (!debugSyms)
-    return (debugging.cache[what] = false);
-
-  switch(debugSyms) {
-    case '*':
-    case 'dcp-client':
-    case 'verbose':
-      return (debugging.cache[what] = true);
+  if (-1 !== debugSyms.indexOf('*') ||
+      -1 !== debugSyms.indexOf(what) ||
+      -1 !== debugSyms.indexOf('dcp-client') ||
+      -1 !== debugSyms.indexOf('verbose')) {
+    debugging.cache[what] = true;
+  } else {
+    debugging.cache[what] = false;
   }
 
-  return !!(debugging.cache[what] = (what ? debugSyms.match('\\b' + what + '(\\b|,)') : exports.debug))
+  return debugging.cache[what];
 }
 debugging.cache = {}
 
@@ -120,7 +120,7 @@ function loadBootstrapBundle() {
   return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
-const injectedModules = {}
+const injectedModules = {};
 const resolveFilenamePrevious = moduleSystem._resolveFilename;
 moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilenameShim(moduleIdentifier) { 
   if (injectedModules.hasOwnProperty(moduleIdentifier)) {
@@ -136,6 +136,9 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
  *
  * @param       id              {string}        module identifier
  * @param       moduleExports   {object}        the module's exports object
+ * @param       clobber         {boolean}       inject on top of an existing module identifier
+ *                                              if there is a collsion.
+ * @throw Error if there is a collision and clobber is not truey.
  */
 function injectModule(id, moduleExports, clobber) {
   if (!clobber && typeof moduleSystem._cache[id] !== 'undefined')
@@ -146,7 +149,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].exports = moduleExports
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
-  injectedModules[id] = true
+  injectedModules[id] = true;
   debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
@@ -163,7 +166,6 @@ for (let moduleId in nsMap) {
   let moduleExports = bundle[nsMap[moduleId]]
   if (!moduleExports)
     throw new Error(`Bundle is missing exports for module ${moduleId}`)
-
   injectModule(moduleId, moduleExports)
 }
 
@@ -445,6 +447,7 @@ exports.init = async function dcpClient$$init() {
     bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
   if (process.env.DCP_SCHEDULER_LOCATION)
     userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+
   /* 9 */
   debugging('modules') && console.debug('Begin phase 2 module injection');
   Object.entries(bundle).forEach(entry => {
@@ -462,6 +465,16 @@ exports.init = async function dcpClient$$init() {
     injectModule('dcp/dcp-config', global.dcpConfig, true)
   }
 
+  Object.defineProperty(exports, 'distDir', {
+    value: function dcpClient$$distDir$getter() {
+      return distDir;
+    },
+    configurable: false,
+    writable: false,
+    enumerable: false
+  })
+
+  injectModule('dcp/client', exports);
   
   /* 10 */
   if (dcpConfig.parseArgv) {
@@ -495,15 +508,17 @@ exports.initcb = require('./init-common').initcb
  * This function does not download the configuration object from the scheduler,
  * nor does it check for remote bundle updates.
  *
- * @param       config          The dcpConfig object which is normally downloaded from the scheduler
- * @param       ...             Arguments to pass to init()
- *
  * @note This is an unofficial API and is subject to change without notice.
  */
-exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*, ... */) { 
-  let argv = Array.from(arguments)
-  argv.unshift(_initForTestHarnessSymbol)
-  exports.init.apply(null, argv)
+exports._initForTestHarness = function dcpClient$$_initForTestHarness(dcpConfig) {
+  var dcp;
+  
+  exports.init(_initForTestHarnessSymbol);
+  dcp = makeInitReturnObject();
+  function setConfig(dcpConfig) {
+    injectModule('dcp/dcp-config', dcpConfig, true);
+  }
+  return { dcp, setConfig };
 }
 
 /**
@@ -514,6 +529,7 @@ exports._initForTestHarness = function dcpClient$$_initForTestHarness(config /*,
 exports.initSync = function dcpClient$$initSync() {
   let argv = Array.from(arguments);
   argv.unshift(_initForSyncSymbol);
+  initFinish = true;
   exports.init.apply(null, argv);
 
   return makeInitReturnObject();
@@ -532,15 +548,15 @@ exports.initSync = function dcpClient$$initSync() {
 function fetchSync(url) {
   const child_process = require('child_process');
   var child;
-  var args = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
+  var argv = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
   if (typeof url !== 'string')
     url = url.href;
-  args.push(url);
+  argv.push(url);
 
-  child = child_process.spawnSync(args[0], args.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
 
@@ -556,7 +572,7 @@ function fetchSync(url) {
 function makeInitReturnObject() {
   var o = {};
   var nsMap = require('./ns-map');
-  
+
   for (let moduleIdentifier in nsMap) {
     if (!nsMap.hasOwnProperty(moduleIdentifier))
       continue;
