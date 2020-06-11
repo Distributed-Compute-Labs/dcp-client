@@ -391,6 +391,10 @@ exports.init = async function dcpClient$$init() {
     userConfig.scheduler.location = new URL(userConfig.scheduler.location)
   if (userConfig.bundle && typeof userConfig.bundle.location === 'string')
     userConfig.bundle.location = new URL(userConfig.bundle.location)
+
+  if (!userConfig.scheduler.configLocation)
+    userConfig.scheduler.configLocation = new URL(userConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
+
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
 
