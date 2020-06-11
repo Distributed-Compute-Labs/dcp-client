@@ -384,7 +384,7 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_CONFIG_LOCATION)
     userConfig.scheduler.configLocation = process.env.DCP_CONFIG_LOCATION
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
-    userConfig.bundle.location = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i)
+    userConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION)
     userConfig.bundle.location = process.env.DCP_BUNDLE_LOCATION
   if (userConfig.scheduler && typeof userConfig.scheduler.location === 'string')
