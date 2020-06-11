@@ -195,19 +195,25 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
   message = `HTTP Status: ${error.request.status} for ${error.request.method} ${error.request.location}`
 
   switch(headers['content-type'].replace(/;.*$/, '')) {
-  case 'text/plain':
-    message += '\n' + chalk.grey(error.request.responseText)
-    break;
-  case 'text/html':
-    message += '\n' + chalk.grey(require('html-to-text').fromString(error.request.responseText, {
-      wordwrap: parseInt(process.env.COLUMNS, 10) || 80,
-      format: {
-        heading: function (elem, fn, options) {
-          var h = fn(elem.children, options);
-          return '====\n' + chalk.yellow(chalk.bold(h.toUpperCase())) + '\n====';
+    case 'text/plain':
+      message += '\n' + chalk.grey(error.request.responseText)
+      break;
+    case 'text/html': {
+      let html = error.request.responseText;
+
+      html = html.replace(/\n<a/gi, ' <a'); /* html-to-text bug, affects google 301s /wg jun 2020 */
+      message += chalk.grey(require('html-to-text').fromString(html, {
+        wordwrap: parseInt(process.env.COLUMNS, 10) || 80,
+        hideLinkHrefIfSameAsText: true,
+        format: {
+          heading: function (elem, fn, options) {
+            var h = fn(elem.children, options);
+            return '\n====\n' + chalk.yellow(chalk.bold(h.toUpperCase())) + '\n====\n';
+          }
         }
-      }}))
-    break;
+      }));
+      break;
+    }
   }
 
   return message
@@ -400,8 +406,8 @@ exports.init = async function dcpClient$$init() {
       debugging() && console.debug(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
       remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
     } catch(e) {
-      debugging() && console.error(exports.justFetchPrettyError(e))
-      throw new Error(exports.justFetchPrettyError(e, false))
+      console.error(exports.justFetchPrettyError(e))
+      throw e;
     }
   } else if (initSyncMode) {
     debugging() && console.debug(` * Blocking while loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
@@ -434,8 +440,8 @@ exports.init = async function dcpClient$$init() {
         debugging() && console.debug(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
         finalBundleCode = await require('dcp/protocol').justFetch(dcpConfig.bundle.location.href);
       } catch(e) {
-        debugging() && console.error(exports.justFetchPrettyError(e));
-        throw new Error(exports.justFetchPrettyError(e, false));
+        console.error(exports.justFetchPrettyError(e));
+        throw e;
       }
     }
   }
