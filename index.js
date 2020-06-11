@@ -561,8 +561,8 @@ function fetchSync(url) {
     url = url.href;
   argv.push(url);
 
-  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ]});
-  debugger;
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env, process.env), shell: false, windowsHide: true,
+                                                            stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ]});
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
   return child.output[3].toString('utf-8');
