@@ -1,4 +1,3 @@
-
 /**
  * @file        index.js
  *              NodeJS entry point for the dcp-client package.
@@ -182,7 +181,7 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
   let chalk, message, headers={}
 
   if (!error.request || !error.request.status)
-    return error.message
+    return error;
 
   if (typeof useChalk === 'undefined')
     useChalk = require('tty').isatty(0) || process.env.FORCE_COLOR;
@@ -554,7 +553,7 @@ exports.initSync = function dcpClient$$initSync() {
 function fetchSync(url) {
   const child_process = require('child_process');
   var child;
-  var argv = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
+  var argv = [ process.execPath, require.resolve('./bin/download'), '--fd=3' ];
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
@@ -562,11 +561,11 @@ function fetchSync(url) {
     url = url.href;
   argv.push(url);
 
-  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ]});
+  debugger;
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
-
-  return child.stdout.toString('utf-8');
+  return child.output[3].toString('utf-8');
 }
 
 /** Factory function which returns an object which is all of the dcp/ modules exported into
