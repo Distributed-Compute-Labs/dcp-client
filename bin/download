@@ -9,6 +9,7 @@
 
 const dcpClient = require('..');
 const { dcp } = dcpClient._initForTestHarness();
+const fs = require('fs');
 
 function usage() {
   console.log(`Usage: ${process.argv[1]} protocol://restofurl.com`);
@@ -17,11 +18,16 @@ function usage() {
 async function main(argv) {
   var data;
   var url;
-
+  var fd;
+  
   for (let i=0; i < argv.length; i++) {
     if (argv[i] === '--quiet') {
       argv.splice(i--,1);
       console.log = console.debug = function(){};
+    }
+    if (argv[i].startsWith('--fd=')) {
+      fd = parseInt(argv[i].slice(5), 10);
+      argv.splice(i--,1);
     }
   }
   url = argv[argv.length - 1];
@@ -31,12 +37,14 @@ async function main(argv) {
 
   try {
     data = await dcp.protocol.justFetch(url);
-    process.stdout.write(data);
+    if (fd)
+      fs.writeSync(fd, data);
+    else
+      process.stdout.write(data);
   } catch(e) {
     console.error(dcpClient.justFetchPrettyError(e))
     process.exit(1);
   }
 }
-
 
 main.call(null, process.argv.slice(1)).finally(() => setImmediate(process.exit));

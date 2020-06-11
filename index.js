@@ -1,4 +1,3 @@
-
 /**
  * @file        index.js
  *              NodeJS entry point for the dcp-client package.
@@ -182,7 +181,7 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
   let chalk, message, headers={}
 
   if (!error.request || !error.request.status)
-    return error.message
+    return error;
 
   if (typeof useChalk === 'undefined')
     useChalk = require('tty').isatty(0) || process.env.FORCE_COLOR;
@@ -195,19 +194,25 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
   message = `HTTP Status: ${error.request.status} for ${error.request.method} ${error.request.location}`
 
   switch(headers['content-type'].replace(/;.*$/, '')) {
-  case 'text/plain':
-    message += '\n' + chalk.grey(error.request.responseText)
-    break;
-  case 'text/html':
-    message += '\n' + chalk.grey(require('html-to-text').fromString(error.request.responseText, {
-      wordwrap: parseInt(process.env.COLUMNS, 10) || 80,
-      format: {
-        heading: function (elem, fn, options) {
-          var h = fn(elem.children, options);
-          return '====\n' + chalk.yellow(chalk.bold(h.toUpperCase())) + '\n====';
+    case 'text/plain':
+      message += '\n' + chalk.grey(error.request.responseText)
+      break;
+    case 'text/html': {
+      let html = error.request.responseText;
+
+      html = html.replace(/\n<a/gi, ' <a'); /* html-to-text bug, affects google 301s /wg jun 2020 */
+      message += chalk.grey(require('html-to-text').fromString(html, {
+        wordwrap: parseInt(process.env.COLUMNS, 10) || 80,
+        hideLinkHrefIfSameAsText: true,
+        format: {
+          heading: function (elem, fn, options) {
+            var h = fn(elem.children, options);
+            return '\n====\n' + chalk.yellow(chalk.bold(h.toUpperCase())) + '\n====\n';
+          }
         }
-      }}))
-    break;
+      }));
+      break;
+    }
   }
 
   return message
@@ -384,7 +389,7 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_CONFIG_LOCATION)
     userConfig.scheduler.configLocation = process.env.DCP_CONFIG_LOCATION
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
-    userConfig.bundle.location = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i)
+    userConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION)
     userConfig.bundle.location = process.env.DCP_BUNDLE_LOCATION
   if (userConfig.scheduler && typeof userConfig.scheduler.location === 'string')
@@ -404,8 +409,8 @@ exports.init = async function dcpClient$$init() {
       debugging() && console.debug(` * Loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
       remoteConfigCode = await require('dcp/protocol').justFetch(dcpConfig.scheduler.configLocation)
     } catch(e) {
-      debugging() && console.error(exports.justFetchPrettyError(e))
-      throw new Error(exports.justFetchPrettyError(e, false))
+      console.error(exports.justFetchPrettyError(e))
+      throw e;
     }
   } else if (initSyncMode) {
     debugging() && console.debug(` * Blocking while loading configuration from ${dcpConfig.scheduler.configLocation.href}`);
@@ -438,8 +443,8 @@ exports.init = async function dcpClient$$init() {
         debugging() && console.debug(` * Loading autoUpdate bundle from ${dcpConfig.bundle.location.href}`);
         finalBundleCode = await require('dcp/protocol').justFetch(dcpConfig.bundle.location.href);
       } catch(e) {
-        debugging() && console.error(exports.justFetchPrettyError(e));
-        throw new Error(exports.justFetchPrettyError(e, false));
+        console.error(exports.justFetchPrettyError(e));
+        throw e;
       }
     }
   }
@@ -552,7 +557,7 @@ exports.initSync = function dcpClient$$initSync() {
 function fetchSync(url) {
   const child_process = require('child_process');
   var child;
-  var argv = [ process.execPath, require.resolve('./bin/download'), '--quiet' ];
+  var argv = [ process.execPath, require.resolve('./bin/download'), '--fd=3' ];
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
@@ -560,11 +565,11 @@ function fetchSync(url) {
     url = url.href;
   argv.push(url);
 
-  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env), shell: false, windowsHide: true, stdio: [ 'ignore', 'pipe', 'inherit' ]});
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env, process.env), shell: false, windowsHide: true,
+                                                            stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ]});
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
-
-  return child.stdout.toString('utf-8');
+  return child.output[3].toString('utf-8');
 }
 
 /** Factory function which returns an object which is all of the dcp/ modules exported into
