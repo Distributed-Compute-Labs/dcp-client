@@ -14,7 +14,7 @@ realpath()
   (
     filename="$1"
     dirname="`dirname \"$1\"`"
-    basename="`basename \"$1"`"
+    basename="`basename \"$1\"`"
     [ "$dirname" ] || dirname="."
     cd "$dirname" && echo "`pwd -P`/$basename"
   )
