@@ -48,7 +48,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     'eth',
     'serialize',
     'job',
-    'rangeobject',
+    'range-object',
     'stats-ranges',
     'standard-objects',
     "worker",
