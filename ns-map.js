@@ -52,6 +52,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     'stats',
     'standard-objects',
     "worker",
+    "publish",
   ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
 
   /* Provide internal copies of third-party npm libraries when external (native?) copies not available */
