@@ -200,6 +200,7 @@
 
 .dcp-modal .dcp-modal-footer {
   display: flex;
+  align-items: center;
 }
 
 .dcp-modal .dcp-buttons-wrapper {
@@ -220,7 +221,7 @@
  *  based on whether or not their messages are instanceof Error
  */
 #dcp-modal-alert.exception #dcp-modal-alert-message {
-  white-space: nowrap;
+  white-space: normal;
   margin-right: 2em;    
 }
 
@@ -232,7 +233,6 @@
 #dcp-modal-alert.exception .dcp-bug-icon {
   padding-right: 0.35em;
   display: inline-block;
-  float: right;
   text-decoration: none;
 }
 
