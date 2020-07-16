@@ -1,10 +1,10 @@
 {
   "name": "dcp-client",
-  "version": "3.1.5",
+  "version": "3.1.7",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
   "scripts": {
-    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git tag v$PACKAGE_VERSION && git push --tags",
+    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git tag -f v$PACKAGE_VERSION && git push --tags",
     "build": "./build/bundle"
   },
   "repository": {
