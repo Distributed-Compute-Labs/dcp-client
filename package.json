@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.1.7",
+  "version": "3.1.9",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
   "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#README",
   "dependencies": {
     "chalk": "^2.4.2",
-    "dcp-worker": "^1.0.2",
+    "dcp-worker": "^1.0.6",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "md5": "^2.2.1",
