@@ -1,35 +1,36 @@
 {
   "name": "dcp-client",
-  "version": "3.1.9",
+  "version": "3.1.10-2",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
   "scripts": {
-    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git tag -f v$PACKAGE_VERSION && git push --tags",
     "build": "./build/bundle"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:Distributed-Compute-Labs/dcp-client.git"
+    "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
   },
   "author": "Kings Distributed Systems",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Distributed-Compute-Labs/dcp-client/issues"
+    "url": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client/issues"
   },
-  "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#README",
+  "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
   "dependencies": {
     "chalk": "^2.4.2",
     "dcp-worker": "^1.0.6",
+    "ethereumjs-util": "^6.2.0",
+    "ethereumjs-wallet": "^0.6.3",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
-    "niim": "^1.11.6-j",
-    "node-localstorage": "^2.1.6",
+    "niim": "^1.11.6-i",
+    "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.12",
+    "webpack-cli": "^3.3.11",
     "xmlhttprequest-ssl": "^1.6.0",
     "yargs": "^15.3.1"
   },
