@@ -255,7 +255,7 @@ function checkConfigFileSafePerms(fullPath) {
     let check
     check=path.resolve.apply(null, args)
     if (fs.statSync(check).mode & 0o022)
-      throw new Error(`Config ${fullPath} insecure due to world- or group-writeable ${check}`)
+      console.warn(`Config ${fullPath} insecure due to world- or group-writeable ${check}`);
     args.pop()
   } while(args.length)
 }
