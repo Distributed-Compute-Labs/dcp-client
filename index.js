@@ -254,10 +254,59 @@ function checkConfigFileSafePerms(fullPath) {
   {
     let check
     check=path.resolve.apply(null, args)
-    if (fs.statSync(check).mode & 0o022)
-      throw new Error(`Config ${fullPath} insecure due to world- or group-writeable ${check}`)
+    if (fs.statSync(check).mode & 0o002)
+      throw new Error(`Config ${fullPath} insecure due to world-writeable ${check}`);
     args.pop()
-  } while(args.length)
+  } while(args.length);
+}
+
+
+/** Merge a new configuration object on top of an existing one, via
+ *  addConfig().  The file is read, turned into an object, and becomes
+ *  the neo config.
+ *
+ *  Any falsey path component causes us to not read the file. This silent
+ *  failure is desired behaviour.
+ */
+function addConfigFile(existing /*, file path components ... */) {
+  let fullPath = '';
+  
+  for (let i=1; i < arguments.length; i++) {
+    if (!arguments[i])
+      return;
+    fullPath = path.join(fullPath, arguments[i]);
+  }
+
+  if (fullPath && fs.existsSync(fullPath)) {
+    let neo;
+    let code
+    
+    checkConfigFileSafePerms(fullPath);
+    code = fs.readFileSync(fullPath, 'utf-8');
+
+    if (code.match(/^\s*{/)) {
+      let neo = evalScriptInSandbox(fullPath, bundleSandbox, true);
+      addConfig(existing, neo);
+    } else {
+      let configSandbox = {}
+      configSandbox.console = console
+      Object.assign(configSandbox, bundleSandbox)
+      Object.assign(configSandbox, dcpConfig)
+      evalStringInSandbox(code, configSandbox, fullPath);
+    }
+    addConfig(existing, neo);
+  }
+}
+
+/** Merge a new configuration object on top of an existing one, via
+ *  addConfig().  The registry key is read, turned into an object, and 
+ *  becomes the neo config.
+ */
+async function addConfigRKey(hive, keyTail) {
+  var neo = await require('./windows-registry').getObject(hive, keyTail);
+
+  if (neo)
+    addConfig(existing, neo);
 }
 
 /**
@@ -286,9 +335,14 @@ exports.init = async function dcpClient$$init() {
  * of the API consumer always take priority.
  *
  *  0 - load the local copy of the bundle (happens as side effect of initial require)
- *  1 - specify the default config by reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
- *  2 - use this copy to plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
- *  3 - merge the passed-in configuration with the default configuration
+ *  1 - create the local config by 
+ *       - reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
+ *       - reading the registry
+ *       - receiving input from the dcp-cli module
+ *       - arguments to init()
+ *       - etc  (see dcp-docs file dcp-config-file-regkey-priorities)
+ *  2 - plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
+ *  3 - merge the passed-in configuration on top of the default configuration
  *  4 - use the config + environment + arguments to figure out where the scheduler is
  *  5 - pull the scheduler's config, and layer it on top of the current configuration
  *  6 - reapply the passed-in configuration into the current configuration
@@ -303,12 +357,11 @@ exports.init = async function dcpClient$$init() {
   let dcpConfig = require('dcp/dcp-config')
   let remoteConfigCode = false;
   let finalBundleCode
-  let userConfig = { scheduler: {}, bundle: {}, parseArgv: true }
-  let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
-  let homedirConfig
+  let localConfig = { scheduler: {}, bundle: {}, parseArgv: true }
   let URL = require('dcp/dcp-url').URL
   let testHarnessMode = false
   let initSyncMode = false;
+  let etc  = (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
   
   if (arguments[0] === _initForTestHarnessSymbol) {
     /* Disable homedir config, remote code/config download in test harness mode */
@@ -318,90 +371,95 @@ exports.init = async function dcpClient$$init() {
       remoteConfigCode = JSON.stringify(remoteConfigCode)
     }
     testHarnessMode = true
-    homedirConfigPath = process.env["DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH"]
   } else if (arguments[0] === _initForSyncSymbol) {
     initSyncMode = true;
     arguments = Array.from(arguments);
     arguments.shift();
   }
   
-  /* Fix all future files containing new URL() to use our class */
+  /* Fix all future files containing new URL() to use dcp-url::URL */
   bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(dcpConfig)
 
-  /* 1 */
-  if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
-    let code
-    
-    checkConfigFileSafePerms(homedirConfigPath)
-    code = fs.readFileSync(homedirConfigPath, 'utf-8')
-
-    if (code.match(/^\s*{/)) {
-      homedirConfig = evalScriptInSandbox(homedirConfigPath, bundleSandbox, true)
-      addConfig(userConfig, homedirConfig)
-    } else {
-      let configSandbox = {}
-      configSandbox.console = console
-      Object.assign(configSandbox, bundleSandbox)
-      Object.assign(configSandbox, dcpConfig)
-      evalStringInSandbox(code, configSandbox, homedirConfigPath)
-    }
+  /* 1 - create local config */
+  if (process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH)
+    addConfigFile(localConfig, process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH);
+  else {
+    let home = os.homedir();
+    console.log(111)
+    let programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
+        
+    /* This follows spec doc line-by-line */
+    await addConfigRKey('HKLM', 'dcp-client/dcp-config');
+    await addConfigFile(etc,    'dcp-client/dcp-config.js');
+    await addConfigRKey('HKLM', `dcp-client/${programName}/dcp-config`);
+    await addConfigFile(etc,    `dcp-client/${programName}/dcp-config.js`); 
+    await addConfigFile(etc,    './dcp/dcp-client/dcp-config.js');
+    await addConfigFile(etc,    `./dcp/dcp-client/${programName}/dcp-config.js`); 
+    await addConfigRKey('HKCU', `dcp-client/dcp-config`);
+    await addConfigRKey('HKCU', `dcp-client/${programName}/dcp-config`);
   }
-  /* Sort out polymorphic arguments: 'passed-in configuration' */
+
+  /* Sort out polymorphic arguments: 'passed-in configuration'.
+   * bug: this should be CLI then paseed-in config, but dcp-cli replaces passed-in configuration here. /wg aug 2020
+   */
   if (arguments[0]) {
     if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL)) {
-      addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
+      addConfig(localConfig, { scheduler: { location: new URL(arguments[0]) }})
     } else if (typeof arguments[0] === 'object') {
-      addConfig(userConfig, arguments[0]);
+      addConfig(localConfig, arguments[0]);
     }
   }
   if (arguments[1])
-    userConfig.bundle.autoUpdate = !!arguments[1]
+    localConfig.bundle.autoUpdate = !!arguments[1]
   if (arguments[2])
-    userConfig.bundle.location = new URL(arguments[2])
+    localConfig.bundle.location = new URL(arguments[2])
 
+  addConfigFile(etc,    `override/dcp-config.js`);
+  addConfigRKey('HKLM', 'override/dcp-config');
+  
   /* 2 */
   global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
 
   /* 3 */
-  addConfig(dcpConfig, userConfig)
+  addConfig(dcpConfig, localConfig)
   if (!dcpConfig.scheduler.location)
     dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
   if (!dcpConfig.scheduler.configLocation)
     dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
-  if (userConfig)
-    addConfig(dcpConfig, userConfig) 
+  if (localConfig)
+    addConfig(dcpConfig, localConfig) 
 
   /* 4 */
-  if (userConfig.parseArgv) {
+  if (localConfig.parseArgv) {
     // don't enable help output for init
     const argv = require('dcp/dcp-cli').base().help(false).argv;
     const { scheduler } = argv;
     if (scheduler) {
-      userConfig.scheduler.location = new URL(scheduler);
+      localConfig.scheduler.location = new URL(scheduler);
     }
   }
   if (process.env.DCP_SCHEDULER_LOCATION)
-    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+    localConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
   if (process.env.DCP_SCHEDULER_CONFIGLOCATION)
-    userConfig.scheduler.configLocation = process.env.DCP_SCHEDULER_CONFIGLOCATION
+    localConfig.scheduler.configLocation = process.env.DCP_SCHEDULER_CONFIGLOCATION
   if (process.env.DCP_CONFIG_LOCATION)
-    userConfig.scheduler.configLocation = process.env.DCP_CONFIG_LOCATION
+    localConfig.scheduler.configLocation = process.env.DCP_CONFIG_LOCATION
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
-    userConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
+    localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION)
-    userConfig.bundle.location = process.env.DCP_BUNDLE_LOCATION
-  if (userConfig.scheduler && typeof userConfig.scheduler.location === 'string')
-    userConfig.scheduler.location = new URL(userConfig.scheduler.location)
-  if (userConfig.bundle && typeof userConfig.bundle.location === 'string')
-    userConfig.bundle.location = new URL(userConfig.bundle.location)
+    localConfig.bundle.location = process.env.DCP_BUNDLE_LOCATION
+  if (localConfig.scheduler && typeof localConfig.scheduler.location === 'string')
+    localConfig.scheduler.location = new URL(localConfig.scheduler.location)
+  if (localConfig.bundle && typeof localConfig.bundle.location === 'string')
+    localConfig.bundle.location = new URL(localConfig.bundle.location)
 
-  if (!userConfig.scheduler.configLocation)
-    userConfig.scheduler.configLocation = new URL(userConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
+  if (!localConfig.scheduler.configLocation)
+    localConfig.scheduler.configLocation = new URL(localConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
 
-  if (userConfig)
-    addConfig(dcpConfig, userConfig) 
+  if (localConfig)
+    addConfig(dcpConfig, localConfig) 
 
   /* 5 */
   if (!testHarnessMode && !initSyncMode) {
@@ -430,8 +488,8 @@ exports.init = async function dcpClient$$init() {
 
   if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
     dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
-  if (userConfig)
-    addConfig(dcpConfig, userConfig)
+  if (localConfig)
+    addConfig(dcpConfig, localConfig)
 
   /* 7 */
   if (!testHarnessMode && dcpConfig.bundle.autoUpdate && dcpConfig.bundle.location) {
@@ -455,7 +513,7 @@ exports.init = async function dcpClient$$init() {
   else
     bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
   if (process.env.DCP_SCHEDULER_LOCATION)
-    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+    localConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
 
   /* 9 */
   debugging('modules') && console.debug('Begin phase 2 module injection');

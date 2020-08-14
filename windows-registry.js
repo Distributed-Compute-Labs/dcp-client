@@ -1,22 +1,36 @@
 /**
  * @file        windows-registry.js
- *		Windows registry configuration/integration utility for DCP.
+ *              Windows registry configuration/integration utility for DCP. All exported functions
+ *              return false on non-Windows platforms.
+ *
  *              Basic idea: summarize registry into an objects which can be used as the
  *              initializer object for DCP Client and wallet cache. Multiple hives are read
  *              to support higher-priviledged overrides for Administrators writing Group
  *              Policy files in Enterprise installs.
  *
- * @note        In registry-speak, keys are like directories and values are like files -- i.e. a key can 
+ *              Note: In registry-speak, keys are like directories and values are like files -- i.e. a key can
  *              contain keys and/or values, but values cannot contain keys; only strings and numbers and stuff.
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        Jul 2020
  */
 
-const privHive = 'HKLM';
+const machHive = 'HKLM';
 const userHive = 'HKCU';
-const baseKey = '\\Software\\Kings Distributed Systems\\';
 const regedit = require('regedit');
+
+exports.baseKey = 'Software\\Kings Distributed Systems';
+
+/** Join multiple registry keys fragments together into a full path. 
+ *  @param      {string|Array} ...
+ *  @returns    {string}
+ */
+function keyJoin(/*...*/) {
+  var args = Array.from(arguments);
+  var flat = args.reduce((arr, x) => arr.concat(x), []);
+
+  return flat.join('\\');
+}
 
 /** Get all of the entries for a given key.  Keys are returned in a property
  *  named keys.  Values are returned in a property named values.
@@ -132,18 +146,82 @@ async function regTree(rootPath, tree) {
   return tree;
 }
 
-let dcpClientConfig = {};
+exports.getObject = async function dcpClient$$windowsRegistry$getObject(hive, keyTail) {
+  var tree = {};
 
-//addConfig(dcpClientConfig, 'dcp-client');
-(async function() {
-  var userTree, privTree;
+  keyTail = keyTail.replace(/\//g, '\\');
+  key = `${hive}\\${exports.baseKey}\\${keyTail}`;
 
-  if (await keyExists(privHive + baseKey + 'dcp-client'))
-    privTree = await regTree(privHive + baseKey + 'dcp-client');
+  if (await keyExists(key))
+    await regTree(key, tree);
+  else
+    return false;
+  
+  return tree;
+}
 
-  if (await keyExists(userHive + baseKey + 'dcp-client'))
-    userTree = await regTree(userHive + baseKey + 'dcp-client');
+/** 
+ * @deprecated
+ * Get a DCP Config object for a certain configuration "level". Levels always exist in a
+ * 'this program' and 'any program' sandwhich, provided programName is not falsey.
+ *
+ * @param {string}     hive             the hive to check: used to allow us to
+ *                                      differentiate between user-specific and 
+ *                                      machine-wide configuration entries.
+ * @param {string}     programName      the name of the program doing the configuration
+ *                                      lookup (ignored if falsey).
+ * @param {boolean}    override         true if we are looking at the top-most level
+ *                                      of configury; used, for example, by registry
+ *                                      entries written by an adminsitrator as some
+ *                                      kind of group policy.
+ *
+ * @returns {object} a DCP config object describing the overrides at this specific configuration 
+ *                   "level", with no inheritance from levels either below or above this one.
+ */
+async function getDcpConfig(hive, programName, override) {
+  var tree = {};
+  var baseKey = keyJoin(hive, exports.baseKey, override ? 'override' : 'dcp-client');
 
-  console.log(userTree, privTree);
-})().then(process.exit);
+  if (await keyExists(keyJoin(baseKey, programName, 'dcp-config')))
+    await regTree(keyJoin(baseKey, programName, 'dcp-config'), tree);
+  if (await keyExists(keyJoin(baseKey, 'dcp-config')))
+    await regTree(keyJoin(baseKey, 'dcp-config'), tree);
 
+  return tree;
+}
+
+/** Return any DCP Config values defined in the registry for the user 
+ * @deprecated
+ */
+exports.getUserDcpConfig = async function dcpClient$$windowsRegistry$getUserDcpConfig(programName) {
+  if (!programName && programName !== false)
+    programName = path.basename(process.argv[1], '.js');
+  return getDcpConfig(userHive, programName, false);
+}
+
+/** Return any DCP Config values defined in the registry for the machine
+ * @deprecated
+ */
+exports.getMachDcpConfig = async function dcpClient$$windowsRegistry$getMachDcpConfig(programName) {
+  if (!programName && programName !== false)
+    programName = path.basename(process.argv[1], '.js');
+  return getDcpConfig(machHive, programName, false);
+}
+
+/** Return any DCP Config values defined in the registry as administrative overrides 
+ * @deprecated
+ */
+exports.getOverrideDcpConfig = async function dcpClient$$windowsRegistry$getOverrideDcpConfig() {
+  if (!programName && programName !== false)
+    programName = path.basename(process.argv[1], '.js');
+  return getDcpConfig(machHive, programName, true)
+}
+
+/** Make all exported functions fast-path false return on non-windows */
+if (require('os').platform() !== 'win32') {
+  for (let exp in exports) {
+    if (typeof exports[exp] === 'function') {
+      exports[exp] = function() { return false };
+    }
+  }
+}
