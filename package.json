@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.1.1",
+  "version": "3.1.12-0",
   "description": "Core libraries for accessing DCP network",
   "main": "index.js",
   "scripts": {
@@ -18,11 +18,13 @@
   "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
   "dependencies": {
     "chalk": "^2.4.2",
-    "dcp-worker": "^1.0.0-b",
+    "dcp-worker": "^1.0.6",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.3",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
+    "http-agent": "^0.1.2",
+    "https-agent": "^1.0.0",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
     "niim": "^1.11.6-i",

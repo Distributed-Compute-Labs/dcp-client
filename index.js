@@ -271,7 +271,7 @@ function checkConfigFileSafePerms(fullPath) {
     let check
     check=path.resolve.apply(null, args)
     if (fs.statSync(check).mode & 0o002)
-      throw new Error(`Config ${fullPath} insecure due to world-writeable ${check}`);
+      console.warn(`Config ${fullPath} insecure due to world-writeable ${check}`);
     args.pop()
   } while(args.length);
 }
@@ -619,6 +619,7 @@ exports.createAggregateConfig() = async function dcpClient$$aggregateConfig() {
 
   /* 6 */
   bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
+  bundleSandbox.XMLHttpRequest = XMLHttpRequest;
   bundleSandbox.window = bundleSandbox
   bundleSandbox.globalThis = bundleSandbox
   if (remoteConfigCode) {
