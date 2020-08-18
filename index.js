@@ -6,9 +6,21 @@
  *              same directory as this file, and inject the exported modules into the NodeJS
  *              module environment.
  *
- *              During init(), we wire up require('dcp/dcp-xhr') to provide global.XMLHttpRequest,
- *              from the local bundle, allowing us to immediately start using an Agent which
- *              understands proxies and keepalive.
+ *              There are three initialization styles provided, which are all basically the same, 
+ *              have different calling styles;
+ *              1. initSync - blocks until initialization is complete
+ *              2. init     - returns a Promise, is an "async" function; resolve when initialization is complete
+ *              3. initcb   - invokes a callback when initialization is complete
+ *
+ *              During initialization, we 
+ *              1. wire up require('dcp/dcp-xhr') to provide global.XMLHttpRequest from the local bundle, 
+ *                 allowing us to immediately start using an Agent which understands HTTP proxies and 
+ *                 and keepalive,
+ *              2. build the layered dcp-config for the program invoking init 
+ *                 (see: https://people.kingsds.network/wesgarland/dcp-client-priorities.html /wg aug 2020)
+ *              3. download a new bundle if auto-update is on
+ *              4. make the bundle "see" the layered dcp-config as their global dcpConfig
+ *              5. re-inject the bundle modules (possibly from the new bundle) 
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        July 2019
@@ -19,7 +31,7 @@ const path    = require('path');
 const process = require('process');
 
 exports.debug = false;
-let initFinish = false; /* flag to help us detect use of Compute API before init promise resolves */
+let initInvoked = false; /* flag to help us detect use of Compute API before init */
 
 function debugging(what) {
   const debugSyms = []
@@ -126,7 +138,7 @@ const injectedModules = {};
 const resolveFilenamePrevious = moduleSystem._resolveFilename;
 moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilenameShim(moduleIdentifier) { 
   if (injectedModules.hasOwnProperty(moduleIdentifier)) {
-    if (!initFinish) {
+    if (!initInvoked) {
       if( moduleIdentifier === 'dcp/compute') throw new Error(`module ${moduleIdentifier} cannot be required until the dcp-client::init() promise has been resolved.`);
     }
     return moduleIdentifier;
@@ -309,9 +321,10 @@ function addConfigFile(existing /*, file path components ... */) {
  *  becomes the neo config.
  */
 async function addConfigRKey(existing, hive, keyTail) {
-  var neo = await require('./windows-registry').getObject(hive, keyTail);
-
-  debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
+  return;
+  //  var neo = await require('./windows-registry').getObject(hive, keyTail);
+  neo=false;
+//  debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
 
   if (neo)
     addConfig(existing, neo);
@@ -346,6 +359,77 @@ function addConfigEnviron(existing, prefix) {
   addConfig(existing, neo);
 }
 
+/** 
+ * Tasks which are run in the early phases of initialization
+ * - plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
+ */
+function initHead() {
+  initInvoked = true; /* Allow us to eval require("dcp/compute"); from config */
+  global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
+}
+
+/** 
+ * Tasks which are run in the late phases of initialization:
+ * 1 - re-export the modules from the new bundle
+ * 2 - load and cache identity & bank keystores if they are provided and config.parseArgv is true
+ * 
+ * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
+ */
+function initTail() {
+  /* 1 */
+  debugging('modules') && console.debug('Begin phase 2 module injection');
+  Object.entries(bundle).forEach(entry => {
+    let [id, moduleExports] = entry
+    if (id !== 'dcp-config') {
+      injectModule('dcp/' + id, moduleExports, typeof nsMap['dcp/' + id] !== 'undefined')
+    }
+  })
+
+  if (global.dcpConfig) {
+    /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
+    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
+    bundleSandbox.dcpConfig = require('dcp/dcp-client') = global.dcpConfig;
+    injectModule('dcp/dcp-config', global.dcpConfig, true);
+  } else {
+    Object.assign(defaultConfig, aggrConfig);
+    debugger;
+  }
+
+  Object.defineProperty(exports, 'distDir', {
+    value: function dcpClient$$distDir$getter() {
+      return distDir;
+    },
+    configurable: false,
+    writable: false,
+    enumerable: false
+  })
+
+  injectModule('dcp/client', exports);
+
+  /* 2 */
+  if (aggrConfig.parseArgv) {
+    const dcpCli = require('dcp/dcp-cli');
+    // don't enable help output for init
+    const argv = dcpCli.base().help(false).argv;
+    const { help, identity, identityFile, defaultBankAccount, defaultBankAccountFile } = argv;
+
+    if (!help) {
+      const wallet = require('dcp/wallet');
+      if (identity || identityFile) {
+        const idKs_p = dcpCli.getIdentityKeystore();
+        wallet.addId(idKs_p);
+      }
+
+      if (defaultBankAccount || defaultBankAccountFile) {
+        const bankKs_p = dcpCli.getAccountKeystore();
+        wallet.add(bankKs_p);
+      }
+    }
+  }
+
+  return makeInitReturnObject();
+}
+
 /**
  * Initialize the dcp-client bundle for use by the compute API, etc.
  *
@@ -367,18 +451,23 @@ function addConfigEnviron(existing, prefix) {
  * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
  */
 exports.init = async function dcpClient$$init() {
+  initHead();
+  await exports.createAggregateConfig.apply(null, arguments);
+  initTail();
+}
+
+exports.createAggregateConfig() = async function dcpClient$$aggregateConfig() {
 /* The steps that are followed are in a very careful order; there are default configuration options 
  * which can be overridden by either the API consumer or the scheduler; it is important that the wishes 
  * of the API consumer always take priority.
  *
- *  0 - load the local copy of the bundle (happens as side effect of initial require)
  *  1 - create the local config by 
+ *       - reading the config buried in the bundle and defined at module load
  *       - reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
  *       - reading the registry
  *       - receiving input from the dcp-cli module
  *       - arguments to init()
  *       - etc  (see dcp-docs file dcp-config-file-regkey-priorities)
- *  2 - plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
  *  3 - merge the passed-in configuration on top of the default configuration
  *  4 - use the config + environment + arguments to figure out where the scheduler is
  *  5 - pull the scheduler's config, and layer it on top of the current configuration
@@ -388,12 +477,11 @@ exports.init = async function dcpClient$$init() {
  *  8 - activate either the local bundle or the remote bundle against a fresh sandbox using the
  *      latest config: this causes it to (unfortunately) cache configuration values like the location
  *      of the scheduler
- *  9 - re-export the modules from the new bundle
- * 10 - load and cache identity & bank keystores if they are provided and config.parseArgv is true
+
  *
  * Note re strategy - we always write to localConfig and read from aggrConfig. We sync aggr to local
- * before any reads.  This lets us rebuild aggr from various sources at any future point with conflating
- * local configuration and defaults, either hard-coded or remote.
+ * before any reads.  This lets us rebuild aggr from various sources at any future point without
+ * conflating local configuration and defaults, either hard-coded or remote.
  */
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
   let remoteConfigCode = false;
@@ -405,37 +493,44 @@ exports.init = async function dcpClient$$init() {
   let testHarnessMode = false
   let initSyncMode = false;
   let etc  = (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
-  
+
+  defaultConfig.DEFAULT_CONFIG=true;
+  localConfig.LOCAL_CONFIG=true;
+
+  debugger;
+  defaultConfig.TEST = 413;
+  /* Peel off first argument if it is a secret-internal-API mode selector. */
+  arguments = Array.from(arguments);
   if (arguments[0] === _initForTestHarnessSymbol) {
-    /* Disable homedir config, remote code/config download in test harness mode */
-    arguments = Array.from(arguments)
-    remoteConfigCode = arguments.shift()
-    if (typeof remoteConfigCode === 'object') {
-      remoteConfigCode = JSON.stringify(remoteConfigCode)
-    }
-    testHarnessMode = true
-  } else if (arguments[0] === _initForSyncSymbol) {
-    initSyncMode = true;
-    arguments = Array.from(arguments);
     arguments.shift();
+    testHarnessMode = true; /* test harness => no local config, no remote config */
+  } else if (arguments[0] === _initForSyncSymbol) {
+    arguments.shift();
+    initSyncMode = true;    /* sync mode => use external process to fetch remote config */
   }
+  defaultConfig.TEST = 423;
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
   bundleSandbox.URL = URL
   if (defaultConfig.needs && defaultConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(defaultConfig)
 
-  initFinish = true; /* Allow us to eval require("dcp/compute"); from config */
+  defaultConfig.TEST = 431;
 
   /* 1 - create local config */
   addConfig(aggrConfig, defaultConfig);
-  if (process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH)
+  defaultConfig.TEST = 435;
+  if (process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH) {
     addConfigFile(localConfig, process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH);
-  else {
+    defaultConfig.TEST = 438;
+  } else {
+    defaultConfig.TEST = 440;
     let home = os.homedir();
     let programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
         
     /* This follows spec doc line-by-line */
+    console.log('start');
+    await (async function crap() { return 123 })();
     await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config');
     await addConfigFile(localConfig, etc,    'dcp-client/dcp-config.js');
     await addConfigRKey(localConfig, 'HKLM', `dcp-client/${programName}/dcp-config`);
@@ -445,6 +540,10 @@ exports.init = async function dcpClient$$init() {
     await addConfigRKey(localConfig, 'HKCU', `dcp-client/dcp-config`);
     await addConfigRKey(localConfig, 'HKCU', `dcp-client/${programName}/dcp-config`);
   }
+
+  console.log('assigning');
+  defaultConfig.TEST = 454;
+  console.log('assigned', defaultConfig.TEST);
 
   /* Sort out polymorphic arguments: 'passed-in configuration'.
    * bug: this should be CLI then paseed-in config, but dcp-cli replaces passed-in configuration here. /wg aug 2020
@@ -466,7 +565,7 @@ exports.init = async function dcpClient$$init() {
   await addConfigRKey(localConfig, 'HKLM', 'override/dcp-config');
   
   /* 2 */
-  global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
+  defaultConfig.TEST = 473;
 
   /* 3 */
   addConfig(aggrConfig, localConfig);
@@ -511,12 +610,12 @@ exports.init = async function dcpClient$$init() {
       throw e;
     }
   } else if (initSyncMode) {
-    debugging() && console.debug(` * Blocking while loading configuration from ${localConfig.scheduler.configLocation.href}`);
+    debugging() && console.debug(` * Blocking while loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
     remoteConfigCode = fetchSync(aggrConfig.scheduler.configLocation);
   }
   if (remoteConfigCode !== false && remoteConfigCode.length === 0)
     throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href)
-  addConfig(aggrConfig, localConfig);
+  defaultConfig.TEST = 523;
 
   /* 6 */
   bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
@@ -533,6 +632,8 @@ exports.init = async function dcpClient$$init() {
      * later because the local scheduler config tells us where to find it, so we
      * rebuild the aggregate config object in order to get correct override precedence.
      */
+    newConfig.NEW_CONFIG = true;
+    remoteConfig.REMOTE_CONFIG = true;
     addConfig(newConfig,  defaultConfig);
     addConfig(newConfig,  remoteConfig);
     addConfig(newConfig,  localConfig);
@@ -571,60 +672,9 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_SCHEDULER_LOCATION)
     aggrConfig.scheduler.location = localConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION);
 
-  /* 9 */
-  debugging('modules') && console.debug('Begin phase 2 module injection');
-  Object.entries(bundle).forEach(entry => {
-    let [id, moduleExports] = entry
-    if (id !== 'dcp-config') {
-      injectModule('dcp/' + id, moduleExports, typeof nsMap['dcp/' + id] !== 'undefined')
-    }
-  })
-
-  if (global.dcpConfig) {
-    /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
-    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
-    Object.assign(nsMap['dcp/dcp-config'], global.dcpConfig) /* in case anybody has internal references - should props be proxies? /wg nov 2019 */
-    bundleSandbox.dcpConfig = nsMap['dcp/dcp-config'] = global.dcpConfig
-    injectModule('dcp/dcp-config', global.dcpConfig, true)
-  } else {
-    Object.assign(defaultConfig, aggrConfig);
-    debugger;
-  }
-
-  Object.defineProperty(exports, 'distDir', {
-    value: function dcpClient$$distDir$getter() {
-      return distDir;
-    },
-    configurable: false,
-    writable: false,
-    enumerable: false
-  })
-
-  injectModule('dcp/client', exports);
-
-  /* 10 */
-  if (aggrConfig.parseArgv) {
-    const dcpCli = require('dcp/dcp-cli');
-    // don't enable help output for init
-    const argv = dcpCli.base().help(false).argv;
-    const { help, identity, identityFile, defaultBankAccount, defaultBankAccountFile } = argv;
-
-    if (!help) {
-      const wallet = require('dcp/wallet');
-      if (identity || identityFile) {
-        const idKs = await dcpCli.getIdentityKeystore();
-        wallet.addId(idKs);
-      }
-
-      if (defaultBankAccount || defaultBankAccountFile) {
-        const bankKs = await dcpCli.getAccountKeystore();
-        wallet.add(bankKs);
-      }
-    }
-  }
-
-  initFinish = true;
-  return makeInitReturnObject();
+//XXX  console.log(aggrConfig);
+  defaultConfig.DEFAULT_CONFIG2='wtf';
+  //XXX return the tail return;
 }
 
 exports.initcb = require('./init-common').initcb
@@ -653,9 +703,28 @@ exports._initForTestHarness = function dcpClient$$_initForTestHarness(dcpConfig)
  * @returns dcpConfig
  */
 exports.initSync = function dcpClient$$initSync() {
+  const child_process = require('child_process');
+  var child;
+  var argv = [ process.execPath, require.resolve('./bin/export-dcpconfig'), '--fd=3' ];
+  var output = '';
+  var env = { FORCE_COLOR: 1 };
+  var dcpConfig;
+  
+  if (typeof url !== 'string')
+    url = url.href;
+  argv.push(url);
+
+  child = child_process.spawnSync(argv[0], argv.slice(1), { env: Object.assign(env, process.env), shell: false, windowsHide: true,
+                                                            stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ]});
+  if (child.status !== 0)
+    throw new Error(`Child process returned exit code ${child.status}`);
+
+  dcpConfig = child.output[3].toString('utf-8');
+
   let argv = Array.from(arguments);
+
+
   argv.unshift(_initForSyncSymbol);
-  initFinish = true;
   exports.init.apply(null, argv);
 
   return makeInitReturnObject();
