@@ -27,17 +27,17 @@ module.declare([], function $$nsMap(require, exports, module) {
   var moduleIdentifier;
   
   /* LHS: where symbols appear      RHS: where they come from in dcp-client-bundle-src.js */      
-  exports['dcp/bootstrap-build']= 'dcp-build'
-  exports['dcp/build']          = 'dcp-build' /* overridden when new version loaded */
-  exports['dcp/dcp-config' ]    = 'dcp-config'
+  exports['dcp/build']          = 'dcp-build';
 
   for (moduleIdentifier of [
+    'dcp-config',
     'compute',
     'wallet',
     'protocol',
     'protocol-v4',
     'client-modal',
     'bank-util',
+    'dcp-assert',
     'dcp-xhr',
     'dcp-env',
     'dcp-url',
