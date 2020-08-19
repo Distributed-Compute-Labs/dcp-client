@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
+    "url": "git+ssh://git@github.com/Distributed-Compute-Protocol/dcp-client.git"
   },
   "author": "Kings Distributed Systems",
   "license": "MIT",
   "bugs": {
-    "url": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client/issues"
+    "url": "https://github.com/Distributed-Compute-Protocol/dcp-client/issues"
   },
-  "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
+  "homepage": "https://github.com/Distributed-Compute-Protocol/dcp-client#README",
   "dependencies": {
     "chalk": "^2.4.2",
     "dcp-worker": "^1.0.6",
