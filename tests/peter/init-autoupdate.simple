@@ -1,0 +1,18 @@
+#! /usr/bin/env node
+/* Note: this test assumes that the local DCP-client and the production DCP-client
+ *       bundle were built at different times.  If this test is run from the same
+ *       bootstrap bundle as the published bundle, it will fail, because it can't
+ *       detect the update.
+ */
+const dcpClient = require('../..');
+const { assertNeq3, assertEq3 } = require('dcp/dcp-assert').always;
+
+async function main() {
+  await dcpClient.init(undefined, true);
+  let dcpConfig = require('dcp/dcp-config');
+
+  assertNeq3(require('dcp/build'), require('dcp/bootstrap-build'));
+  assertNeq3(require('dcp/build').built, require('dcp/bootstrap-build').built);
+}
+
+main().then(() => process.exit(0)).catch((e) => console.error(e) && process.exit(1));
