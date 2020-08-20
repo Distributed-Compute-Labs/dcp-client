@@ -20,7 +20,7 @@
     "chalk": "^2.4.2",
     "dcp-worker": "^1.0.6",
     "ethereumjs-util": "^6.2.0",
-    "ethereumjs-wallet": "^0.6.3",
+    "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "http-agent": "^0.1.2",
