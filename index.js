@@ -578,6 +578,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let parseArgv = process.argv.length > 1;
   let URL = require('dcp/dcp-url').URL
   let etc  = (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
+  let home = process.env.DCP_CLIENT_HOMEDIR || os.homedir();
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
   bundleSandbox.URL = URL
@@ -586,25 +587,19 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
 
   /* 1 - create local config */
   addConfig(aggrConfig, defaultConfig);
-  if (process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH) {
-    addConfigFile(localConfig, process.env.DCP_CLIENT_TEST_HARNESS_MODE_HOMEDIR_CONFIG_PATH);
-  } else {
-    let home = os.homedir();
-
-    if (!programName)
-      programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
+  if (!programName)
+    programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
         
-    /* This follows spec doc line-by-line */
-    await (async function crap() { return 123 })();
-    await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config');
-    await addConfigFile(localConfig, etc,    'dcp-client/dcp-config.js');
-    await addConfigRKey(localConfig, 'HKLM', `dcp-client/${programName}/dcp-config`);
-    await addConfigFile(localConfig, etc,    `dcp-client/${programName}/dcp-config.js`); 
-    await addConfigFile(localConfig, home,   '.dcp/dcp-client/dcp-config.js');
-    await addConfigFile(localConfig, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
-    await addConfigRKey(localConfig, 'HKCU', `dcp-client/dcp-config`);
-    await addConfigRKey(localConfig, 'HKCU', `dcp-client/${programName}/dcp-config`);
-  }
+  /* This follows spec doc line-by-line */
+  await (async function crap() { return 123 })();
+  await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config');
+  await addConfigFile(localConfig, etc,    'dcp-client/dcp-config.js');
+  await addConfigRKey(localConfig, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  await addConfigFile(localConfig, etc,    `dcp-client/${programName}/dcp-config.js`); 
+  await addConfigFile(localConfig, home,   '.dcp/dcp-client/dcp-config.js');
+  await addConfigFile(localConfig, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
+  await addConfigRKey(localConfig, 'HKCU', `dcp-client/dcp-config`);
+  await addConfigRKey(localConfig, 'HKCU', `dcp-client/${programName}/dcp-config`);
 
   /* Sort out polymorphic arguments: 'passed-in configuration'.
    * bug: this should be CLI then paseed-in config, but dcp-cli replaces passed-in configuration here. /wg aug 2020
