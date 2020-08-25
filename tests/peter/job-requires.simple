@@ -1,0 +1,16 @@
+#! /usr/bin/env
+
+process.env.DCP_DEBUG='*';
+require('dcp-client').initSync();
+const compute = require('dcp/compute');
+const mid = './lib/reverser';
+
+var job = compute.for(["apple", "banana", "pineapple"], `function work(data) {
+  progress();
+//  require('node-seal');
+  return require('${mid}').reverse(data);
+}`);
+
+job.requires(mid);
+job.on('error', (e) => console.log('job error', e));
+job.exec().then((results) => console.log(results.values()));
