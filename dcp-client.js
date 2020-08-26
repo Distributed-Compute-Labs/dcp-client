@@ -23,7 +23,7 @@
   \\____/  \\_/  \\___/\\_|     |_|  
                                     
 %c
-The console is a browser feature indended for developers. If somebody told you to paste something here it may be a scam and your information could be stolen. Help us keep security in mind and keep your keystores safe.
+The console is a browser feature intended for developers. If somebody told you to paste something here it may be a scam and your information could be stolen. Help us keep security in mind and keep your keystores safe.
   ~ DCP Team
   
 http://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00a473;", "font-size: 1.2em;");
