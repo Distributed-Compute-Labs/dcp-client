@@ -7,7 +7,6 @@ const mid = './lib/reverser';
 
 var job = compute.for(["apple", "banana", "pineapple"], `function work(data) {
   progress();
-//  require('node-seal');
   return require('${mid}').reverse(data);
 }`);
 

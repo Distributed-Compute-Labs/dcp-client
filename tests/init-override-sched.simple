@@ -1,5 +1,5 @@
 #! /usr/bin/env node
-const dcpClient = require('../..');
+const dcpClient = require('..');
 const { assertEq2, assertEq3 } = require('dcp/dcp-assert');
 const alternateScheduler = 'https://demo-scheduler.distributed.computer/';
 

@@ -1,6 +1,6 @@
 #! /usr/bin/env
 
-require('../..').init().then(async () => {
+require('..').init().then(async () => {
   const compute = require('dcp/compute');
   const mid = './lib/reverser';
 

@@ -4,7 +4,7 @@
  *       bootstrap bundle as the published bundle, it will fail, because it can't
  *       detect the update.
  */
-require('../..').initSync(undefined, true);
+require('..').initSync(undefined, true);
 const { assertNeq3, assertEq3 } = require('dcp/dcp-assert').always;
 
 assertNeq3(require('dcp/build'), require('dcp/bootstrap-build'));
