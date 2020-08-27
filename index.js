@@ -258,10 +258,14 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
  *  is overlaid on the existing object, so that properties specified in the 
  *  existing object graph overwrite, but unspecified edges are left alone.
  *
+ *  Instances of URL and dcpUrl::URL receive special treatment: if they are being
+ *  overwritten by a string, the string is used the argument to the constructor
+ *  to create a new object that replaces the entire value.
+ * 
  * *note* -     We treat objects with constructors other than Function or Object
  *              as though they were primitive values, as they may contain internal 
  *              state that is not represented solely by their own properties
- * 
+ *
  * @param       {object}        existing        The top node of an object graph whose 
  *                                              edges may be replaced
  * @param       {object}        neo             The top node of an object graph whose
@@ -271,7 +275,8 @@ function addConfig (existing, neo) {
   const dcpURL  = require('dcp/dcp-url').URL;
 
   for (let prop in neo) {
-    if (!neo.hasOwnProperty(prop)) { continue }
+    if (!neo.hasOwnProperty(prop))
+      continue;
     if (typeof existing[prop] === 'object' && (existing[prop] instanceof URL || existing[prop] instanceof dcpURL)) {
       existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
@@ -570,6 +575,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * before any reads.  This lets us rebuild aggr from various sources at any future point without
  * conflating local configuration and defaults, either hard-coded or remote.
  */
+  const dcpURL  = require('dcp/dcp-url').URL;
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
   let remoteConfigCode = false;
   let finalBundleURL = false;
@@ -589,7 +595,9 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, defaultConfig);
   if (!programName)
     programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
-        
+  if (!aggrConfig.scheduler.location)
+    aggrConfig.scheduler.location = localConfig.scheduler.location = new dcpURL('https://scheduler.distributed.computer/')
+
   /* This follows spec doc line-by-line */
   await (async function crap() { return 123 })();
   await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config');
@@ -621,15 +629,10 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   await addConfigFile(localConfig, etc,    `override/dcp-config.js`);
   await addConfigRKey(localConfig, 'HKLM', 'override/dcp-config');
   
-  /* 2 */
-  defaultConfig.TEST = 473;
-
   /* 3 */
   addConfig(aggrConfig, localConfig);
-  if (!aggrConfig.scheduler.location)
-    aggrConfig.scheduler.location = localConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
   if (!aggrConfig.scheduler.configLocation)
-    aggrConfig.scheduler.configLocation = localConfig.scheduler.configLocation = new URL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'));
+    aggrConfig.scheduler.configLocation = localConfig.scheduler.configLocation = new dcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'));
 
   /* 4 */
   if (aggrConfig.parseArgv) {
