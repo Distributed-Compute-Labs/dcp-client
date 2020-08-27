@@ -1,0 +1,12 @@
+#! /usr/bin/env node
+const path = require('path');
+process.env.DCP_CLIENT_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');
+
+async function main() {
+debugger
+  await require('..').init();
+  const dcpConfig = require('dcp/dcp-config');
+  console.log(dcpConfig.scheduler.location.href);
+}
+
+main().then(() => console.log('done')).catch((e) => console.log('error running test:', e));
