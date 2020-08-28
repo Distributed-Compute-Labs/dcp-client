@@ -1,12 +1,12 @@
 #! /usr/bin/env node
-const path = require('path');
-process.env.DCP_CLIENT_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');
+
+require('./setup-homedir');
 
 async function main() {
-debugger
   await require('..').init();
   const dcpConfig = require('dcp/dcp-config');
-  console.log(dcpConfig.scheduler.location.href);
+  if (!dcpConfig.scheduler.location.href.endsWith('/from/tests-homedir/dcp-client/dcp-config'))
+    throw new Error('Homedir did not override scheduler location');
 }
 
-main().then(() => console.log('done')).catch((e) => console.log('error running test:', e));
+await main();
