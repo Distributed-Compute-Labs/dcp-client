@@ -654,7 +654,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let aggrConfig = {};
   let parseArgv = process.argv.length > 1;
   let etc  = (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
-  let home = process.env.DCP_CLIENT_HOMEDIR || os.homedir();
+  let home = require('dcp/dcp-dot-dir').getHomeDir();
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
   bundleSandbox.URL = dcpURL;
