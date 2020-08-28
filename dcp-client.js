@@ -14,7 +14,7 @@
  */
 (function namespaceIIFE() {
 
-  console.log(` %c
+  console.log(`%c
    _____ _____ ___________   _   
   /  ___|_   _|  _  | ___ \\ | |  
   \\ \`--.  | | | | | | |_/ / | |  
@@ -25,8 +25,8 @@
 %c
 The console is a browser feature intended for developers. If somebody told you to paste something here it may be a scam and your information could be stolen. Help us keep security in mind and keep your keystores safe.
   ~ DCP Team
-  
-http://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00a473;", "font-size: 1.2em;");
+
+https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00a473;", "font-size: 1.2em;");
 
   var _dcpConfig = typeof dcpConfig === 'object' ? dcpConfig : undefined;
   
