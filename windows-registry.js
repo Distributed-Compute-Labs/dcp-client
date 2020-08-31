@@ -19,7 +19,7 @@ const machHive = 'HKLM';
 const userHive = 'HKCU';
 const regedit = require('regedit');
 
-exports.baseKey = 'Software\\Kings Distributed Systems';
+exports.baseKey = 'Software\\Kings Distributed Systems\\DCP';
 
 /** Join multiple registry keys fragments together into a full path. 
  *  @param      {string|Array} ...
@@ -73,40 +73,13 @@ async function getValues(key) {
  *  @param      {string}        key            The key to check, eg HKLM\\Software\\Kings Distributed Systems
  *  @returns Promise which resolves to boolean
  */
-async function XXXkeyExists(key) {
-  console.log('checking', key);
-  var components = key.split('\\');
-  var parent = components.slice(0, components.length - 1).join('\\');
-  var keyBase = components[components.length - 1];
-  var parentSubKeys;
-
-  if (components.length === 1)
-    return true; /* assume all hives exist */
-
-  if (!keyExists(parent))
-    return false;
-
-  parentSubKeys = await getKeys(parent);
-  return (parentSubKeys.map((a) => a.toUpperCase()).filter((a) => a === keyBase.toUpperCase())).length !== 0;
-}
-
-/** Returns true if a given key exists in the registry. Strange algorithm works
- *  around bugs in the npm regedit package.
- *
- *  @param      {string}        key            The key to check, eg HKLM\\Software\\Kings Distributed Systems
- *  @returns Promise which resolves to boolean
- */
 async function keyExists(key) {
-  console.log('checking', key);
-
   var lhs, rhs;
 
   for (rhs = key.split('\\'), lhs = rhs.splice(0,2).join('\\');
        rhs.length;
        lhs += '\\' + rhs.shift()) {
-    console.log('lhs', lhs);
     let subKeys = await getKeys(lhs);
-    console.log('subKeys of', lhs, 'are', subKeys);
     if ((subKeys.map((a) => a.toUpperCase()).filter((a) => a === rhs[0].toUpperCase())).length === 0)
       return false;
   }
