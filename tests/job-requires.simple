@@ -1,6 +1,7 @@
 #! /usr/bin/env
 
-process.env.DCP_DEBUG='*';
+require('./setup-homedir');
+
 require('dcp-client').initSync();
 const compute = require('dcp/compute');
 const mid = './lib/reverser';
