@@ -19,7 +19,7 @@ const machHive = 'HKLM';
 const userHive = 'HKCU';
 const regedit = require('regedit');
 
-exports.baseKey = 'Software\\Kings Distributed Systems\\DCP';
+exports.baseKey = process.env.DCP_REGISTRY_BASEKEY || 'Software\\Kings Distributed Systems\\DCP';
 
 /** Join multiple registry keys fragments together into a full path. 
  *  @param      {string|Array} ...
