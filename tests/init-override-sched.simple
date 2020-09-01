@@ -4,6 +4,7 @@ const { assertEq2, assertEq3 } = require('dcp/dcp-assert');
 const alternateScheduler = 'https://demo-scheduler.distributed.computer/';
 
 require('dcp/dcp-assert').setDebugBuild(true);
+require('./setup-testenv');
 
 async function main() {
   await dcpClient.init(alternateScheduler);

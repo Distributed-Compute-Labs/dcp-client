@@ -1,6 +1,6 @@
 #! /usr/bin/env
 
-require('./setup-homedir');
+require('./setup-testenv');
 
 require('..').init().then(async () => {
   const compute = require('dcp/compute');

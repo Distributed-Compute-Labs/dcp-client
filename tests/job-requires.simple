@@ -1,6 +1,6 @@
 #! /usr/bin/env
 
-require('./setup-homedir');
+require('./setup-testenv');
 
 require('dcp-client').initSync();
 const compute = require('dcp/compute');

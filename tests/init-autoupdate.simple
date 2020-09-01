@@ -7,6 +7,9 @@
 const dcpClient = require('..');
 const { assertNeq3, assertEq3 } = require('dcp/dcp-assert').always;
 
+require('./setup-testenv');
+process.env.DCP_CONFIG_LOCATION = 'https://scheduler.distributed.computer/etc/dcp-config.js';
+
 async function main() {
   await dcpClient.init(undefined, true);
   let dcpConfig = require('dcp/dcp-config');
