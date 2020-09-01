@@ -302,7 +302,7 @@ function addConfigs() {
 function checkConfigFileSafePerms(fullPath) {
   let newPath
   let args = fullPath.split(path.sep)
-  
+
   args[0] += path.sep
   do
   {
@@ -313,6 +313,8 @@ function checkConfigFileSafePerms(fullPath) {
     args.pop()
   } while(args.length);
 }
+if (os.platform() === 'win32')
+  checkConfigFileSafePerms = function(){};
 
 /** Create a memo of where dcpURL instances are in the object graph */
 function makeURLMemo(obj, where) {
@@ -442,13 +444,13 @@ function addConfigEnviron(existing, prefix) {
       let prop = fixCase(v.slice(prefix.length))
       if (typeof neo[prop] !== 'object') {
         neo[prop] = {}
+        addConfig(neo[prop], JSON.parse(process.env[v]))
+      } else {
+        if (typeof neo[prop] === "object") {
+          throw new Error("Cannot override configuration property " + prop + " with a string (is an object)")
+        }
+        neo[prop] = process.env[v]
       }
-      addConfig(neo[prop], JSON.parse(process.env[v]))
-    } else {
-      if (typeof neo[prop] === "object") {
-        throw new Error("Cannot override configuration property " + prop + " with a string (is an object)")
-      }
-      neo[prop] = process.env[v]
     }
   }
 
@@ -648,8 +650,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  */
   const dcpURL = require('dcp/dcp-url').URL;
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
-  let remoteConfigCode = false;
-  let finalBundleURL = false;
+  let remoteConfigCode;
   let localConfig = {
     scheduler: {
       location: new dcpURL('https://scheduler.distributed.computer/#default')
@@ -705,11 +706,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   await addConfigEnviron(localConfig, 'DCP_CONFIG_');
   await addConfigFile(localConfig, etc,    `override/dcp-config.js`);
   await addConfigRKey(localConfig, 'HKLM', 'override/dcp-config');
-
-  /* 3 */
   addConfig(aggrConfig, localConfig);
-  if (!aggrConfig.scheduler.configLocation)
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new dcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'))});
 
   /* 4 */
   if (aggrConfig.parseArgv) {
@@ -724,24 +721,36 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new dcpURL(process.env.DCP_SCHEDULER_LOCATION) });
   if (process.env.DCP_CONFIG_LOCATION) 
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new dcpURL(process.env.DCP_CONFIG_LOCATION) });
+  else if (process.env.DCP_CONFIG_LOCATION === '')
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: '' });
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
     aggrConfig.bundle.autoUpdate = localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION) 
     addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new dcpURL(process.env.DCP_BUNDLE_LOCATION) });
 
-  /* 5 */
-  try {
-    debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
-    remoteConfigCode = await require('dcp/protocol').justFetch(aggrConfig.scheduler.configLocation)
-  } catch(e) {
-    console.error('Error: could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
-    console.log(exports.justFetchPrettyError(e));
-    throw e;
+  /* 3 */
+  if (!aggrConfig.scheduler.configLocation &&
+      aggrConfig.scheduler.configLocation !== '' &&
+      aggrConfig.scheduler.configLocation !== null) {
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new dcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'))});
   }
 
-  if (remoteConfigCode !== false && remoteConfigCode.length === 0)
-    throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href)
-
+  /* 5 */
+  if (aggrConfig.scheduler.configLocation) {
+    try {
+      debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
+      remoteConfigCode = await require('dcp/protocol').justFetch(aggrConfig.scheduler.configLocation)
+    } catch(e) {
+      console.error('Error: could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
+      console.log(exports.justFetchPrettyError(e));
+      throw e;
+    }
+    if (remoteConfigCode.length === 0)
+      throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
+  } else {
+    debugging() && console.debug(` * No remote configuration loaded; scheduler.configLocation is null or empty`);
+  }
+      
   /* 6 */
   bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
   bundleSandbox.XMLHttpRequest = XMLHttpRequest;
@@ -750,7 +759,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (remoteConfigCode) {
     let remoteConfig = {};
     let newConfig = {};
-    addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation));
+    addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
     require('dcp/dcp-url').patchup(remoteConfig);
 
@@ -796,12 +805,12 @@ function fetchAggregateConfig(initArgv) {
   var child;
   var argv = [].concat(process.argv);
   var output = '';
-  var env = { FORCE_COLOR: 1 };
+  var env = Object.assign({ FORCE_COLOR: 1 }, process.env);
   var dcpConfig;
 
   argv[1] = require.resolve('./bin/build-dcp-config')
   child = child_process.spawnSync(argv[0], argv.slice(1), {
-    env: Object.assign(env, process.env),
+    env: env,
     shell: false, windowsHide: true,
     stdio: [ 'pipe', 'inherit', 'inherit', 'pipe' ],
     input: serializer.serialize({programName: process.argv[1], initArgv: initArgv})
