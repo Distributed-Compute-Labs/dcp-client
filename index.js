@@ -659,7 +659,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   };
   let aggrConfig = {};
   let parseArgv = process.argv.length > 1;
-  let etc  = (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
+  let etc  = process.env.DCP_ETCDIR || (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
   let home = require('dcp/dcp-dot-dir').getHomeDir();
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
