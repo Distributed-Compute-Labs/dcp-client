@@ -1,17 +1,17 @@
 {
   "name": "dcp-client",
-  "version": "3.1.16",
+  "version": "3.1.16-b",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
   ],
-  "homepage": "https://github.com/Distributed-Compute-Protocol/dcp-client#README",
+  "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#README",
   "bugs": {
-    "url": "https://github.com/Distributed-Compute-Protocol/dcp-client/issues"
+    "url": "https://github.com/Distributed-Compute-Labs/dcp-client/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Distributed-Compute-Protocol/dcp-client.git"
+    "url": "git+ssh://git@github.com/Distributed-Compute-Labs/dcp-client.git"
   },
   "license": "MIT",
   "author": "Kings Distributed Systems",
