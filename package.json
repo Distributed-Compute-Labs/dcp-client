@@ -5,13 +5,13 @@
   "keywords": [
     "dcp"
   ],
-  "homepage": "https://github.com/Distributed-Compute-Protocol/dcp-client#README",
+  "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#readme",
   "bugs": {
-    "url": "https://github.com/Distributed-Compute-Protocol/dcp-client/issues"
+    "url": "https://github.com/Distributed-Compute-Labs/dcp-client/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Distributed-Compute-Protocol/dcp-client.git"
+    "url": "git+ssh://git@github.com/Distributed-Compute-Labs/dcp-client.git"
   },
   "license": "MIT",
   "author": "Kings Distributed Systems",
