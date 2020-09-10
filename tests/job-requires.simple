@@ -1,8 +1,8 @@
-#! /usr/bin/env
+#! /usr/bin/env node
 
 require('./setup-testenv');
 
-require('dcp-client').initSync();
+require('..').initSync();
 const compute = require('dcp/compute');
 const mid = './lib/reverser';
 

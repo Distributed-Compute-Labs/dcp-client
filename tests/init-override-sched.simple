@@ -6,11 +6,7 @@ const alternateScheduler = 'https://demo-scheduler.distributed.computer/';
 require('dcp/dcp-assert').setDebugBuild(true);
 require('./setup-testenv');
 
-async function main() {
-  await dcpClient.init(alternateScheduler);
-  let dcpConfig = require('dcp/dcp-config');
+await dcpClient.init(alternateScheduler);
+let dcpConfig = require('dcp/dcp-config');
 
-  assertEq3(dcpConfig.scheduler.location.href, alternateScheduler);
-}
-
-main().then(() => process.exit(0)).catch((e) => console.error(e) && process.exit(1));
+assertEq3(dcpConfig.scheduler.location.href, alternateScheduler);

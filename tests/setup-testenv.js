@@ -12,5 +12,3 @@ process.env.DCP_REGISTRY_BASEKEY = `Software\\Kings Distributed Systems\\DCP-Cli
 
 require('child_process').spawnSync('reg.exe', [ 'delete', 'HKLM\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
 require('child_process').spawnSync('reg.exe', [ 'delete', 'HKCU\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
-
-
