@@ -502,7 +502,7 @@ exports.init = async function dcpClient$$init() {
 
       if (defaultBankAccount || defaultBankAccountFile) {
         const bankKs = await dcpCli.getAccountKeystore();
-        wallet.add(bankKs, 'default', true);
+        wallet.add(bankKs);
       }
     }
   }
