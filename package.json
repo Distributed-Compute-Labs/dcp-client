@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "chalk": "^2.4.2",
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#b32f765ba91e00a72591a35e401cbde8bb223e98",
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#7a322f2f718193c5622a478dc0eea792e6d452ec",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
