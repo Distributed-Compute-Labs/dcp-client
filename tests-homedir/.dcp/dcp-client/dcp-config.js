@@ -1,1 +1,1 @@
-scheduler.location = scheduler.location.resolve('/from/tests-homedir/dcp-client/dcp-config');
+scheduler.location.pathname = '/from/tests-homedir/dcp-client/dcp-config';

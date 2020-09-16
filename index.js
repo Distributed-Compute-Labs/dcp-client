@@ -116,11 +116,12 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
  *                                       trace purposes.
  */
 function evalStringInSandbox(code, sandbox, filename) {
-  var context = require('vm').createContext(sandbox)
-  var ret
-
-  ret = require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
-  return ret;
+  let context = require('vm').createContext(sandbox);
+  // remove comments and then decide if this config file has a return. If so we need to wrap it.
+  if (code.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '').match(/^\s*return/m)) {
+    code = `( () => { ${code} })()`;
+  }
+  return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
 }
 
 /** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch.
@@ -272,7 +273,7 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
  */
 function addConfig (existing, neo) {
   const dcpURL  = require('dcp/dcp-url').URL;
-  
+
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
@@ -401,8 +402,10 @@ function addConfigFile(existing /*, file path components ... */) {
       urlMemo = makeURLMemo(existing);
       
       knownGlobals = Object.keys(configSandbox);
-      evalStringInSandbox(code, configSandbox, fullPath);
+      const ret = evalStringInSandbox(code, configSandbox, fullPath);
 
+      if (ret !== null && typeof ret === "object")
+        neo = ret;
       for (let key of Object.keys(configSandbox)) {
         if (knownGlobals.indexOf(key) === -1)
           neo[key] = configSandbox[key];  /* new global = new top-level config object */
@@ -659,7 +662,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   };
   let aggrConfig = {};
   let parseArgv = process.argv.length > 1;
-  let etc  = process.env.DCP_ETCDIR || (require('os').platform() === 'win32') ? process.env.ALLUSERSPROFILE : '/etc';
+  let etc  = process.env.DCP_ETCDIR || (require('os').platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   let home = require('dcp/dcp-dot-dir').getHomeDir();
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
@@ -672,20 +675,20 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, localConfig);
 
   if (!programName)
-    programName = process.argv[1] ? path.basename(process.argv[1], '.js') : false;
-
+    programName = process.argv[1] || false;
+  if (programName)
+    programName = path.basename(programName, '.js');
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-  await (async function crap() { return 123 })();
   await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  await addConfigFile(config, etc,    'dcp-client/dcp-config.js');
-  await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  await addConfigFile(config, etc,    `dcp-client/${programName}/dcp-config.js`); 
+  await addConfigFile(config, etc, 'dcp-client/dcp-config.js');
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && await addConfigFile(config, etc,    `dcp-client/${programName}/dcp-config.js`);
   await addConfigFile(config, home,   '.dcp/dcp-client/dcp-config.js');
-  await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
+  programName && await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
   await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
-  await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
   
   /* Sort out polymorphic arguments: 'passed-in configuration'.
    * bug: this should be CLI then paseed-in config, but dcp-cli replaces passed-in configuration here. /wg aug 2020
@@ -808,6 +811,7 @@ function fetchAggregateConfig(initArgv) {
   var env = Object.assign({ FORCE_COLOR: 1 }, process.env);
   var dcpConfig;
 
+  const programName = 
   argv[1] = require.resolve('./bin/build-dcp-config')
   child = child_process.spawnSync(argv[0], argv.slice(1), {
     env: env,

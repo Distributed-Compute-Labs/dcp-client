@@ -13,5 +13,5 @@ require('..').init().then(async () => {
 
   job.requires(mid);
   job.on('error', (e) => console.log('job error', e));
-  job.exec().then((results) => console.log(results.values()));
+  // job.exec().then((results) => console.log(results.values()));
 });

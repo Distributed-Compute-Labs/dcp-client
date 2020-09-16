@@ -1,0 +1,15 @@
+const { test } = require('zora');
+const dcpClient = require('..');
+require('./setup-testenv');
+
+dcpClient.initSync();
+let dcpConfig = require('dcp/dcp-config');
+
+test('homedir should override etc', function (t) {
+  t.equal(dcpConfig.scheduler.location.pathname, '/from/tests-homedir/dcp-client/dcp-config');
+});
+
+test('etcdir settings should be present when not overridden', function (t) {
+  t.equal(dcpConfig.heyJude, "don't make it bad")
+  t.equal(dcpConfig.bank, 42)
+});
