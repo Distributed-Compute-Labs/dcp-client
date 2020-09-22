@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.2.0",
+  "version": "3.2.0-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "chalk": "^2.4.2",
-    "dcp-worker": "^1.0.12",
+    "dcp-worker": "^1.1.0",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
