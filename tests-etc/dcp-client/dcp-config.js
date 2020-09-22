@@ -1,6 +1,12 @@
-scheduler.location.pathname = '/from/tests-etc/dcp-client/dcp-config';
-
+// Note: we are also using these test configs to test accepted forms
+// this form returns an object
 return {
-  "heyJude": "don't make it bad",
-  "bank": 42
+  "etcOnly": "in-etc",
+  "etcProgramName": "in-etc",
+  "homeDir": "in-etc",
+  "homeDirProgramName": "in-etc",
+  "etcOverriden": "in-etc",
+  "etcProgramNameOverridden": "in-etc",
+  "homeDirOverridden": "in-etc",
+  "homeDirProgramNameOverriden": "in-etc"
 }

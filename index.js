@@ -118,10 +118,19 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
 function evalStringInSandbox(code, sandbox, filename) {
   let context = require('vm').createContext(sandbox);
   // remove comments and then decide if this config file has a return. If so we need to wrap it.
-  if (code.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '').match(/^\s*return/m)) {
+  if (withoutComments(code).match(/^\s*return/m)) {
     code = `( () => { ${code} })()`;
   }
   return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
+}
+
+/**
+ * Return a version of the code without comments. The algorithm here is pretty basic
+ * feel free to improve it.
+ * @param {string} code String to change
+ */
+function withoutComments(code) {
+  return code.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '')
 }
 
 /** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch.
@@ -383,7 +392,7 @@ function addConfigFile(existing /*, file path components ... */) {
     checkConfigFileSafePerms(fullPath);
     code = fs.readFileSync(fullPath, 'utf-8');
     
-    if (code.match(/^\s*{/)) {
+    if (withoutComments(code).match(/^\s*{/)) {
       neo = evalScriptInSandbox(fullPath, bundleSandbox, true);
       addConfig(existing, neo);
     } else {
@@ -404,17 +413,20 @@ function addConfigFile(existing /*, file path components ... */) {
       knownGlobals = Object.keys(configSandbox);
       const ret = evalStringInSandbox(code, configSandbox, fullPath);
 
-      if (ret !== null && typeof ret === "object")
-        neo = ret;
+      // handle programmatic assignment to top-level config
+      // via sandbox globals
       for (let key of Object.keys(configSandbox)) {
         if (knownGlobals.indexOf(key) === -1)
-          neo[key] = configSandbox[key];  /* new global = new top-level config object */
+          neo[key] = configSandbox[key];  /* new global in sandbox = new top-level config object */
       }
       for (let key of Object.keys(existing)) {
         if (configSandbox.hasOwnProperty(key))
           neo[key] = configSandbox[key];
       }
-      applyURLMemo(urlMemo, existing);
+
+      applyURLMemo(urlMemo, neo);
+      // use return values now if available
+      if (ret !== null && typeof ret === "object") Object.assign(neo, ret);
     }
     addConfig(existing, neo);
   }
@@ -681,13 +693,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  await addConfigFile(config, etc, 'dcp-client/dcp-config.js');
+                 await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+                 await addConfigFile(config, etc,    'dcp-client/dcp-config.js');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
   programName && await addConfigFile(config, etc,    `dcp-client/${programName}/dcp-config.js`);
   await addConfigFile(config, home,   '.dcp/dcp-client/dcp-config.js');
   programName && await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
-  await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
+                 await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
   
   /* Sort out polymorphic arguments: 'passed-in configuration'.
