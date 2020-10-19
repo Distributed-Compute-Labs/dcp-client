@@ -1,4 +1,5 @@
-#! /usr/bin/env node
+#!/usr/bin/env node
+
 /**
  * @file        events.js
  *              Sample node application showing how to deploy a DCP job whilst receiving
@@ -11,53 +12,52 @@
  * @author      Wes Garland, wes@kingsds.network
  * @date        Aug 2019, April 2020
  */
-const SCHEDULER_URL =  new URL('https://scheduler.distributed.computer') ;
+
+const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
 
 /** Main program entry point */
 async function main() {
   const compute = require('dcp/compute');
-  let job, results, startTime;
+  const wallet = require('dcp/wallet');
+  let startTime;
 
-  job = compute.for(["red", "green", "yellow", "blue", "brown", "orange", "pink"],
-    function(colour) {
-        progress(0);
-        let sum = 0;
-        for (let i =0; i < 10000000; i++) {
-          progress(i / 10000000);
-          sum += Math.random();
-        }
-      return colour
-    }
-  )
+  const job = compute.for(
+    ['red', 'green', 'yellow', 'blue', 'brown', 'orange', 'pink'],
+    (colour) => {
+      progress(0);
+      let sum = 0;
+      for (let i = 0; i < 10000000; i += 1) {
+        progress(i / 10000000);
+        sum += Math.random();
+      }
+      return { colour, sum };
+    },
+  );
 
-  job.on('accepted',
-    function(ev) {
-      console.log(` - Job accepted by scheduler, waiting for results`);
-      console.log(` - Job has id ${this.id}`)
-      startTime = Date.now()
-    }
-  )
+  job.on('accepted', () => {
+    console.log(` - Job accepted by scheduler, waiting for results`);
+    console.log(` - Job has id ${job.id}`);
+    startTime = Date.now();
+  });
 
-  job.on('readystatechange',
-    function(arg) {
+  job.on('readystatechange', (arg) => {
     console.log(`new ready state: ${arg}`);
-    }
-  )
+  });
 
-  job.on('result',
-    function(ev) {
-      console.log(` - Received result for slice ${ev.sliceNumber} at ${Math.round((Date.now() - startTime) / 100)/10}s`);
-      console.log(` * Wow! ${ev.result} is such a pretty colour!`);
-    }
-  )
+  job.on('result', (ev) => {
+    console.log(
+      ` - Received result for slice ${ev.sliceNumber} at ${
+        Math.round((Date.now() - startTime) / 100) / 10
+      }s`,
+    );
+    console.log(` * Wow! ${ev.result.colour} is such a pretty colour!`);
+  });
 
   job.public.name = 'events example, nodejs';
-  results = await job.exec(compute.marketValue);
-  results = await results.values();
 
-  let ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
+  const ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
   job.setPaymentAccountKeystore(ks);
-  results = await job.exec(compute.marketValue)
+  const results = await job.exec(compute.marketValue);
   console.log('results=', Array.from(results));
 }
 
