@@ -430,7 +430,7 @@ exports.init = async function dcpClient$$init() {
                                          dcpConfig in the bundle - put it back */
 
   if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
-    dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client-bundle.js'))
+    dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client/dist/dcp-client-bundle.js'))
   if (userConfig)
     addConfig(dcpConfig, userConfig)
 
