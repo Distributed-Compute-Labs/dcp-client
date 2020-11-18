@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -25,7 +25,7 @@
   "dependencies": {
     "btoa": "1.2.1",
     "chalk": "^2.4.2",
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop",
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
