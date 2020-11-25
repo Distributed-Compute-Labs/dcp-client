@@ -234,7 +234,7 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
 function addConfig (existing, neo) {
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop)) { continue }
-    if (typeof neo[prop] === 'object' && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name)) {
+    if (neo[prop] !== null && typeof neo[prop] === 'object' && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name)) {
       if (typeof existing[prop] === 'undefined') {
         existing[prop] = {}
       }
