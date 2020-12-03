@@ -44,6 +44,7 @@ const path = require('path')
 const fs = require('fs')
 const distDir = path.resolve(path.dirname(module.filename), 'dist')
 const moduleSystem = require('module')
+
 const bundleSandbox = {
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
   require: require,
@@ -54,12 +55,6 @@ const bundleSandbox = {
   URL: URL,
   dcpConfig: {
     bundleConfig: true,
-    scheduler: {
-    }, bank: {
-      location: new URL('http://bootstrap.distributed.computer/')
-    }, packageManager: {
-      location: new URL('http://bootstrap.distributed.computer/')
-    },
     needs: { urlPatchup: true }
   },
 }
@@ -329,6 +324,14 @@ exports.init = async function dcpClient$$init() {
   bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(dcpConfig)
+
+  /* pre-populate major dcp-config keys so that ~/.dcp/.../dcp-config.js can override settings more easily */
+  dcpConfig.future('scheduler.services');
+  dcpConfig.future('bank.services');
+  dcpConfig.future('dcp.connectionOptions.default.ttl');
+  dcpConfig.future('worker.dcp.connectionOptions.default.ttl');
+  dcpConfig.future('worker.evaluatorSetupFiles');
+  dcpConfig.future('portal');
 
   /* 1 */
   if (homedirConfigPath && fs.existsSync(homedirConfigPath)) {
