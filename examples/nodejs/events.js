@@ -13,7 +13,8 @@
  * @date        Aug 2019, April 2020
  */
 
-const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
+// const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
+const SCHEDULER_URL = new URL('http://scheduler.will.office.kingsds.network/');
 
 /** Main program entry point */
 async function main() {
@@ -21,18 +22,51 @@ async function main() {
   const wallet = require('dcp/wallet');
   let startTime;
 
+  // const dataUrl = new URL('https://people.kingsds.network/willpringle/1428-stuff/data.json');
+  // const dataUrl = 'https://people.kingsds.network/willpringle/1428-stuff/data.json';
+  const data = [];
+
+  // for (let j = 0; j < 1; j++) {
+  //   for (let i = 1; i < 6; i++) {
+  //     data.push(new URL(`https://people.kingsds.network/willpringle/1428-stuff/datum${i}.txt`));
+  //   }
+  // }
+
+  for (let i = 1; i < 10; i++) {
+    // data.push(new URL(`https://people.kingsds.network/willpringle/1428-stuff/largeDataset/datum${i}.txt`));
+    data.push(`string${i}`)
+  }
+
+  /* Work functions */
+
+  // const workfunction = (colour) => {
+  //   progress(0);
+  //   let sum = 0;
+  //   for (let i = 0; i < 10000000; i += 1) {
+  //     progress(i / 10000000);
+  //     sum += Math.random();
+  //   }
+  //   return { colour, sum };
+  // };
+
+  const workfunction = new URL("https://people.kingsds.network/willpringle/1428-stuff/workfun.txt");
+  // const workfunction = new Object();
+
+  // const workfunction = 'https://people.kingsds.network/willpringle/1428-stuff/workfun';
+
+  console.log(workfunction instanceof URL);
+  console.log(URL);
+
+  console.log('<======== CALLING COMPUTE.FOR ========>');
+
   const job = compute.for(
-    ['red', 'green', 'yellow', 'blue', 'brown', 'orange', 'pink'],
-    (colour) => {
-      progress(0);
-      let sum = 0;
-      for (let i = 0; i < 10000000; i += 1) {
-        progress(i / 10000000);
-        sum += Math.random();
-      }
-      return { colour, sum };
-    },
+    data,
+    workfunction,
   );
+
+  console.log('<========  AFTER COMPUTE.FOR  ========>')
+  
+  // job.debug = true;
 
   job.on('accepted', () => {
     console.log(` - Job accepted by scheduler, waiting for results`);
@@ -53,6 +87,7 @@ async function main() {
     console.log(` * Wow! ${ev.result.colour} is such a pretty colour!`);
   });
 
+
   job.public.name = 'events example, nodejs';
 
   const ks = await wallet.get(); /* usually loads ~/.dcp/default.keystore */
@@ -62,8 +97,8 @@ async function main() {
 }
 
 /* Initialize DCP Client and run main() */
-require('dcp-client')
-  .init(SCHEDULER_URL, true)
+require('../..')
+  .init(SCHEDULER_URL)
   .then(main)
   .catch(console.error)
   .finally(process.exit);
