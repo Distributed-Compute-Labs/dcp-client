@@ -301,7 +301,7 @@ exports.init = async function dcpClient$$init() {
   let userConfig = { scheduler: {}, bundle: {}, parseArgv: true }
   let homedirConfigPath = path.resolve(require('os').homedir(), '.dcp', 'dcp-client', 'dcp-config.js')
   let homedirConfig
-  let URL = require('dcp/dcp-url').URL
+  let DcpURL = require('dcp/dcp-url').DcpURL
   let testHarnessMode = false
   let initSyncMode = false;
   
@@ -321,7 +321,7 @@ exports.init = async function dcpClient$$init() {
   }
   
   /* Fix all future files containing new URL() to use our class */
-  bundleSandbox.URL = URL
+  bundleSandbox.URL = DcpURL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(dcpConfig)
 
@@ -354,7 +354,7 @@ exports.init = async function dcpClient$$init() {
   /* Sort out polymorphic arguments: 'passed-in configuration' */
   if (arguments[0]) {
     if (typeof arguments[0] === 'string' || (typeof arguments[0] === 'object' && arguments[0] instanceof global.URL)) {
-      addConfig(userConfig, { scheduler: { location: new URL(arguments[0]) }})
+      addConfig(userConfig, { scheduler: { location: new DcpURL(arguments[0]) }})
     } else if (typeof arguments[0] === 'object') {
       addConfig(userConfig, arguments[0]);
     }
@@ -362,7 +362,7 @@ exports.init = async function dcpClient$$init() {
   if (arguments[1])
     userConfig.bundle.autoUpdate = !!arguments[1]
   if (arguments[2])
-    userConfig.bundle.location = new URL(arguments[2])
+    userConfig.bundle.location = new DcpURL(arguments[2])
 
   /* 2 */
   global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest
@@ -370,9 +370,9 @@ exports.init = async function dcpClient$$init() {
   /* 3 */
   addConfig(dcpConfig, userConfig)
   if (!dcpConfig.scheduler.location)
-    dcpConfig.scheduler.location = new (require('dcp/dcp-url').URL)('https://scheduler.distributed.computer')
+    dcpConfig.scheduler.location = new (require('dcp/dcp-url').DcpURL)('https://scheduler.distributed.computer')
   if (!dcpConfig.scheduler.configLocation)
-    dcpConfig.scheduler.configLocation = new URL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
+    dcpConfig.scheduler.configLocation = new DcpURL(dcpConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
 
@@ -382,11 +382,11 @@ exports.init = async function dcpClient$$init() {
     const argv = require('dcp/dcp-cli').base().help(false).argv;
     const { scheduler } = argv;
     if (scheduler) {
-      userConfig.scheduler.location = new URL(scheduler);
+      userConfig.scheduler.location = new DcpURL(scheduler);
     }
   }
   if (process.env.DCP_SCHEDULER_LOCATION)
-    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+    userConfig.scheduler.location = new DcpURL(process.env.DCP_SCHEDULER_LOCATION)
   if (process.env.DCP_SCHEDULER_CONFIGLOCATION)
     userConfig.scheduler.configLocation = process.env.DCP_SCHEDULER_CONFIGLOCATION
   if (process.env.DCP_CONFIG_LOCATION)
@@ -396,12 +396,12 @@ exports.init = async function dcpClient$$init() {
   if (process.env.DCP_BUNDLE_LOCATION)
     userConfig.bundle.location = process.env.DCP_BUNDLE_LOCATION
   if (userConfig.scheduler && typeof userConfig.scheduler.location === 'string')
-    userConfig.scheduler.location = new URL(userConfig.scheduler.location)
+    userConfig.scheduler.location = new DcpURL(userConfig.scheduler.location)
   if (userConfig.bundle && typeof userConfig.bundle.location === 'string')
-    userConfig.bundle.location = new URL(userConfig.bundle.location)
+    userConfig.bundle.location = new DcpURL(userConfig.bundle.location)
 
   if (!userConfig.scheduler.configLocation)
-    userConfig.scheduler.configLocation = new URL(userConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
+    userConfig.scheduler.configLocation = new DcpURL(userConfig.scheduler.location.resolve('etc/dcp-config.js')) /* 4 */
 
   if (userConfig)
     addConfig(dcpConfig, userConfig) 
@@ -433,7 +433,7 @@ exports.init = async function dcpClient$$init() {
                                          dcpConfig in the bundle - put it back */
 
   if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
-    dcpConfig.bundle.location = new URL(dcpConfig.portal.location.resolve('dcp-client/dist/dcp-client-bundle.js'))
+    dcpConfig.bundle.location = new DcpURL(dcpConfig.portal.location.resolve('dcp-client/dist/dcp-client-bundle.js'))
   if (userConfig)
     addConfig(dcpConfig, userConfig)
 
@@ -459,7 +459,7 @@ exports.init = async function dcpClient$$init() {
   else
     bundle = evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), bundleSandbox)
   if (process.env.DCP_SCHEDULER_LOCATION)
-    userConfig.scheduler.location = new URL(process.env.DCP_SCHEDULER_LOCATION)
+    userConfig.scheduler.location = new DcpURL(process.env.DCP_SCHEDULER_LOCATION)
 
   /* 9 */
   debugging('modules') && console.debug('Begin phase 2 module injection');
