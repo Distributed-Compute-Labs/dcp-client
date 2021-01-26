@@ -321,7 +321,7 @@ exports.init = async function dcpClient$$init() {
   }
   
   /* Fix all future files containing new URL() to use our class */
-  bundleSandbox.URL = DcpURL
+  bundleSandbox.URL = URL
   if (dcpConfig.needs && dcpConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(dcpConfig)
 
@@ -432,8 +432,10 @@ exports.init = async function dcpClient$$init() {
   bundleSandbox.dcpConfig = dcpConfig /* assigning window.dcpConfig in remoteConfigCoode creates a new
                                          dcpConfig in the bundle - put it back */
 
-  if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location)
+  if (!dcpConfig.bundle.location && dcpConfig.portal && dcpConfig.portal.location) {
+    dcpConfig.portal.location = new DcpURL(dcpConfig.portal.location.href); // convert from URL to DcpURL
     dcpConfig.bundle.location = new DcpURL(dcpConfig.portal.location.resolve('dcp-client/dist/dcp-client-bundle.js'))
+  }
   if (userConfig)
     addConfig(dcpConfig, userConfig)
 
