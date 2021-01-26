@@ -2,21 +2,27 @@
   "name": "dcp-client",
   "version": "3.1.12-0",
   "description": "Core libraries for accessing DCP network",
-  "main": "index.js",
-  "scripts": {
-    "build": "./build/bundle",
-    "test": "npx peter -v tests"
+  "keywords": [
+    "dcp"
+  ],
+  "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
+  "bugs": {
+    "url": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git"
   },
-  "author": "Kings Distributed Systems",
   "license": "MIT",
-  "bugs": {
-    "url": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client/issues"
+  "author": "Kings Distributed Systems",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
   },
-  "homepage": "https://gitlab.com/Distributed-Compute-Protocol/dcp-client#README",
+  "scripts": {
+    "build": "./build/bundle",
+    "test": "npx peter -v tests"
+  },
   "dependencies": {
     "chalk": "^2.4.2",
     "dcp-worker": "^1.0.6",
@@ -38,11 +44,5 @@
   "devDependencies": {
     "peter": "2.1.0-a",
     "zora": "^4.0.0"
-  },
-  "directories": {
-    "example": "examples"
-  },
-  "keywords": [
-    "dcp"
-  ]
+  }
 }
