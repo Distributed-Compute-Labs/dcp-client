@@ -27,7 +27,6 @@
     "nanoid": "^2.1.11",
     "niim": "^1.11.6-i",
     "node-localstorage": "^2.1.5",
-    "peter": "^2.1.0-a",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "regedit": "^3.0.3",
@@ -37,6 +36,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
+    "peter": "2.1.0-a",
     "zora": "^4.0.0"
   },
   "directories": {
