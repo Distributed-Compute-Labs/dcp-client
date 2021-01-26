@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "./build/bundle",
-    "test": "npx peter tests"
+    "test": "npx peter -v tests"
   },
   "repository": {
     "type": "git",
