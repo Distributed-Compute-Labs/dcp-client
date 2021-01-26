@@ -1,13 +1,16 @@
 # This file is a template, and might need editing before it works on your project.
 # Official framework image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/node/tags/
-image: node:latest
+image: node:10
 
 # This folder is cached between builds
 # http://docs.gitlab.com/ee/ci/yaml/README.html#cache
 cache:
+  key:
+    files:
+      - package.json
   paths:
-    - node_modules/
+    - node_modules
 
 before_script:
   ##
@@ -36,7 +39,24 @@ before_script:
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
 
-test:
+  ##
+  ## Use ssh-keyscan to scan the keys of your private server. Replace gitlab.com
+  ## with your own domain name. You can copy and repeat that command if you have
+  ## more than one server to connect to.
+  ##
+  - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
   script:
     - npm install
+
+test:
+  stage: test
+  script:
     - npm test
