@@ -1,12 +1,10 @@
-#! /usr/bin/env node
-
 const { test } = require('zora');
 const os = require('os');
 const dcpClient = require('..');
 require('./setup-testenv');
 
 dcpClient.initSync();
-let dcpConfig = require('dcp/dcp-config');
+const dcpConfig = require('dcp/dcp-config');
 
 test('config order', function (t) {
   t.equal(dcpConfig.etcOnly, "in-etc");
