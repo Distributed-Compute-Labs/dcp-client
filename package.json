@@ -24,6 +24,7 @@
     "test": "npx peter -v tests"
   },
   "dependencies": {
+    "btoa": "1.2.1",
     "chalk": "^2.4.2",
     "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop",
     "ethereumjs-util": "^6.2.0",
