@@ -281,12 +281,12 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
  *                                              edges describe the replacement
  */
 function addConfig (existing, neo) {
-  const dcpURL  = require('dcp/dcp-url').URL;
+  const { DcpURL } = require('dcp/dcp-url');
 
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
-    if (typeof existing[prop] === 'object' && (existing[prop] instanceof URL || existing[prop] instanceof dcpURL)) {
+    if (typeof existing[prop] === 'object' && (existing[prop] instanceof URL || existing[prop] instanceof DcpURL)) {
       existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
     }
@@ -326,13 +326,12 @@ function checkConfigFileSafePerms(fullPath) {
 if (os.platform() === 'win32')
   checkConfigFileSafePerms = function(){};
 
-/** Create a memo of where dcpURL instances are in the object graph */
+/** Create a memo of where DcpURL instances are in the object graph */
 function makeURLMemo(obj, where) {
-  const dcpURL  = require('dcp/dcp-url').URL;
+  const { DcpURL } = require('dcp/dcp-url');
   var memo = [];
   var here;
-  
-  /* const dcpURL = */
+
   if (!where)
     where = '';
 
@@ -340,7 +339,7 @@ function makeURLMemo(obj, where) {
     if (typeof obj[prop] !== 'object')
       continue;
     here = where ? where + '.' + prop : prop;
-    if (obj[prop] instanceof dcpURL || obj[prop] instanceof URL) {
+    if (obj[prop] instanceof DcpURL || obj[prop] instanceof URL) {
       memo.push(here);
     } else {
       memo = memo.concat(makeURLMemo(obj[prop], here));
@@ -352,7 +351,7 @@ function makeURLMemo(obj, where) {
 
 /** Change any properties in the urlMemo which are strings into URLs */
 function applyURLMemo(urlMemo, top) {
-  const dcpURL = require('dcp/dcp-url').URL;
+  const { DcpURL } = require('dcp/dcp-url');
   for (let path of urlMemo) {
     let obj = top;
     let pathEls, pathEl;
@@ -363,7 +362,7 @@ function applyURLMemo(urlMemo, top) {
       obj = obj[pathEl];      
     }
     if (typeof obj[pathEl] === 'string')
-      obj[pathEl] = new dcpURL(obj[pathEl]);
+      obj[pathEl] = new DcpURL(obj[pathEl]);
   }
 }
 
@@ -663,22 +662,22 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * conflating local configuration and defaults, either hard-coded or remote.  The localConfig is used
  * to figure out where to download the scheduler.
  */
-  const dcpURL = require('dcp/dcp-url').URL;
+  const { DcpURL } = require('dcp/dcp-url');
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
   let remoteConfigCode;
   let localConfig = {
     scheduler: {
-      location: new dcpURL('https://scheduler.distributed.computer/#default')
+      location: new DcpURL('https://scheduler.distributed.computer/#default')
     },
     bundle: {}
   };
   let aggrConfig = {};
   let parseArgv = process.argv.length > 1;
-  let etc  = process.env.DCP_ETCDIR || (require('os').platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
-  let home = require('dcp/dcp-dot-dir').getHomeDir();
+  const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
+  const home = process.env.DCP_HOMEDIR || os.homedir();
   
   /* Fix all future files containing new URL() to use dcp-url::URL */
-  bundleSandbox.URL = dcpURL;
+  bundleSandbox.URL = DcpURL;
   if (defaultConfig.needs && defaultConfig.needs.urlPatchup)
     require('dcp/dcp-url').patchup(defaultConfig)
 
@@ -707,7 +706,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
    */
   if (initArgv[0]) {
     if (typeof initArgv[0] === 'string' || (typeof initArgv[0] === 'object' && initArgv[0] instanceof global.URL)) {
-      addConfig(localConfig.scheduler, { location: new dcpURL(initArgv[0]) });
+      addConfig(localConfig.scheduler, { location: new DcpURL(initArgv[0]) });
     } else if (typeof initArgv[0] === 'object') {
       addConfig(localConfig, initArgv[0]);
     }
@@ -729,25 +728,25 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     const argv = require('dcp/dcp-cli').base().help(false).argv;
     const { scheduler } = argv;
     if (scheduler) {
-      aggrConfig.scheduler.location = localConfig.scheduler.location = new dcpURL(scheduler);
+      aggrConfig.scheduler.location = localConfig.scheduler.location = new DcpURL(scheduler);
     }
   }
   if (process.env.DCP_SCHEDULER_LOCATION)
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new dcpURL(process.env.DCP_SCHEDULER_LOCATION) });
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new DcpURL(process.env.DCP_SCHEDULER_LOCATION) });
   if (process.env.DCP_CONFIG_LOCATION) 
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new dcpURL(process.env.DCP_CONFIG_LOCATION) });
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new DcpURL(process.env.DCP_CONFIG_LOCATION) });
   else if (process.env.DCP_CONFIG_LOCATION === '')
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: '' });
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
     aggrConfig.bundle.autoUpdate = localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION) 
-    addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new dcpURL(process.env.DCP_BUNDLE_LOCATION) });
+    addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new DcpURL(process.env.DCP_BUNDLE_LOCATION) });
 
   /* 3 */
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== '' &&
       aggrConfig.scheduler.configLocation !== null) {
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new dcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'))});
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new DcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'))});
   }
 
   /* 5 */
@@ -791,7 +790,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   }
 
   if (!aggrConfig.bundle.location && aggrConfig.portal && aggrConfig.portal.location) {
-    localConfig.bundle.location = new dcpURL(aggrConfig.portal.location.resolve('dcp-client-bundle.js'))
+    localConfig.bundle.location = new DcpURL(aggrConfig.portal.location.resolve('dcp-client-bundle.js'))
     addConfig(aggrConfig, localConfig);
   }
   
@@ -814,8 +813,8 @@ exports.initcb = require('./init-common').initcb
  */
 function fetchAggregateConfig(initArgv) {
   const child_process = require('child_process');
-  const serializer    = require('dcp/serialize');
-  const dcpURL        = require('dcp/dcp-url').URL;
+  const serializer = require('dcp/serialize');
+  const { DcpURL } = require('dcp/dcp-url');
 
   var child;
   var argv = [].concat(process.argv);
@@ -835,7 +834,7 @@ function fetchAggregateConfig(initArgv) {
   if (child.status !== 0)
     throw new Error(`Child process returned exit code ${child.status}`);
 
-  serializer.userCtors.dcpUrl$$URL = dcpURL;
+  serializer.userCtors.dcpUrl$$URL = DcpURL;
   return serializer.deserialize(child.output[3].toString('utf-8'));
 }
   
