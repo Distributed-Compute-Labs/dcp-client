@@ -1,3 +1,4 @@
 build/etc/config.cache
 node_modules
 *~
+.vscode
