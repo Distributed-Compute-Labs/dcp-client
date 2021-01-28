@@ -286,7 +286,7 @@ function addConfig (existing, neo) {
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
-    if (typeof existing[prop] === 'object' && (existing[prop] instanceof URL || existing[prop] instanceof DcpURL)) {
+    if (typeof existing[prop] === 'object' && DcpURL.isURL(existing[prop])) {
       existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
     }
@@ -339,7 +339,7 @@ function makeURLMemo(obj, where) {
     if (typeof obj[prop] !== 'object')
       continue;
     here = where ? where + '.' + prop : prop;
-    if (obj[prop] instanceof DcpURL || obj[prop] instanceof URL) {
+    if (DcpURL.isURL(obj[prop])) {
       memo.push(here);
     } else {
       memo = memo.concat(makeURLMemo(obj[prop], here));
