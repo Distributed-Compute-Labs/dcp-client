@@ -1,0 +1,18 @@
+require('./setup-testenv');
+
+require('..')
+  .init()
+  .then(async () => {
+    const compute = require('dcp/compute');
+    const mid = './lib/reverser';
+
+    const job = compute.for(
+      ['apple', 'banana', 'pineapple'],
+      function work(data) {
+        progress();
+        return require('${mid}').reverse(data);
+      },
+    );
+
+    job.dependencies(mid);
+  });
