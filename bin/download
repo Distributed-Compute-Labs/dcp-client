@@ -1,13 +1,14 @@
 #! /usr/bin/env node
 /**
- * @file        download        Program to download a URL and send it to stdout or the
- *                              specified field descriptor.
+ * @file        download        Program to download a URL and send it to stdout.  Used to implement
+ *                              dcp-client's initSync() method.
  *
  * @author      Wes Garland, wes@kingsds.netework
  * @date        May 2020
  */
 
 const dcpClient = require('..');
+const { dcp } = dcpClient._initForTestHarness();
 const fs = require('fs');
 
 function usage() {
@@ -35,7 +36,7 @@ async function main(argv) {
     return usage();
 
   try {
-    data = await require('dcp/protocol').justFetch(url);
+    data = await dcp.protocol.justFetch(url);
     if (fd)
       fs.writeSync(fd, data);
     else
