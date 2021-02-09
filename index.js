@@ -670,7 +670,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let remoteConfigCode;
   let localConfig = {
     scheduler: {
-      location: new URL('https://scheduler.distributed.computer/#default')
+      location: new URL('https://scheduler.distributed.computer/')
     },
     bundle: {}
   };
