@@ -29,11 +29,13 @@ const os      = require('os');
 const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
+const moduleSystem = require('module');
+const { spawnSync } = require('child_process');
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
 
-function debugging(what) {
+function debugging(what = 'dcp-client') {
   const debugSyms = []
         .concat((exports.debug || '').split(','))
         .concat((process.env.DCP_CLIENT_DEBUG || '').split(','))
@@ -57,31 +59,32 @@ function debugging(what) {
 }
 debugging.cache = {}
 
-const distDir = path.resolve(path.dirname(module.filename), 'dist')
-const moduleSystem = require('module')
+const distDir = path.resolve(path.dirname(module.filename), 'dist');
+
 const bundleSandbox = {
+  URL,
+  Function,
+  Object,
+  Array,
+  Date,
+  require,
+  console,
+  setInterval,
+  setTimeout,
+  clearTimeout,
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
-  require: require,
-  console: console,
-  setInterval: setInterval,
-  setTimeout: setTimeout,
-  clearTimeout: clearTimeout,
-  URL: URL,
-  Function: Function,
-  Object: Object,
-  Array: Array,
-  Date: Date,
   dcpConfig: {
     bundleConfig: true,
-    scheduler: {
-    }, bank: {
-      location: new URL('http://bootstrap.distributed.computer/')
-    }, packageManager: {
+    scheduler: {},
+    bank: {
       location: new URL('http://bootstrap.distributed.computer/')
     },
-    needs: { urlPatchup: true }
+    packageManager: {
+      location: new URL('http://bootstrap.distributed.computer/')
+    },
+    needs: { urlPatchUp: true },
   },
-}
+};
 
 /** Evaluate a file in a sandbox without polluting the global object.
  *  @param      filename        {string}    The name of the file to evaluate, relative to
@@ -305,7 +308,7 @@ function addConfig (existing, neo) {
 function addConfigs() {
   var neo = arguments[arguments.length - 1];
 
-  for (existing of Array.from(arguments).slice(0, -1))
+  for (const existing of Array.from(arguments).slice(0, -1))
     addConfig(existing, neo);
 }
 
@@ -455,6 +458,7 @@ function addConfigEnviron(existing, prefix) {
       continue
     }
     if (process.env[v][0] === '{') {
+      // FIXME(bryan-hoang): fixCase is not defined.
       let prop = fixCase(v.slice(prefix.length))
       if (typeof neo[prop] !== 'object') {
         neo[prop] = {}
@@ -662,12 +666,11 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * conflating local configuration and defaults, either hard-coded or remote.  The localConfig is used
  * to figure out where to download the scheduler.
  */
-  const { DcpURL } = require('dcp/dcp-url');
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
   let remoteConfigCode;
   let localConfig = {
     scheduler: {
-      location: new DcpURL('https://scheduler.distributed.computer/#default')
+      location: new URL('https://scheduler.distributed.computer/#default')
     },
     bundle: {}
   };
@@ -675,11 +678,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let parseArgv = process.argv.length > 1;
   const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   const home = process.env.DCP_HOMEDIR || os.homedir();
-  
-  /* Fix all future files containing new URL() to use dcp-url::URL */
-  bundleSandbox.URL = DcpURL;
-  if (defaultConfig.needs && defaultConfig.needs.urlPatchup)
-    require('dcp/dcp-url').patchup(defaultConfig)
 
   /* 1 - create local config */
   addConfig(aggrConfig, defaultConfig);
@@ -700,14 +698,17 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   programName && await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
                  await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
-  
-  /* Sort out polymorphic arguments: 'passed-in configuration'.
-   * bug: this should be CLI then paseed-in config, but dcp-cli replaces passed-in configuration here. /wg aug 2020
-   */
+
+  // Sort out polymorphic arguments: 'passed-in configuration'.
   if (initArgv[0]) {
     if (typeof initArgv[0] === 'string' || (typeof initArgv[0] === 'object' && initArgv[0] instanceof global.URL)) {
-      addConfig(localConfig.scheduler, { location: new DcpURL(initArgv[0]) });
-    } else if (typeof initArgv[0] === 'object') {
+      addConfig(localConfig.scheduler, { location: new URL(initArgv[0]) });
+
+      /**
+       * Checking using isArray to avoid adding cli argv (e.g. process.execPath,
+       * script name, etc.) into config.
+       */
+    } else if (typeof initArgv[0] === 'object' && !Array.isArray(initArgv[0])) {
       addConfig(localConfig, initArgv[0]);
     }
   }
@@ -715,7 +716,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (initArgv[1])
     localConfig.bundle.autoUpdate = !!initArgv[1];
   if (initArgv[2])
-    addConfig(localConfig.bundle, { location: new dcp.URL(initArgv[2])});
+    addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
   await addConfigEnviron(localConfig, 'DCP_CONFIG_');
   await addConfigFile(localConfig, etc,    `override/dcp-config.js`);
@@ -728,25 +729,27 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     const argv = require('dcp/dcp-cli').base().help(false).argv;
     const { scheduler } = argv;
     if (scheduler) {
-      aggrConfig.scheduler.location = localConfig.scheduler.location = new DcpURL(scheduler);
+      aggrConfig.scheduler.location = localConfig.scheduler.location = new URL(scheduler);
     }
   }
   if (process.env.DCP_SCHEDULER_LOCATION)
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new DcpURL(process.env.DCP_SCHEDULER_LOCATION) });
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new URL(process.env.DCP_SCHEDULER_LOCATION) });
   if (process.env.DCP_CONFIG_LOCATION) 
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new DcpURL(process.env.DCP_CONFIG_LOCATION) });
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new URL(process.env.DCP_CONFIG_LOCATION) });
   else if (process.env.DCP_CONFIG_LOCATION === '')
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: '' });
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
     aggrConfig.bundle.autoUpdate = localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION) 
-    addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new DcpURL(process.env.DCP_BUNDLE_LOCATION) });
+    addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new URL(process.env.DCP_BUNDLE_LOCATION) });
 
   /* 3 */
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== '' &&
       aggrConfig.scheduler.configLocation !== null) {
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new DcpURL(aggrConfig.scheduler.location.resolve('etc/dcp-config.js'))});
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
+      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.js`)
+    });
   }
 
   /* 5 */
@@ -775,7 +778,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     let newConfig = {};
     addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
-    require('dcp/dcp-url').patchup(remoteConfig);
 
     /* remote config has lower precedence than local modifications, but gets loaded
      * later because the local scheduler config tells us where to find it, so we
@@ -790,7 +792,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   }
 
   if (!aggrConfig.bundle.location && aggrConfig.portal && aggrConfig.portal.location) {
-    localConfig.bundle.location = new DcpURL(aggrConfig.portal.location.resolve('dcp-client-bundle.js'))
+    localConfig.bundle.location = new URL(`${aggrConfig.portal.location}dcp-client-bundle.js`)
     addConfig(aggrConfig, localConfig);
   }
   
@@ -812,30 +814,29 @@ exports.initcb = require('./init-common').initcb
  * @param  initArgv   the arguments to initSync()
  */
 function fetchAggregateConfig(initArgv) {
-  const child_process = require('child_process');
-  const serializer = require('dcp/serialize');
-  const { DcpURL } = require('dcp/dcp-url');
+  const { patchup: patchUp } = require('dcp/dcp-url');
+  const { serialize, deserialize } = require('dcp/serialize');
 
-  var child;
-  var argv = [].concat(process.argv);
-  var output = '';
-  var env = Object.assign({ FORCE_COLOR: 1 }, process.env);
-  var dcpConfig;
+  const argv = [].concat(process.argv);
+  const programName = argv[1] = require.resolve('./bin/build-dcp-config');
+  const env = { FORCE_COLOR: 1, ...process.env };
+  const nodeArgs = debugging('build-dcp-config') ? ['--inspect'] : []
 
-  const programName = 
-  argv[1] = require.resolve('./bin/build-dcp-config')
-  child = child_process.spawnSync(argv[0], argv.slice(1), {
+  const child = spawnSync(argv[0], nodeArgs.concat(argv.slice(1)), {
     env: env,
     shell: false, windowsHide: true,
     stdio: [ 'pipe', 'inherit', 'inherit', 'pipe' ],
-    input: serializer.serialize({programName: process.argv[1], initArgv: initArgv})
+    input: serialize({programName, initArgv})
   });
   
-  if (child.status !== 0)
+  if (child.status !== 0) {
     throw new Error(`Child process returned exit code ${child.status}`);
+  }
 
-  serializer.userCtors.dcpUrl$$URL = DcpURL;
-  return serializer.deserialize(child.output[3].toString('utf-8'));
+  const serializedOutput = String(child.output[3]);
+  const aggregateConfig = deserialize(serializedOutput);
+  patchUp(aggregateConfig);
+  return aggregateConfig;
 }
   
 /** Fetch a web resource from the server, blocking the event loop. Used by initSync() to
@@ -849,7 +850,6 @@ function fetchAggregateConfig(initArgv) {
  *  @throws if there was an error, including HTTP 404 etc.
  */
 exports.fetchSync = function fetchSync(url) {
-  const child_process = require('child_process');
   var child;
   var argv = [ process.execPath, require.resolve('./bin/download'), '--fd=3' ];
   var output = '';
@@ -859,7 +859,7 @@ exports.fetchSync = function fetchSync(url) {
     url = url.href;
   argv.push(url);
 
-  child = child_process.spawnSync(argv[0], argv.slice(1), { 
+  child = spawnSync(argv[0], argv.slice(1), { 
     env: Object.assign(env, process.env), shell: false, windowsHide: true,
     stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ],
 
