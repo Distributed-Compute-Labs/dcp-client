@@ -489,7 +489,7 @@ exports._initHead = function dcpClient$$initHead() {
  *     bundle will provide post-initialization nsMap).
  * 2 - inject modules from the final bundle on top of the bootstrap modules
  * 3 - patch up internal (to the final bundle) references to dcpConfig to reference our generated config
- * 4 - load and cache identity & bank keystores if they are provided and config.parseArgv is true
+ * 4 - load and cache identity & bank keystores if they are provided and config.parseArgv allows
  * 5 - create the return object
  * 
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
@@ -544,7 +544,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   })
 
   /* 4 */
-  if (aggrConfig.parseArgv) {
+  if (aggrConfig.parseArgv !== false) {
     const dcpCli = require('dcp/dcp-cli');
     /* don't enable help output when automating */
     const argv = dcpCli.base().help(false).argv;
@@ -723,7 +723,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, localConfig);
 
   /* 4 */
-  if (aggrConfig.parseArgv) {
+  if (aggrConfig.parseArgv !== false) {
     // don't enable help output for init
     const argv = require('dcp/dcp-cli').base().help(false).argv;
     const { scheduler } = argv;
