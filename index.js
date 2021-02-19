@@ -31,6 +31,7 @@ const path    = require('path');
 const process = require('process');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
+const { createContext, runInContext } = require('vm');
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
@@ -93,7 +94,7 @@ const bundleSandbox = {
  */
 function evalScriptInSandbox(filename, sandbox, olFlag) {
   var code
-  var context = require('vm').createContext(sandbox)
+  var context = createContext(sandbox)
   try {
     code = fs.readFileSync(path.resolve(distDir, filename), 'utf-8')
     if (olFlag)
@@ -105,7 +106,7 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
     throw e
   }
 
-  return require('vm').runInContext(code, context, filename, 0) // eslint-disable-line
+  return runInContext(code, context, filename, 0);
 }
 
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
@@ -118,13 +119,38 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
  *  @param      filename {string}        The name of the file we're evaluating for stack-
  *                                       trace purposes.
  */
-function evalStringInSandbox(code, sandbox, filename) {
-  let context = require('vm').createContext(sandbox);
+function evalStringInSandbox(
+  code,
+  sandbox,
+  filename = '(dcp-client$$evalStringInSandbox)',
+) {
+  const context = createContext(sandbox);
   // remove comments and then decide if this config file has a return. If so we need to wrap it.
   if (withoutComments(code).match(/^\s*return/m)) {
     code = `( () => { ${code} })()`;
   }
-  return require('vm').runInContext(code, context, filename || '(dcp-client$$evalStringInSandbox)', 0) // eslint-disable-line
+
+  let result;
+
+  /**
+   * Need to wrap in trycatch so that we can control the stack trace that is
+   * printed.
+   */
+  try {
+    result = runInContext(code, context, {
+      filename,
+      /**
+       * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
+       * the whole stack trace to stderr by default.
+       */
+      displayErrors: debugging('evalStringInSandbox'),
+    });
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+
+  return result;
 }
 
 /**
@@ -499,6 +525,7 @@ exports._initHead = function dcpClient$$initHead() {
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
  */
 function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
+  const { patchup: patchUp } = require('dcp/dcp-url');
   var nsMap;            /* the final namespace map to go from bundle->dcp-client environment */
   var bundle;           /* the final bundle, usually a copy of the bootstrap bundle */
   var finalBundleLabel; /* symbolic label used for logs describing the source of the final bundle */
@@ -506,8 +533,18 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
                            possibly edited by the postInitTailHook function. */
   /* 1 */
   if (finalBundleCode) {
-    finalBundleLabel = finalBundleURL;
-    bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, finalBundleLabel);
+    finalBundleLabel = String(finalBundleURL);
+
+    /**
+     * The finalBundleCode may include dcpConfig.bank.location.resolve, which
+     * means we need to convert the URLs in the bundleSandbox into DcpURLs.
+     */
+    patchUp(bundleSandbox);
+    bundle = evalStringInSandbox(
+      finalBundleCode,
+      bundleSandbox,
+      finalBundleLabel,
+    );
   } else {
     let bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
     finalBundleLabel = bundleFilename;
