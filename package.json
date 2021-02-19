@@ -46,7 +46,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
-    "peter": "2.1.0-a",
+    "peter": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/peter.git#develop",
     "zora": "^4.0.0"
   }
 }
