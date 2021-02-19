@@ -854,17 +854,32 @@ function fetchAggregateConfig(initArgv) {
   const { patchup: patchUp } = require('dcp/dcp-url');
   const { serialize, deserialize } = require('dcp/serialize');
 
-  const argv = [].concat(process.argv);
-  const programName = argv[1] = require.resolve('./bin/build-dcp-config');
+  const { argv } = process;
+  const [, programName] = argv;
   const env = { FORCE_COLOR: 1, ...process.env };
-  const nodeArgs = debugging('build-dcp-config') ? ['--inspect'] : []
 
-  const child = spawnSync(argv[0], nodeArgs.concat(argv.slice(1)), {
-    env: env,
-    shell: false, windowsHide: true,
-    stdio: [ 'pipe', 'inherit', 'inherit', 'pipe' ],
-    input: serialize({programName, initArgv})
-  });
+  /**
+   * Spreading an empty array doesn't add anything to the parent array, hence
+   * why we're making nodeArgs an array.
+   */
+  const nodeArgs = debugging('build-dcp-config') ? ['--inspect'] : []
+  const spawnArgs = [...nodeArgs, require.resolve('./bin/build-dcp-config'), ...argv.slice(2)];
+  const child = spawnSync(
+    process.execPath,
+    spawnArgs,
+    {
+      env,
+      shell: false,
+      windowsHide: true,
+      /**
+       * Create a 4th file descriptor to use for piping the serialized config
+       * from build-dcp-config. (e.g. child.output[3])
+       */
+      stdio: ['pipe', 'inherit', 'inherit', 'pipe'],
+      input: serialize({ programName, initArgv }),
+    },
+  );
+
   
   if (child.status !== 0) {
     throw new Error(`Child process returned exit code ${child.status}`);
