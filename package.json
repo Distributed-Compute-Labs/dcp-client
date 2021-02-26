@@ -26,7 +26,6 @@
   "dependencies": {
     "btoa": "1.2.1",
     "chalk": "^2.4.2",
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
@@ -46,6 +45,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#feature/use-dcp-config",
     "peter": "2.1.0-a",
     "zora": "^4.0.0"
   }
