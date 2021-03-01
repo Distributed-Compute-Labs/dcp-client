@@ -768,16 +768,16 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
    * 4. Use the config + environment + arguments to figure out where the
    *    scheduler is.
    *
-   * Only override the scheduler from argv if it is specified in the process'
-   * argv. If not, rely on scheduler url passed in `initArgv`.
+   * Only override the scheduler from argv if dcp-cli specifies a scheduler.
+   * e.g. the user specifies a --dcp-scheduler option.
    */
-  if (aggrConfig.parseArgv !== false && process.argv.includes('--scheduler')) {
-    // Don't enable help output for init
-    const { scheduler } = require('dcp/dcp-cli').base().help(false).parse();
-    aggrConfig.scheduler.location = localConfig.scheduler.location = new URL(
-      scheduler,
-    );
+  // Don't enable help output for init
+  const { dcpScheduler } = require('dcp/dcp-cli').base().help(false).parse();
+  if (typeof dcpScheduler !== 'undefined') {
+    localConfig.scheduler.location = dcpScheduler;
+    aggrConfig.scheduler.location = dcpScheduler;
   }
+
 
   if (process.env.DCP_SCHEDULER_LOCATION)
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new URL(process.env.DCP_SCHEDULER_LOCATION) });
