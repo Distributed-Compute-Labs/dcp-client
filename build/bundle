@@ -127,14 +127,13 @@ mkdir -p "${BUNDLE_TMP}/dist" || exit $?
 cat > "${BUNDLE_TMP}/local-config.incl" <<EOF
 echo " . Loading DCP local-config extras for dcp-client build/bundle" >&2
 SRC_DIR="${DCP_SRC}"
-DCP_ROOT="${BUNDLE_TMP}"
+DCP_PREFIX="${BUNDLE_TMP}"
 BUILD="${DCP_BUILD}"
 DCP_LOCAL_CONFIG_JSON="${BUNDLE_TMP}/local-config.json"
 EOF
 
 node > "${BUNDLE_TMP}/local-config.json" << EOJS
 const localConfig = {};
-localConfig.dcp_root = "${BUNDLE_TMP}";
 localConfig.generated = "`date` by `id -un` on `hostname`";
 if ("${DCP_BUILD}") localConfig.build = "${DCP_BUILD}";
 localConfig.dcpClientDestination = "${BUNDLE_TMP}/dist";
