@@ -97,7 +97,7 @@ Module         | Description
 :------------- | :----------------
 dcp/compute    | The Compute API
 dcp/dcp-build  | Object containing version information, etc. of the running bundle
-dcp/dcp-cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
+dcp/cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
 dcp/dcp-events | Provides classes related to cross-platform event emitting
 dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
 dcp/wallet     | The Wallet API
