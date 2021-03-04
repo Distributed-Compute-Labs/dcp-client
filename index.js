@@ -310,13 +310,12 @@ exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, u
  *                                              edges describe the replacement
  */
 function addConfig (existing, neo) {
-  const { URL, isURL } = require('dcp/dcp-url');
+  const { DcpURL } = require('dcp/dcp-url');
 
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
-    // TODO(bryan-hoang): && isURL(existing[prop])
-    if (typeof existing[prop] === 'object') {
+    if (typeof existing[prop] === 'object' && DcpURL.isURL(existing[prop])) {
       existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
     }
@@ -356,9 +355,9 @@ function checkConfigFileSafePerms(fullPath) {
 if (os.platform() === 'win32')
   checkConfigFileSafePerms = function(){};
 
-/** Create a memo of where URL instances are in the object graph */
+/** Create a memo of where DcpURL instances are in the object graph */
 function makeURLMemo(obj, where) {
-  // const { URL } = require('dcp/dcp-url');
+  const { DcpURL } = require('dcp/dcp-url');
   var memo = [];
   var here;
 
@@ -369,12 +368,11 @@ function makeURLMemo(obj, where) {
     if (typeof obj[prop] !== 'object')
       continue;
     here = where ? where + '.' + prop : prop;
-    // TODO(bryan-hoang): Re-add feature once v4 is ready.
-    // if (URL.isURL(obj[prop])) {
-      // memo.push(here);
-    // } else {
+    if (DcpURL.isURL(obj[prop])) {
+      memo.push(here);
+    } else {
       memo = memo.concat(makeURLMemo(obj[prop], here));
-    // }
+    }
   }
 
   return memo;
@@ -382,7 +380,7 @@ function makeURLMemo(obj, where) {
 
 /** Change any properties in the urlMemo which are strings into URLs */
 function applyURLMemo(urlMemo, top) {
-  const { URL } = require('dcp/dcp-url');
+  const { DcpURL } = require('dcp/dcp-url');
   for (let path of urlMemo) {
     let obj = top;
     let pathEls, pathEl;
@@ -393,7 +391,7 @@ function applyURLMemo(urlMemo, top) {
       obj = obj[pathEl];      
     }
     if (typeof obj[pathEl] === 'string')
-      obj[pathEl] = new URL(obj[pathEl]);
+      obj[pathEl] = new DcpURL(obj[pathEl]);
   }
 }
 
