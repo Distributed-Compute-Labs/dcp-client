@@ -41,7 +41,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     'dcp-xhr',
     'dcp-env',
     'dcp-url',
-    'dcp-cli',
+    'cli',
     'dcp-timers',
     'dcp-dot-dir',
     'dcp-events',
