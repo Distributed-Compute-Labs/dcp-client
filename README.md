@@ -79,15 +79,15 @@ In addition to application-specified options, users of NodeJS applications may a
 ```javascript
 /* Use the default scheduler */
 await require('dcp-client').init();
-let { compute } = require('dcp/compute');
+let compute = require('dcp/compute');
 
 /* Preferences are stored in my-dcp-config.js */
 await require('dcp-client').init('my-dcp-config.js');
-let { compute } = require('dcp/compute');
+let compute = require('dcp/compute');
 
 /* Use an alternate scheduler */
 await require('dcp-client').init(URL('https://scheduler.distributed.computer'));
-let { compute } = require('dcp/compute');
+let compute = require('dcp/compute');
 ```
 
 ### Additional Functionality
@@ -124,16 +124,17 @@ const { EventEmitter } = dcp['dcp-events'];
 The examples in this directory show how to use DCP from a web page using the BravoJS module system and no special web server. The usage is virtually identical to NodeJS, except that your web page must include a *main module* which is a SCRIPT tag with a `module.declare` declaration.
 
 ####  Abbreviated Examples
-```javascript
-<SCRIPT src="/path/to/bravojs/bravo.js"></SCRIPT>
-<SCRIPT src="/path/to/dcp-client/bravojs-shim.js"></SCRIPT>
-<SCRIPT>
-module.declare(["dcp-client/index"], function(require, exports, module) {
+```html
+<script src="/path/to/bravojs/bravo.js"></script>
+<script src="/path/to/dcp-client/bravojs-shim.js"></script>
+<script>
+module.declare(["dcp-client/index"], async function(require, exports, module) {
   /* Use the default scheduler */
-  let { compute } = require('dcp-client').init()
+  await require('dcp-client').init();
+  let compute = require('dcp/compute');
   compute.for(....)
 })
-</SCRIPT>
+</script>
 ```
 
 ### examples/vanilla-web
