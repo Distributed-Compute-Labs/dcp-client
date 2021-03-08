@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.2.4",
+  "version": "3.2.5-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -26,7 +26,6 @@
   "dependencies": {
     "btoa": "1.2.1",
     "chalk": "^2.4.2",
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop",
     "ethereumjs-util": "^6.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
@@ -48,5 +47,8 @@
   "devDependencies": {
     "peter": "2.1.0-a",
     "zora": "^4.0.0"
+  },
+  "peerDependencies": {
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop"
   }
 }
