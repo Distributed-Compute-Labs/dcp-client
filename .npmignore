@@ -1,5 +1,4 @@
 tests*
-bin
 build
 .vscode
 .gitlab-ci.yml
