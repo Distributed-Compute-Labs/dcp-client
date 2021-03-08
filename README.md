@@ -142,7 +142,7 @@ The example in this directory shows how to use DCP from a web page with no modul
 
 ```javascript
 <!-- use an alternate scheduler -->
-<SCRIPT id='dcp-client' src="/path/dcp-client/index.js" scheduler="https://myscheduler.com/"></SCRIPT>
+<SCRIPT id='dcp-client' src="/path/dcp-client/dcp-client.js" scheduler="https://myscheduler.com/"></SCRIPT>
 ```
 
 ```javascript
