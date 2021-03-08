@@ -86,7 +86,7 @@ await require('dcp-client').init('my-dcp-config.js');
 let compute = require('dcp/compute');
 
 /* Use an alternate scheduler */
-await require('dcp-client').init(URL('https://scheduler.distributed.computer'));
+await require('dcp-client').init('https://scheduler.distributed.computer');
 let compute = require('dcp/compute');
 ```
 
