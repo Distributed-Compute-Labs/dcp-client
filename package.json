@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.3.3-a",
+  "version": "3.3.3-b",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -42,11 +42,12 @@
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11",
     "xmlhttprequest-ssl": "^1.6.0",
-    "yargs": "16.2.0",
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade"
+    "yargs": "16.2.0"
   },
   "devDependencies": {
-    "peter": "2.1.0-a",
-    "zora": "^4.0.0"
+    "peter": "^2.1.3"
+  },
+  "peerDependencies": {
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade"
   }
 }
