@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "./build/bundle",
-    "test": "npx peter -v tests"
+    "test": "npx peter tests"
   },
   "dependencies": {
     "btoa": "1.2.1",
@@ -32,7 +32,6 @@
     "https-agent": "^1.0.0",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
-    "niim": "^1.11.6-i",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
@@ -43,8 +42,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
-    "peter": "2.1.0-a",
-    "zora": "^4.0.0"
+    "peter": "^2.1.3"
   },
   "peerDependencies": {
     "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop"
