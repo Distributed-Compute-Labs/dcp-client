@@ -93,8 +93,11 @@ let compute = require('dcp/compute');
 await require('dcp-client').init(new URL('https://scheduler.distributed.computer'));
 let compute = require('dcp/compute');
 
-/* Use an alternate scheduler using dcp-config fragment */
-await require('dcp-client').init(dcp-config.scheduler);
+/* Use an alternate scheduler using dcp-config fragment. a dcp-config is an object which can have
+ * scheduler.location, bundle.location, and bundle.autoUpdate. */                                       
+await require('dcp-client').init({
+  scheduler: { location: new URL('https://scheduler.distributed.computer') },
+}
 let compute = require('dcp/compute');
 ```
 
