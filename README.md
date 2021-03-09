@@ -85,8 +85,16 @@ let compute = require('dcp/compute');
 await require('dcp-client').init('my-dcp-config.js');
 let compute = require('dcp/compute');
 
-/* Use an alternate scheduler */
+/* Use an alternate scheduler string */
 await require('dcp-client').init('https://scheduler.distributed.computer');
+let compute = require('dcp/compute');
+
+/* Use an alternate scheduler URL that is supported on node version 10 and above */
+await require('dcp-client').init(new URL('https://scheduler.distributed.computer'));
+let compute = require('dcp/compute');
+
+/* Use an alternate scheduler using dcp-config fragment */
+await require('dcp-client').init(dcp-config.scheduler);
 let compute = require('dcp/compute');
 ```
 
@@ -96,7 +104,7 @@ In addition to exporting the key APIs, when running dcp-client from NodeJS, the 
 Module         | Description 
 :------------- | :----------------
 dcp/compute    | The Compute API
-dcp/dcp-build  | Object containing version information, etc. of the running bundle
+dcp/build  | Object containing version information, etc. of the running bundle
 dcp/dcp-cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
 dcp/dcp-events | Provides classes related to cross-platform event emitting
 dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
