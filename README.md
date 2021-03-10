@@ -79,26 +79,15 @@ In addition to application-specified options, users of NodeJS applications may a
 ```javascript
 /* Use the default scheduler */
 await require('dcp-client').init();
-let compute = require('dcp/compute');
+let { compute } = require('dcp/compute');
 
 /* Preferences are stored in my-dcp-config.js */
 await require('dcp-client').init('my-dcp-config.js');
-let compute = require('dcp/compute');
+let { compute } = require('dcp/compute');
 
-/* Use an alternate scheduler string */
-await require('dcp-client').init('https://scheduler.distributed.computer');
-let compute = require('dcp/compute');
-
-/* Use an alternate scheduler URL that is supported on node version 10 and above */
-await require('dcp-client').init(new URL('https://scheduler.distributed.computer'));
-let compute = require('dcp/compute');
-
-/* Use an alternate scheduler using dcp-config fragment. a dcp-config is an object which can have
- * scheduler.location, bundle.location, and bundle.autoUpdate. */                                       
-await require('dcp-client').init({
-  scheduler: { location: new URL('https://scheduler.distributed.computer') },
-}
-let compute = require('dcp/compute');
+/* Use an alternate scheduler */
+await require('dcp-client').init(URL('https://scheduler.distributed.computer'));
+let { compute } = require('dcp/compute');
 ```
 
 ### Additional Functionality
@@ -107,7 +96,7 @@ In addition to exporting the key APIs, when running dcp-client from NodeJS, the 
 Module         | Description 
 :------------- | :----------------
 dcp/compute    | The Compute API
-dcp/build  | Object containing version information, etc. of the running bundle
+dcp/dcp-build  | Object containing version information, etc. of the running bundle
 dcp/dcp-cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
 dcp/dcp-events | Provides classes related to cross-platform event emitting
 dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
@@ -135,17 +124,16 @@ const { EventEmitter } = dcp['dcp-events'];
 The examples in this directory show how to use DCP from a web page using the BravoJS module system and no special web server. The usage is virtually identical to NodeJS, except that your web page must include a *main module* which is a SCRIPT tag with a `module.declare` declaration.
 
 ####  Abbreviated Examples
-```html
-<script src="/path/to/bravojs/bravo.js"></script>
-<script src="/path/to/dcp-client/bravojs-shim.js"></script>
-<script>
-module.declare(["dcp-client/index"], async function(require, exports, module) {
+```javascript
+<SCRIPT src="/path/to/bravojs/bravo.js"></SCRIPT>
+<SCRIPT src="/path/to/dcp-client/bravojs-shim.js"></SCRIPT>
+<SCRIPT>
+module.declare(["dcp-client/index"], function(require, exports, module) {
   /* Use the default scheduler */
-  await require('dcp-client').init();
-  let compute = require('dcp/compute');
+  let { compute } = require('dcp-client').init()
   compute.for(....)
 })
-</script>
+</SCRIPT>
 ```
 
 ### examples/vanilla-web
@@ -153,7 +141,7 @@ The example in this directory shows how to use DCP from a web page with no modul
 
 ```javascript
 <!-- use an alternate scheduler -->
-<SCRIPT id='dcp-client' src="/path/dcp-client/dcp-client.js" scheduler="https://myscheduler.com/"></SCRIPT>
+<SCRIPT id='dcp-client' src="/path/dcp-client/index.js" scheduler="https://myscheduler.com/"></SCRIPT>
 ```
 
 ```javascript
