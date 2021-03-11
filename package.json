@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.3.3-b",
+  "version": "3.4.0-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -42,8 +42,5 @@
   },
   "devDependencies": {
     "peter": "^2.1.3"
-  },
-  "peerDependencies": {
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade"
-  },
+  }
 }
