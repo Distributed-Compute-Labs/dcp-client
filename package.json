@@ -21,20 +21,17 @@
   },
   "scripts": {
     "build": "./build/bundle",
-    "test": "npx peter -v tests"
+    "test": "npx peter tests"
   },
   "dependencies": {
     "btoa": "1.2.1",
     "chalk": "^2.4.2",
-    "ethereumjs-util": "^6.2.0",
-    "ethereumjs-wallet": "^0.6.5",
     "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "http-agent": "^0.1.2",
     "https-agent": "^1.0.0",
     "md5": "^2.2.1",
     "nanoid": "^2.1.11",
-    "niim": "^1.11.6-i",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
