@@ -316,7 +316,8 @@ function addConfig (existing, neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
     if (typeof existing[prop] === 'object' && DcpURL.isURL(existing[prop])) {
-      existing[prop] = new (existing[prop].constructor)(neo[prop]);
+      if (neo[prop])
+        existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
     }
     if (typeof neo[prop] === 'object' && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name)) {
