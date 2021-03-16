@@ -14,5 +14,5 @@ require('..')
       },
     );
 
-    job.dependencies(mid);
+    job.requires(mid);
   });
