@@ -9,5 +9,5 @@ const job = compute.for(['apple', 'banana', 'pineapple'], function work(data) {
   return require('${mid}').reverse(data);
 });
 
-job.dependencies(mid);
+job.requires(mid);
 job.on('error', (e) => console.log('job error', e));
