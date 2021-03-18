@@ -122,7 +122,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
     outputStream.on('end',   this.destroy);
     outputStream.on('close', this.destroy);
     outputStream.on('error', this.destroy);
-  } 
+  }
 }
 
 exports.Evaluator.prototype.shutdownSockets = function Evaluator$shutdownSockets() {
@@ -130,7 +130,7 @@ exports.Evaluator.prototype.shutdownSockets = function Evaluator$shutdownSockets
     return;
 
   debug && console.log(`Evalr-${this.id}: Shutting down evaluator sockets`);
-  
+
   if (this.incompleteLine)
     console.warn(`Discarded incomplete line ${this.incompleteLine} from destroyed connection`);
 
@@ -145,8 +145,8 @@ exports.Evaluator.prototype.shutdownSockets = function Evaluator$shutdownSockets
   this.streams.output.destroy();
   this.streams.output = null;
 }
-    
-/** Destroy a instance of Evaluator, closing the streams input and output 
+
+/** Destroy a instance of Evaluator, closing the streams input and output
  *  were the same (presumably a socket). All events are released to avoid
  *  entrain garbage, closures, etc.
  *
