@@ -292,7 +292,9 @@ function main() {
     + 'Usage: dcp-evaluator [options] [<file.js> <file.js> ...]')
   .options({
     port: {
+      alias: 'p',
       describe: 'Indicates port number to listen on (default: stdio pipes).',
+      type: 'number',
     },
     listen: {
       describe: 'Indicates address of network interface to listen on (listen address|any).',
