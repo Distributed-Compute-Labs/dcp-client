@@ -298,7 +298,8 @@ function main() {
     },
     listen: {
       describe: 'Indicates address of network interface to listen on (listen address|any).',
-      default: false,
+      type: 'string',
+      default: 'localhost',
     },
     solo: {
       describe: 'Do not fork; only run one evaluator at a time.',
