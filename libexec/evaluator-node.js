@@ -1,4 +1,5 @@
 #! /usr/bin/env node
+/* eslint-disable node/shebang */
 /**
  *  @file       evaluator-node.js
  *              Simple 'node' evaluator -- equivalent to native evaluators,
