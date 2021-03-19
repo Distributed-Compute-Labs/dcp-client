@@ -267,7 +267,7 @@ function server(listenAddr, port, files) {
 
     child = child_process.spawn(process.execPath, [ __filename, ...files ]);
     child.stderr.setEncoding('utf-8');
-    child.stderr.on('data', (chunk) => process.stderr.write('child>', chunk));
+    child.stderr.on('data', (chunk) => process.stderr.write(chunk));
     child.stdout.on('data', (chunk) => socket.write(chunk));
     socket.on('data', (chunk) => child.stdin.write(chunk));
     socket.on('close', () => child.kill('SIGINT'));
