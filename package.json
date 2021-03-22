@@ -45,6 +45,6 @@
     "peter": "^2.1.3"
   },
   "peerDependencies": {
-    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#epic/scheduler-upgrade"
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#merge/epic-into-develop"
   }
 }
