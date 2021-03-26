@@ -1,6 +1,6 @@
 # DCP-Client
 
-This is the official client library for DCP, the Distributed Compute Protocol.  This library allows client applications to communicate with the Scheduler, Bank, and other parts of a DCP network. This library is redistributable and may be included with other programs under the terms of the MIT license. 
+This is the official client library for DCP, the Distributed Compute Protocol.  This library allows client applications to communicate with the Scheduler, Bank, and other parts of a DCP network. This library is redistributable and may be included with other programs under the terms of the MIT license.
 
 ## Release Notes
 
@@ -13,7 +13,7 @@ DCP is currently (May 2020) in testing for a limited set of developers under our
 The DCP-Client code can be made to run in nearly any JavaScript environment which supports ES5 and XMLHttpRequest.  Our officially-supported platforms are
 - NodeJS version 10 (LTS)
 - NodeJS version 12 (LTS)
-- BravoJS, latest version 
+- BravoJS, latest version
 - Vanilla Web - no module system at all
 
 ### Related Products
@@ -38,10 +38,10 @@ To use the DCP Client library from a plain vanilla web platform, you must make t
 If you are a web developer looking to get started quickly, there are is a sample project on JS Fiddle that might interest you at https://jsfiddle.net/KingsDistributedSystems/58e6up4b/
 
 #### Self-Hosted Bundle
-To host the bundle on your own server, simply acquire the dcp-client package and copy the files `dcp-client.js` and `dcp-client.css` into a directory on your web server that your web clients can access. We recommend using the `dcp/` directory under your document root.  
+To host the bundle on your own server, simply acquire the dcp-client package and copy the files `dcp-client.js` and `dcp-client.css` into a directory on your web server that your web clients can access. We recommend using the `dcp/` directory under your document root.
 
 ### BravoJS (EDP: not implemented)
-To use the DCP Client library with BravoJS, you must make the bundle and the loader visible to your web application. 
+To use the DCP Client library with BravoJS, you must make the bundle and the loader visible to your web application.
 
 ## DCP-Client API
 While methods of initializing dcp-client vary somewhat from platform to platform or framework to framework (see below), after initializing, you will have a way to access the key exports of the dcp-client library:
@@ -51,7 +51,7 @@ While methods of initializing dcp-client vary somewhat from platform to platform
 4. `dcp-config` - a configuration object which can override various core options, such as the location of a local HTTP proxy; the initial default is downloaded from `protocol://location.of.scheduler/etc/dcp-config`
 5. A global symbol, XMLHttpRequest, which understands HTTP, HTTPS, and HTTP-KeepAlive.  This is the native implementation on the browser platforms and polyfilled in NodeJS via the `dcp-xhr` module. The polyfill includes deep network-layer debugging hooks.
 
-### init() and initSync() - CommonJS 
+### init() and initSync() - CommonJS
 From your NodeJS application (or any other using the CommonJS `require` function), you can invoke `require('dcp-client').init()` which initializes the dcp-client library. This function returns a promise that, once resolved, signals that the DCP modules have been injected into the NodeJS module memo (more about DCP modules below). Alternatively, you may call `initSync` with the same arguments and behavior as `init` except that the initialization is performed synchronously.
 
 The `init` function takes zero or more arguments, allowing the developer to create an object which overrides the various DCP defaults; in particular, the location of the scheduler and the name of the code bundle which is executed to provide the APIs.   This object has the same "shape" as the `dcpConfig` export from the library, and this is no coincidence: *any* parameter specified in the configuration will override the same-pathed property provided by the scheduler's configuration object that lives at `etc/dcp-config.js` relative to the scheduler's location.
@@ -94,7 +94,7 @@ await require('dcp-client').init(new URL('https://scheduler.distributed.computer
 let compute = require('dcp/compute');
 
 /* Use an alternate scheduler using dcp-config fragment. a dcp-config is an object which can have
- * scheduler.location, bundle.location, and bundle.autoUpdate. */                                       
+ * scheduler.location, bundle.location, and bundle.autoUpdate. */
 await require('dcp-client').init({
   scheduler: { location: new URL('https://scheduler.distributed.computer') },
 }
@@ -104,10 +104,11 @@ let compute = require('dcp/compute');
 ### Additional Functionality
 In addition to exporting the key APIs, when running dcp-client from NodeJS, the following modules are automatically injected into the NodeJS module memo, so that they can be used in `require()` statements:
 
-Module         | Description 
+Module         | Description
 :------------- | :----------------
 dcp/compute    | The Compute API
 dcp/dcp-build  | Object containing version information, etc. of the running bundle
+dcp/cli    | Provides a standard set of DCP CLI options and related utility functions via yargs
 dcp/dcp-events | Provides classes related to cross-platform event emitting
 dcp/dcp-config | The running configuration object (result of merging various options to `init()`)
 dcp/wallet     | The Wallet API
@@ -171,7 +172,7 @@ console.log(results);
 
 ## Executing Jobs
 
-At its core, a job can be thought of as an input set, a Work function; executing a job yields an output set. 
+At its core, a job can be thought of as an input set, a Work function; executing a job yields an output set.
 
 Jobs (job handles) are generally created with the `compute.for` function, which is described in detail in the Compute API documentation. To execute the job, we invoke the `exec()` method of the job handle.
 
@@ -179,11 +180,11 @@ An input set can be described with arguments to `compute.for()` with `RangeObjec
 
 ### Examples
 run Work on the whole numbers between 1 and 10:
-```javascript 
+```javascript
 job = compute.for(1, 10, Work)
 ```
 run Work on the numbers 6, 9, 12, 15:
-```javascript 
+```javascript
 job = compute.for(6, 16, 3, Work)
 ```
 
@@ -202,7 +203,7 @@ The DCP Client bundle comes with a number of DCP APIs exposed for use in your ow
 * provides a JavaScript interface to software developers, allowing them to describe data sets and work functions for transmission to the Scheduler. See https://docs.dcp.dev/specs/compute-api.
 
 ### Wallet API
-* provides a JavaScript interface to software developers for the management of Addresses, Wallets, and Keystores. See https://docs.dcp.dev/specs/wallet-api. 
+* provides a JavaScript interface to software developers for the management of Addresses, Wallets, and Keystores. See https://docs.dcp.dev/specs/wallet-api.
 
 
 ### Protocol API
