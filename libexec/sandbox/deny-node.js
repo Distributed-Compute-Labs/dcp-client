@@ -6,6 +6,6 @@
  * @date        Mar 2021
  */
 if (typeof __evaluator === 'object' && __evaluator.type === 'node') {
-  writeln('LOG:Sandbox definition not suitable Node evaluator - exiting');
+  writeln('LOG:Sandbox definition not suitable for Node evaluator - exiting');
   die(99);
 }
