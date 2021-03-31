@@ -27,14 +27,7 @@ try {
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
 
-if (
-  /**
-   * Checkwhether this script is being run in CI; if not, check whether it is a POSIX
-   * environment; if so, check whether running as root and bail if so.
-   */
-  process.env.CI_ENV !== "gitlab" &&
-  (process.getuid && (process.getuid() === 0 || process.geteuid() === 0))
-) {
+if (process.getuid && (process.getuid() === 0 || process.geteuid() === 0)) {
   console.error(
     "Running this program as root is a very bad idea. Exiting process..."
   );
@@ -65,7 +58,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
   /* Add properties to sandbox global scope */
   Object.assign(this.sandboxGlobal, {
     self: this.sandboxGlobal,
-    die: () => { this.destroy(); },
+    die: (exitCode) => { this.destroy(); process.exit(exitCode); },
     writeln: (string)  => { this.writeln(string) },
     onreadln: (handler) => { this.onreadlnHandler = handler },
     setTimeout,
@@ -73,6 +66,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
     clearTimeout,
     clearInterval,
     performance: require('perf_hooks').performance,
+    __evaluator: { type: 'node' }
   });
 
   /* Create a new JS context that has our non-JS-standard global
@@ -159,7 +153,6 @@ exports.Evaluator.prototype.destroy = function Evaluator$destroy() {
   this.streams.input.removeListener('data', this.readData);
   this.sandboxGlobal.writeln = () => { throw new Error('Evaluator ' + this.id + ' has been destroyed; cannot write'); }
   this.sandboxGlobal.progress = () => { throw new Error('Evaluator ' + this.id + ' has been destroyed; cannot send process updates'); }
-
   this.shutdownSockets();
 }
 
@@ -288,7 +281,7 @@ function server(listenAddr, port, files) {
  */
 function main() {
   const argv = require('yargs')
-  .usage('Node Evaluator - Copyright (c) 2020 Kings Distributed Systems. All Rights Reserved.'
+  .usage('Node Evaluator - Copyright (c) 2020-2021 Kings Distributed Systems, Ltd. All Rights Reserved.'
     + 'Usage: dcp-evaluator [options] [<file.js> <file.js> ...]')
   .options({
     port: {
