@@ -453,7 +453,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
    */
   function applyPolyfills(obj, polyfills = {}) {
     // Apply symbols from polyfill object
-    for (prop in polyfills) {
+    for (let prop in polyfills) {
       let found = false;
       for (let o = obj; o.__proto__ && (o.__proto__ !== Object); o = o.__proto__) {
         if (o.hasOwnProperty(prop)) {
