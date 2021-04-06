@@ -61,7 +61,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
           break;
         }
 
-        Promise.resolve().then(async () => {
+        let measurementWrapper = async () => {
           if (lastTimeStamp) {
             ring0PostMessage({
               request: 'measurement',
@@ -72,7 +72,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
           lastTimeStamp = performance.now();
           await timer.fn();
           lastTimeStamp = performance.now();
-        });
+        }
+        Promise.resolve().then(measurementWrapper);
 
         if (timer.recur) {
           timer.when = Date.now() + timer.recur;

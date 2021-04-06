@@ -99,7 +99,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         let resolveHandle, rejectHandle;
         let timeoutPromise = new Promise((...args) => [resolveHandle, rejectHandle] = args);
         // Put job on event loop with timeout
-        setTimeout( async () => {
+        let launchJob = (async () => {
           try {
             let result = await module.main.job.apply(null,[message.data].concat(module.main.arguments))
             resolveHandle(result);
@@ -108,6 +108,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           }
           try{ flushLastLog(); } catch(e) {/* do nothing */}
         });
+        setTimeout(launchJob);
+
         // wait for the above to fulfill
         try {
           const t0 = performance.now();
@@ -148,7 +150,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
   /** A module.declare suitable for running when processing modules arriving as part
   * of a  module group or other in-memory cache.
   */
-  bravojs.ww.groupedModuleDeclare = (dependencies, moduleFactory) => {
+  bravojs.ww.groupedModuleDeclare = function bravojsEnv$$ww$groupedModuleDeclare(dependencies, moduleFactory) {
     var i
     var moduleBase = ''
 
@@ -169,15 +171,15 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
     }
   }
 
-  /* A module.provide suitable for a web worker, which requests modules via message passing.
-*
-*  @param  dependencies  A dependency array
-*  @param  callback  The callback to invoke once all dependencies have been
-*          provided to the environment. Optional.
-*  @param    onerror         The callback to invoke in the case there was an error providing
-*                            the module (e.g. 404). May be called more than once.
-*/
-  bravojs.Module.prototype.provide = (dependencies, callback, onerror) => {
+  /** A module.provide suitable for a web worker, which requests modules via message passing.
+   *
+   *  @param  dependencies      A dependency array
+   *  @param  callback          The callback to invoke once all dependencies have been
+   *                            provided to the environment. Optional.
+   *  @param  onerror           The callback to invoke in the case there was an error providing
+   *                            the module (e.g. 404). May be called more than once.
+   */
+  bravojs.Module.prototype.provide = function bravojsEnv$$Module$provide(dependencies, callback, onerror) {
     var id = Date.now() + Math.random()
 
     dependencies = bravojs.normalizeDependencyArray(dependencies)
@@ -194,7 +196,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
     })
   }
 
-  bravojs.onMainModuleEvaluated = function () {
+  bravojs.onMainModuleEvaluated = function bravojsEnv$$onMainModuleEvaluated() {
     ring2PostMessage({
       request: 'mainModuleEvaluated'
     })
