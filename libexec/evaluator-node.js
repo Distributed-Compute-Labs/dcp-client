@@ -74,7 +74,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
    */
   vm.createContext(this.sandboxGlobal, {
     name: 'Evaluator ' + this.id,
-    origin: 'dcp:://evaluator',
+    origin: 'dcp://evaluator',
     codeGeneration: { strings: true, wasm: true },
   });
 
