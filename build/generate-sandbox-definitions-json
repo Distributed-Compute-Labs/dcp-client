@@ -43,7 +43,7 @@ o.webGpuNative = o.native.concat(['webgpu-worker-environment.js']);
 
 for (let type in o) {
   if (type !== 'node')
-    o.unshift('deny-node');
+    o[type].unshift('deny-node');
 }
 
 fs.writeFileSync(path.resolve(__dirname, target), JSON.stringify(o), 'utf-8');      
