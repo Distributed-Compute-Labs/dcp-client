@@ -7,4 +7,4 @@ cd "$oldDir"
 
 "${myDir}/generate-sandbox-definitions-json"
 echo
-"${myDir}/bundle" $@
+"${myDir}/bundle" "$@"
