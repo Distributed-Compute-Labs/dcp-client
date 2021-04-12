@@ -41,5 +41,10 @@ o.native = [ 'sa-ww-simulation' ].concat(base);
 /** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
 o.webGpuNative = o.native.concat(['webgpu-worker-environment.js']);
 
+for (let type in o) {
+  if (type !== 'node')
+    o[type].unshift('deny-node');
+}
+
 fs.writeFileSync(path.resolve(__dirname, target), JSON.stringify(o), 'utf-8');      
 console.log(`Done - ${Object.keys(o).join(', ')}.`);
