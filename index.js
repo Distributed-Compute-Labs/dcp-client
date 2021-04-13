@@ -838,11 +838,19 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
                                              a new dcpConfig in the bundle - put it back */ 
   }
 
-  if (!aggrConfig.bundle.location && aggrConfig.portal && aggrConfig.portal.location) {
-    localConfig.bundle.location = new URL(`${aggrConfig.portal.location}dcp-client-bundle.js`)
+  // Default location for the auto update bundle is the portal.
+  if (
+    !aggrConfig.bundle.location &&
+    aggrConfig.portal &&
+    aggrConfig.portal.location
+  ) {
+    localConfig.bundle.location = new URL(
+      `${aggrConfig.portal.location}dcp-client/dist/dcp-client-bundle.js`,
+    );
+
     addConfig(aggrConfig, localConfig);
   }
-  
+
   return aggrConfig;
 }
 
