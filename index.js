@@ -132,10 +132,12 @@ function evalStringInSandbox(
    * statement" from being thrown.
    */
   const topLevelReturnRegex = /^return/m;
-  let wasCodeWrapped = false;
+  let lineOffset = 0;
   if (withoutComments(code).match(topLevelReturnRegex)) {
     code = `(() => {\n${code}\n})();`;
-    wasCodeWrapped = true;
+
+    // To account for the newline in "(() => { \n${code}..."
+    lineOffset = -1;
   }
 
   let result;
@@ -147,13 +149,12 @@ function evalStringInSandbox(
   try {
     result = runInContext(code, context, {
       filename,
+      lineOffset,
       /**
        * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
        * the whole stack trace to stderr by default.
        */
       displayErrors: debugging('evalStringInSandbox'),
-      // To account for the newline in "(() => { \n${code}..."
-      lineOffset: wasCodeWrapped ? -1 : 0,
     });
   } catch (error) {
     console.error(error);
