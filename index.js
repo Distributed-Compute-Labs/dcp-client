@@ -125,9 +125,17 @@ function evalStringInSandbox(
   filename = '(dcp-client$$evalStringInSandbox)',
 ) {
   const context = createContext(sandbox);
-  // remove comments and then decide if this config file has a return. If so we need to wrap it.
-  if (withoutComments(code).match(/^\s*return/m)) {
-    code = `( () => { ${code} })()`;
+
+  /**
+   * Remove comments and then decide if this config file has a top level return.
+   * If so, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
+   * statement" from being thrown.
+   */
+  const topLevelReturnRegex = /^return/m;
+  let wasCodeWrapped = false;
+  if (withoutComments(code).match(topLevelReturnRegex)) {
+    code = `(() => {\n${code}\n})();`;
+    wasCodeWrapped = true;
   }
 
   let result;
@@ -144,6 +152,8 @@ function evalStringInSandbox(
        * the whole stack trace to stderr by default.
        */
       displayErrors: debugging('evalStringInSandbox'),
+      // To account for the newline in "(() => { \n${code}..."
+      lineOffset: wasCodeWrapped ? -1 : 0,
     });
   } catch (error) {
     console.error(error);
