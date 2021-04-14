@@ -849,14 +849,17 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
                                              a new dcpConfig in the bundle - put it back */ 
   }
 
-  // Default location for the auto update bundle is the portal.
+  /**
+   * Default location for the auto update bundle is the scheduler so that the
+   * scheduler and the client are on the same code.
+   */
   if (
     !aggrConfig.bundle.location &&
-    aggrConfig.portal &&
-    aggrConfig.portal.location
+    aggrConfig.scheduler &&
+    aggrConfig.scheduler.location
   ) {
     localConfig.bundle.location = new URL(
-      `${aggrConfig.portal.location}dcp-client/dist/dcp-client-bundle.js`,
+      `${aggrConfig.scheduler.location}dcp-client/dist/dcp-client-bundle.js`,
     );
 
     addConfig(aggrConfig, localConfig);
