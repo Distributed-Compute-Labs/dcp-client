@@ -252,13 +252,15 @@ function server(listenAddr, port, files) {
     console.log(`Listening for connections on ${listenAddr}:${port}`);
   });
 
+  /**
+   * @param {net.Socket} socket
+   */
   function handleConnection(socket) {
     const child_process = require('child_process');
-    var child;
 
     debug && console.log('Spawning child to handle new connection from supervsior');
 
-    child = child_process.spawn(process.execPath, [ __filename, ...files ]);
+    const child = child_process.spawn(process.execPath, [__filename, ...files]);
     child.stderr.setEncoding('utf-8');
     child.stderr.on('data', (chunk) => process.stderr.write(chunk));
     child.stdout.on('data', (chunk) => socket.write(chunk));
