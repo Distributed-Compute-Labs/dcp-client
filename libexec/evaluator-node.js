@@ -264,6 +264,26 @@ function server(listenAddr, port, files) {
     child.stderr.setEncoding('utf-8');
     child.stderr.on('data', (chunk) => process.stderr.write(chunk));
     child.stdout.on('data', (chunk) => socket.write(chunk));
+    child.on('close', (code) => {
+      switch (code) {
+        /**
+         * If the evaluator exits with exit code 99, it died prematurely due to
+         * `deny-node.js`. Without handling this case a cryptic
+         * ERR_STREAM_DESTROYED error is thrown when the worker tries talking to
+         * the now dead evaluator.
+         */
+        case 99: {
+          // Based on deny-node.js being used in a node environment accdentally.
+          const errorMessage = `Evaluator exited with exit code ${code} due to invalid evaluator type`;
+          console.error(errorMessage);
+          socket.destroy(new Error(errorMessage));
+          break;
+        }
+        default:
+          break;
+      }
+    });
+
     socket.on('data', (chunk) => child.stdin.write(chunk));
     socket.on('close', () => child.kill('SIGINT'));
     socket.on('end', () => {
