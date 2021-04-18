@@ -162,7 +162,7 @@ function withoutComments(code) {
   return code.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '')
 }
 
-/** Load the bootstrap bundle - used primarily to plumb in protocol.justFetch.
+/** Load the bootstrap bundle - used primarily to plumb in utils::justFetch.
  *  Runs in a different, but identical, sandbox as the config files and client code.
  */
 function loadBootstrapBundle() {
@@ -171,7 +171,7 @@ function loadBootstrapBundle() {
   Object.assign(sandbox, bundleSandbox)
   sandbox.window = sandbox
   sandbox.globalThis = sandbox;
-  
+
   return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
@@ -241,56 +241,6 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 debugging('modules') && console.debug('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
-
-/** Reformat an error (rejection) message from protocol.justFetch, so that debugging code 
- *  can include (for example) a text-rendered version of the remote 404 page.
- *
- *  @param      {object}        error   The rejection from justFetch()
- *  @returns    {string}        An error message, formatted with ANSI color when the output
- *                              is a terminal, suitable for writing directly to stdout. If
- *                              the response included html content (eg a 404 page), it is 
- *                              rendered to text in this string.
- */
-exports.justFetchPrettyError = function dcpClient$$justFetchPrettyError(error, useChalk) {
-  let chalk, message, headers={}
-
-  if (!error.request || !error.request.status)
-    return error;
-
-  if (typeof useChalk === 'undefined')
-    useChalk = require('tty').isatty(0) || process.env.FORCE_COLOR;
-  chalk = new require('chalk').constructor({enabled: useChalk})
-
-  error.request.getAllResponseHeaders().replace(/\r/g,'').split('\n').forEach(function(line) {
-    var colon = line.indexOf(': ')
-    headers[line.slice(0,colon)] = line.slice(colon+2)
-  })
-  message = `HTTP Status: ${error.request.status} for ${error.request.method} ${error.request.location}`
-
-  switch(headers['content-type'].replace(/;.*$/, '')) {
-    case 'text/plain':
-      message += '\n' + chalk.grey(error.request.responseText)
-      break;
-    case 'text/html': {
-      let html = error.request.responseText;
-
-      html = html.replace(/\n<a/gi, ' <a'); /* html-to-text bug, affects google 301s /wg jun 2020 */
-      message += chalk.grey(require('html-to-text').fromString(html, {
-        wordwrap: parseInt(process.env.COLUMNS, 10) || 80,
-        hideLinkHrefIfSameAsText: true,
-        format: {
-          heading: function (elem, fn, options) {
-            var h = fn(elem.children, options);
-            return '\n====\n' + chalk.yellow(chalk.bold(h.toUpperCase())) + '\n====\n';
-          }
-        }
-      }));
-      break;
-    }
-  }
-
-  return message
-}    
 
 /** Merge a new configuration object on top of an existing one. The new object
  *  is overlaid on the existing object, so that properties specified in the 
@@ -520,12 +470,14 @@ exports._initHead = function dcpClient$$initHead() {
  *     bundle will provide post-initialization nsMap).
  * 2 - inject modules from the final bundle on top of the bootstrap modules
  * 3 - patch up internal (to the final bundle) references to dcpConfig to reference our generated config
- * 4 - load and cache identity & bank keystores if they are provided and config.parseArgv allows
- * 5 - create the return object
+ * 4 - verify versioning information for key core components against running scheduler
+ * 5 - load and cache identity & bank keystores if they are provided and config.parseArgv allows
+ * 6 - create the return object
  * 
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
  */
 function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
+  const semver = require('semver');
   const { patchup: patchUp } = require('dcp/dcp-url');
   var nsMap;            /* the final namespace map to go from bundle->dcp-client environment */
   var bundle;           /* the final bundle, usually a copy of the bootstrap bundle */
@@ -586,6 +538,14 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   })
 
   /* 4 */
+  if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
+    throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
+  aggrConfig.scheduler.compatibility.minimum.dcp = '1';
+
+  if (!require('semver').satisfies(require('dcp/protocol').version.provides, aggrConfig.scheduler.compatibility.minimum.dcp))
+    throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, aggrConfig.scheduler.compatibility.minimum.dcp, 'EDCP_PROTOCOL_VERSION');    
+    
+  /* 5 */
   if (aggrConfig.parseArgv !== false) {
     const dcpCli = require('dcp/cli');
     /* don't enable help output when automating */
@@ -606,7 +566,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
     }
   }
 
-  /* 5 */
+  /* 6 */
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
@@ -645,10 +605,10 @@ exports.init = async function dcpClient$$init() {
   if (finalBundleURL) {
     try {
       debugging() && console.debug(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
-      finalBundleCode = await require('dcp/protocol').justFetch(finalBundleURL.href);
+      finalBundleCode = await require('dcp/utils').justFetch(finalBundleURL.href);
     } catch(e) {
       console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      console.debug(exports.justFetchPrettyError(e));
+      console.debug(require('dcp/utils').justFetchPrettyError(e));
       throw e;
     }
   }
@@ -674,7 +634,7 @@ exports.initSync = function dcpClient$$initSync() {
       finalBundleCode = exports.fetchSync(finalBundleURL);
     } catch(e) {
       console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      console.log(exports.justFetchPrettyError(e));
+      console.log(require('dcp/utils').justFetchPrettyError(e));
       throw e;
     }
   }
@@ -726,7 +686,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, localConfig);
 
   if (!programName)
-    programName = process.argv[1] || false;
+    programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
     programName = path.basename(programName, '.js');
   let config = localConfig;
@@ -803,10 +763,10 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (aggrConfig.scheduler.configLocation) {
     try {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
-      remoteConfigCode = await require('dcp/protocol').justFetch(aggrConfig.scheduler.configLocation)
+      remoteConfigCode = await require('dcp/utils').justFetch(aggrConfig.scheduler.configLocation)
     } catch(e) {
       console.error('Error: could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
-      console.log(exports.justFetchPrettyError(e));
+      console.log(require('dcp/utils').justFetchPrettyError(e));
       throw e;
     }
     if (remoteConfigCode.length === 0)
