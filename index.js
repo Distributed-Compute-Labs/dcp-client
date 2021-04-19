@@ -127,13 +127,13 @@ function evalStringInSandbox(
   const context = createContext(sandbox);
 
   /**
-   * Remove comments and then decide if this config file has a top level return.
-   * If so, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
-   * statement" from being thrown.
+   * Remove comments and then decide if this config file contains an IIFE. If
+   * not, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
+   * statement" from being thrown for files with top level return statements.
    */
-  const topLevelReturnRegex = /^return/m;
+  const iifeRegex = /\([\s\S]*\(\)[\s\S]*\{[\s\S]*\}\)\(\);?/;
   let lineOffset = 0;
-  if (withoutComments(code).match(topLevelReturnRegex)) {
+  if (!withoutComments(code).match(iifeRegex)) {
     code = `(() => {\n${code}\n})();`;
 
     // To account for the newline in "(() => { \n${code}..."
