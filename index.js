@@ -949,10 +949,11 @@ exports.fetchSync = function fetchSync(url) {
 
     /**
      * Setting the largest amount of data in bytes allowed on stdout or stderr
-     * to 3 MB to that dcp-client-bundle.js (~2 MB) can be downloaded without
-     * the child exiting with a status of null.
+     * to 5 MB so that dcp-client-bundle.js (~4.6 MB built in debug mode with
+     * source mapped line numbers) can be downloaded without the child exiting
+     * with a status of null (i.e. ENOBUFS).
      */
-    maxBuffer: 3 * 1024 * 1024,
+    maxBuffer: 5 * 1024 * 1024,
   });
 
   if (child.status !== 0)
