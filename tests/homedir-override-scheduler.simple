@@ -5,7 +5,7 @@ require('./setup-testenv');
 async function main() {
   await require('..').init();
   const dcpConfig = require('dcp/dcp-config');
-  if (!dcpConfig.scheduler.location.pathname === '/from/tests-homedir/dcp-client/dcp-config')
+  if (!dcpConfig.bank.location.pathname === '/from/tests-homedir/dcp-client/dcp-config')
     throw new Error('Homedir did not override scheduler location');
 }
 
