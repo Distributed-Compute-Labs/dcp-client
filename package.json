@@ -24,7 +24,8 @@
   },
   "scripts": {
     "build": "./build/bundle",
-    "test": "npx peter tests"
+    "test": "npx peter tests",
+    "vtest": "npx peter -v tests"
   },
   "dependencies": {
     "bravojs": "^1.0.15",
