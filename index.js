@@ -125,9 +125,19 @@ function evalStringInSandbox(
   filename = '(dcp-client$$evalStringInSandbox)',
 ) {
   const context = createContext(sandbox);
-  // remove comments and then decide if this config file has a return. If so we need to wrap it.
-  if (withoutComments(code).match(/^\s*return/m)) {
-    code = `( () => { ${code} })()`;
+
+  /**
+   * Remove comments and then decide if this config file contains an IIFE. If
+   * not, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
+   * statement" from being thrown for files with top level return statements.
+   */
+  const iifeRegex = /\([\s\S]*\(\)[\s\S]*\{[\s\S]*\}\)\(\);?/;
+  let lineOffset = 0;
+  if (!withoutComments(code).match(iifeRegex)) {
+    code = `(() => {\n${code}\n})();`;
+
+    // To account for the newline in "(() => { \n${code}..."
+    lineOffset = -1;
   }
 
   let result;
@@ -139,6 +149,7 @@ function evalStringInSandbox(
   try {
     result = runInContext(code, context, {
       filename,
+      lineOffset,
       /**
        * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
        * the whole stack trace to stderr by default.
@@ -798,11 +809,22 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
                                              a new dcpConfig in the bundle - put it back */ 
   }
 
-  if (!aggrConfig.bundle.location && aggrConfig.portal && aggrConfig.portal.location) {
-    localConfig.bundle.location = new URL(`${aggrConfig.portal.location}dcp-client-bundle.js`)
+  /**
+   * Default location for the auto update bundle is the scheduler so that the
+   * scheduler and the client are on the same code.
+   */
+  if (
+    !aggrConfig.bundle.location &&
+    aggrConfig.scheduler &&
+    aggrConfig.scheduler.location
+  ) {
+    localConfig.bundle.location = new URL(
+      `${aggrConfig.scheduler.location}dcp-client/dist/dcp-client-bundle.js`,
+    );
+
     addConfig(aggrConfig, localConfig);
   }
-  
+
   return aggrConfig;
 }
 
@@ -887,10 +909,11 @@ exports.fetchSync = function fetchSync(url) {
 
     /**
      * Setting the largest amount of data in bytes allowed on stdout or stderr
-     * to 3 MB to that dcp-client-bundle.js (~2 MB) can be downloaded without
-     * the child exiting with a status of null.
+     * to 5 MB so that dcp-client-bundle.js (~4.6 MB built in debug mode with
+     * source mapped line numbers) can be downloaded without the child exiting
+     * with a status of null (i.e. ENOBUFS).
      */
-    maxBuffer: 3 * 1024 * 1024,
+    maxBuffer: 5 * 1024 * 1024,
   });
 
   if (child.status !== 0)

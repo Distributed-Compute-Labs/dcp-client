@@ -59,4 +59,5 @@ build:
 test:
   stage: test
   script:
-    - npm test
+    # Make test output verbose to help with debugging failing tests in CI
+    - npm test -- -v
