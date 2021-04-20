@@ -551,7 +551,6 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   /* 4 */
   if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
     throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
-  aggrConfig.scheduler.compatibility.minimum.dcp = '1';
 
   if (!require('semver').satisfies(require('dcp/protocol').version.provides, aggrConfig.scheduler.compatibility.minimum.dcp))
     throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, aggrConfig.scheduler.compatibility.minimum.dcp, 'EDCP_PROTOCOL_VERSION');    
