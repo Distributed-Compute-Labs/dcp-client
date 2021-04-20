@@ -549,12 +549,15 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   })
 
   /* 4 */
-  if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
-    throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
+  if (aggrConfig.scheduler.compatibility)
+  {
+    if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
+      throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
 
-  if (!require('semver').satisfies(require('dcp/protocol').version.provides, aggrConfig.scheduler.compatibility.minimum.dcp))
-    throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, aggrConfig.scheduler.compatibility.minimum.dcp, 'EDCP_PROTOCOL_VERSION');    
-    
+    if (!require('semver').satisfies(require('dcp/protocol').version.provides, aggrConfig.scheduler.compatibility.minimum.dcp))
+      throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, aggrConfig.scheduler.compatibility.minimum.dcp, 'EDCP_PROTOCOL_VERSION');    
+  }
+  
   /* 5 */
   if (aggrConfig.parseArgv !== false) {
     const dcpCli = require('dcp/cli');
@@ -754,7 +757,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (process.env.DCP_CONFIG_LOCATION) 
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new URL(process.env.DCP_CONFIG_LOCATION) });
   else if (process.env.DCP_CONFIG_LOCATION === '')
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: '' });
+    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: false }); /* explicitly request no remote config */
   if (process.env.DCP_BUNDLE_AUTOUPDATE)
     aggrConfig.bundle.autoUpdate = localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
   if (process.env.DCP_BUNDLE_LOCATION) 
@@ -762,27 +765,27 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
 
   /* 3 */
   if (!aggrConfig.scheduler.configLocation &&
-      aggrConfig.scheduler.configLocation !== '' &&
-      aggrConfig.scheduler.configLocation !== null) {
+      aggrConfig.scheduler.configLocation !== false) {
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
       configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.js`)
     });
   }
 
   /* 5 */
-  if (aggrConfig.scheduler.configLocation) {
+  if (aggrConfig.scheduler.configLocation === false)
+    debugging() && console.debug(` * Not loading configuration from remote scheduler`);
+  else
+  {
     try {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/utils').justFetch(aggrConfig.scheduler.configLocation)
     } catch(e) {
-      console.error('Error: could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
+      console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
       console.log(require('dcp/utils').justFetchPrettyError(e));
       throw e;
     }
     if (remoteConfigCode.length === 0)
       throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
-  } else {
-    debugging() && console.debug(` * No remote configuration loaded; scheduler.configLocation is null or empty`);
   }
       
   /* 6 */
