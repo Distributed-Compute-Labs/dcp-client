@@ -60,6 +60,12 @@ function debugging(what = 'dcp-client') {
 }
 debugging.cache = {}
 
+const log = (namespace, ...args) => {
+  if (debugging(`dcp-client:${namespace}`)) {
+    console.debug(`dcp-client:${namespace}`, ...args);
+  }
+};
+
 const distDir = path.resolve(path.dirname(module.filename), 'dist');
 
 const bundleSandbox = {
@@ -880,6 +886,7 @@ function fetchAggregateConfig(initArgv) {
   }
 
   const serializedOutput = String(child.output[3]);
+  log('fetchAggregateConfig', 'serializedOutput:', serializedOutput);
   const aggregateConfig = deserialize(serializedOutput);
   patchUp(aggregateConfig);
   return aggregateConfig;

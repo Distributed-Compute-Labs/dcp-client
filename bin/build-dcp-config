@@ -43,4 +43,6 @@ async function main() {
   }
 }
 
-main().finally(() => setImmediate(process.exit));
+main()
+  .catch(console.error)
+  .finally(() => setImmediate(process.exit));
