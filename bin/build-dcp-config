@@ -10,7 +10,12 @@
 const fs = require('fs');
 
 const dcpClient = require('..');
-const { serialize, deserialize } = require('dcp/serialize');
+const { Address } = require('dcp/wallet');
+const serializer = require('dcp/serialize');
+
+// To be able to serialize dcpConfig identities
+serializer.userCtors.dcpEth$$Address = Address;
+const { serializeAsync, deserialize } = serializer;
 
 let outputFd = +(process.env.BUILD_DCP_CONFIG_OUTPUT_FD || "3");
 
@@ -29,7 +34,7 @@ async function main() {
   }
         
   let outputObjects = await dcpClient.createAggregateConfig(initArgv, programName);
-  const output = serialize(outputObjects);
+  const output = await serializeAsync(outputObjects);
   
   try {
     fs.writeSync(outputFd, output, 'utf-8');

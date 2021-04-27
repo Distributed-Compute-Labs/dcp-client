@@ -852,8 +852,13 @@ exports.initcb = require('./init-common').initcb
  */
 function fetchAggregateConfig(initArgv) {
   const { patchup: patchUp } = require('dcp/dcp-url');
-  const { serialize, deserialize } = require('dcp/serialize');
+  const { Address } = require('dcp/wallet');
+  const serializer = require('dcp/serialize');
 
+  // To be able to deserialize dcpConfig identities
+
+  serializer.userCtors.dcpEth$$Address = Address;
+  const { serialize, deserialize } = serializer;
   const { argv } = process;
   const [, programName] = argv;
   const env = { FORCE_COLOR: 1, ...process.env };
