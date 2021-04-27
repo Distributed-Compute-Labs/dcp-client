@@ -74,6 +74,8 @@ const bundleSandbox = {
   Object,
   Array,
   Date,
+  // To make instanceof checks for Promises work while serializing dcpConfig
+  Promise,
   require,
   console,
   setInterval,
