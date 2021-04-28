@@ -108,10 +108,16 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
   let bundleScript = document.getElementById("_dcp_client_bundle");
   let ready = bundleScript.getAttribute('onready');
   window.dcp = bundleScript.exports;
+
+  /**
+   * Transform instances of Address-like values into Addresses. Necessary since
+   * the config can't access the Address class before the bundle is loaded.
+   */
+  window.dcp.wallet.Address.patchUp(dcpConfig);
   if (ready)
     window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
 })();
-</scr` + `ipt>`);  
+</script>`);
       bundleScript = document.getElementById('_dcp_client_bundle');
       if (bundleScript)
         bundleScript.onerror = function(e) {
