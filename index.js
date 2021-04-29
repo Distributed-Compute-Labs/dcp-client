@@ -60,6 +60,12 @@ function debugging(what = 'dcp-client') {
 }
 debugging.cache = {}
 
+const log = (namespace, ...args) => {
+  if (debugging(`dcp-client:${namespace}`)) {
+    console.debug(`dcp-client:${namespace}`, ...args);
+  }
+};
+
 const distDir = path.resolve(path.dirname(module.filename), 'dist');
 
 const bundleSandbox = {
@@ -68,6 +74,8 @@ const bundleSandbox = {
   Object,
   Array,
   Date,
+  // To make instanceof checks for Promises work while serializing dcpConfig
+  Promise,
   require,
   console,
   setInterval,
@@ -846,8 +854,13 @@ exports.initcb = require('./init-common').initcb
  */
 function fetchAggregateConfig(initArgv) {
   const { patchup: patchUp } = require('dcp/dcp-url');
-  const { serialize, deserialize } = require('dcp/serialize');
+  const { Address } = require('dcp/wallet');
+  const serializer = require('dcp/serialize');
 
+  // To be able to deserialize dcpConfig identities
+
+  serializer.userCtors.dcpEth$$Address = Address;
+  const { serialize, deserialize } = serializer;
   const { argv } = process;
   const [, programName] = argv;
   const env = { FORCE_COLOR: 1, ...process.env };
@@ -880,6 +893,7 @@ function fetchAggregateConfig(initArgv) {
   }
 
   const serializedOutput = String(child.output[3]);
+  log('fetchAggregateConfig', 'serializedOutput:', serializedOutput);
   const aggregateConfig = deserialize(serializedOutput);
   patchUp(aggregateConfig);
   return aggregateConfig;
