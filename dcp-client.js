@@ -117,7 +117,12 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
   if (ready)
     window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
 })();
-</script>`);
+
+/**
+ * The script tag is broken up on purpose, to avoid parsing errors by certain
+ * browsers.
+ */
+</scr` + `ipt>`);
       bundleScript = document.getElementById('_dcp_client_bundle');
       if (bundleScript)
         bundleScript.onerror = function(e) {
