@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.0.1-a",
+  "version": "4.0.2-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
