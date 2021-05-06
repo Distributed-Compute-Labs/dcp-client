@@ -564,6 +564,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
         gpu: _GPU 
       };
+      /*TODO: ask Sam why we used navigator.__proto__ here. It was causing problems*/
       applyAccessLists(navigator, navWhitelist, {}, {}, navPolyfill);
       applyPolyfills(navigator, navPolyfill);
     }
