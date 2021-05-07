@@ -1,0 +1,50 @@
+#! /usr/bin/env node
+'use strict';
+/**
+ * @file        generate-sandbox-definitions-json
+ *              This file is the single-source-of-authority with respect
+ *              to which files are run for which evaluators.  It is used
+ *              to generate code in ../generated.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Feb 2021
+ */
+
+const fs   = require('fs');
+const path = require('path');
+
+var o = {};
+const target = '../generated/sandbox-definitions.json';
+console.log(`Generating sandbox definitions in ${target}`);
+
+/** All sandbox types use the base files */
+var base = [
+  'script-load-wrapper',
+  'primitive-timers',
+  'event-loop-virtualization',
+  'access-lists',
+  'bravojs-init',
+  'bravojs/bravo.js',
+  'bravojs-env',
+  'calculate-capabilities',
+  'bootstrap'
+];
+
+o.browser = [].concat(base);
+
+/** A node-evaluator sandbox needs extra code to emulate a Web Worker */
+o.node = ['sa-ww-simulation'].concat(base);
+
+/** A native-evaluator sandbox needs extra code to emulate a Web Worker */
+o.native = [ 'sa-ww-simulation' ].concat(base);
+
+/** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
+o.webGpuNative = o.native.concat(['webgpu-worker-environment.js']);
+
+for (let type in o) {
+  if (type !== 'node')
+    o[type].unshift('deny-node');
+}
+
+fs.writeFileSync(path.resolve(__dirname, target), JSON.stringify(o), 'utf-8');      
+console.log(`Done - ${Object.keys(o).join(', ')}.`);

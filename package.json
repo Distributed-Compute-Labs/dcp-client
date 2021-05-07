@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "3.2.8",
+  "version": "4.0.2-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -15,23 +15,27 @@
   },
   "license": "MIT",
   "author": "Kings Distributed Systems",
+  "engines": {
+    "node": ">=12.0.0"
+  },
   "main": "index.js",
   "directories": {
     "example": "examples"
   },
   "scripts": {
     "build": "./build/bundle",
-    "test": "npx peter tests"
+    "test": "npx peter tests",
+    "vtest": "npx peter -v tests"
   },
   "dependencies": {
+    "bravojs": "^1.0.15",
     "btoa": "1.2.1",
     "chalk": "^2.4.2",
-    "dcp-worker": "^1.1.6-c",
-    "expand-tilde": "^2.0.2",
     "html-to-text": "^5.1.1",
     "http-agent": "^0.1.2",
+    "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
-    "md5": "^2.2.1",
+    "https-proxy-agent": "^5.0.0",
     "nanoid": "^2.1.11",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
@@ -39,10 +43,13 @@
     "regedit": "^3.0.3",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11",
-    "xmlhttprequest-ssl": "^1.6.0",
-    "yargs": "^15.3.1"
+    "xmlhttprequest-ssl": "^1.6.1",
+    "yargs": "16.2.0"
   },
   "devDependencies": {
     "peter": "^2.1.3"
+  },
+  "peerDependencies": {
+    "dcp-worker": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-worker.git#develop"
   }
 }

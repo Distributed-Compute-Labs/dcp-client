@@ -1,4 +1,5 @@
-#! /usr/bin/env node
+#!/usr/bin/env node
+/* eslint-disable node/shebang */
 /**
  * @file        download        Program to create dcpConfig variable based on dcp-client::init()
  *                              semantics, and dump the serialized version of it over fd 3.
@@ -7,8 +8,14 @@
  * @date        Aug 2020
  */
 const fs = require('fs');
+
 const dcpClient = require('..');
+const { Address } = require('dcp/wallet');
 const serializer = require('dcp/serialize');
+
+// To be able to serialize dcpConfig identities
+serializer.userCtors.dcpEth$$Address = Address;
+const { serializeAsync, deserialize } = serializer;
 
 let outputFd = +(process.env.BUILD_DCP_CONFIG_OUTPUT_FD || "3");
 
@@ -20,14 +27,14 @@ async function main() {
   if (!process.stdin.isTTY)
     input = fs.readFileSync(process.stdin.fd, 'utf-8');
   if (input && input.length > 1) {
-    ({initArgv, programName} = serializer.deserialize(input));
+    ({ initArgv, programName } = deserialize(input));
   } else {
     initArgv = [];
     programName = false;
   }
         
   let outputObjects = await dcpClient.createAggregateConfig(initArgv, programName);
-  output = serializer.serialize(outputObjects);
+  const output = await serializeAsync(outputObjects);
   
   try {
     fs.writeSync(outputFd, output, 'utf-8');
@@ -41,4 +48,6 @@ async function main() {
   }
 }
 
-main().finally(() => setImmediate(process.exit));
+main()
+  .catch(console.error)
+  .finally(() => setImmediate(process.exit));

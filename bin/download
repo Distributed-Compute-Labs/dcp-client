@@ -1,18 +1,22 @@
 #! /usr/bin/env node
 /**
- * @file        download        Program to download a URL and send it to stdout.  Used to implement
- *                              dcp-client's initSync() method.
+ * @file        download        Program to download a URL and send it to stdout or the
+ *                              specified field descriptor.
  *
  * @author      Wes Garland, wes@kingsds.netework
  * @date        May 2020
  */
 
 const dcpClient = require('..');
-const { dcp } = dcpClient._initForTestHarness();
 const fs = require('fs');
 
 function usage() {
-  console.log(`Usage: ${process.argv[1]} protocol://restofurl.com`);
+  console.log(
+`Usage: ${process.argv[1]} [--quiet] [--fd=number] protocol://restofurl.com
+ Where:
+    --fd=N:     send all output to file descriptor N
+    --quiet:    suppress progress messages
+`);
 }
 
 async function main(argv) {
@@ -20,15 +24,23 @@ async function main(argv) {
   var url;
   var fd;
   
-  for (let i=0; i < argv.length; i++) {
-    if (argv[i] === '--quiet') {
-      argv.splice(i--,1);
-      console.log = console.debug = function(){};
+  loop: for (let i=0; i < argv.length; i++)
+  {
+    let [,key,,value] = argv[i].match(/(^[^=]*)(=?)(.*)/); /* separate by first = */
+    
+    switch(key) {
+      case '--quiet':
+        argv.splice(i--,1);
+        console.log = console.debug = function(){};
+        break;
+      case '--fd':
+        fd = Number(value);
+        break;
+      default:
+        continue loop;
     }
-    if (argv[i].startsWith('--fd=')) {
-      fd = parseInt(argv[i].slice(5), 10);
-      argv.splice(i--,1);
-    }
+
+    argv.splice(i--,1);
   }
   url = argv[argv.length - 1];
 
@@ -36,13 +48,13 @@ async function main(argv) {
     return usage();
 
   try {
-    data = await dcp.protocol.justFetch(url);
+    data = await require('dcp/utils').justFetch(url);
     if (fd)
       fs.writeSync(fd, data);
-    else
+    else 
       process.stdout.write(data);
   } catch(e) {
-    console.error(dcpClient.justFetchPrettyError(e))
+    console.error(require('dcp/utils').justFetchPrettyError(e));
     process.exit(1);
   }
 }

@@ -1,0 +1,10 @@
+#! /bin/bash -e
+
+oldDir="`pwd`"
+cd `dirname $0`
+myDir="`pwd`"
+cd "$oldDir"
+
+"${myDir}/generate-sandbox-definitions-json"
+echo
+"${myDir}/bundle" "$@"

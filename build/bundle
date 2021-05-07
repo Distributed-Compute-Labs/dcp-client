@@ -1,7 +1,7 @@
 #! /bin/bash
 #
 # @file         build.sh        Rebuild the dcp-client bundle without affecting
-#				the intermediate files in the dcp repo.
+#                               the intermediate files in the dcp repo.
 #
 #                               Usage: build/bundle.sh <path to dcp repo>
 #
@@ -165,6 +165,7 @@ cd "${myDir}/.."
 
 # Copy all generated files tracked by the repo into this repo
 git ls-tree --full-tree -r --name-only HEAD dist |\
+(cd "${BUNDLE_TMP}" && [ "$DCP_BUILD" = "debug" ] && while read file; do ls "$file" 2>/dev/null; done || cat) |\
 (cd "${BUNDLE_TMP}" && tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
 STATUS=$?
 echo "Done."
