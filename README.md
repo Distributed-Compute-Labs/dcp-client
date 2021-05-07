@@ -194,6 +194,39 @@ job = compute.for(["red", "green" "blue"], Work)
 ### Limitations to Consider
 The Work function must be either a string or stringifyable via `toString()`.  This means that native functions (i.e. Node functions written in C++) cannot be used for Work.   Additionally, the function must be completely defined and not a closure, since stringification cannot take the closure environment into account. A rule of thumb is that if you cannot `eval()` it, you cannot distribute it.
 
+## Troubleshooting 
+### Deployment Events
+Deploying a job involves several steps, each of which can take several seconds.  The easiest way to track these is to trap the `readyStateChange` event from your client application. ```javascript job.on('readystatechange', (newState) => console.log(newState)); ``` A typical job deployment goes through the following states: 
+* exec 
+* deploying 
+* authorizeHold 
+* authorizeFeeStructure 
+* deployed 
+
+### Result Events Results flow into the job's result set one at a time, as they are completely, throughout the work cycle.  Eventually, `job.exec()` resolves with an Array-like object, the result set, but you can see the results piecemeal by registering for the `result` event: 
+```javascript
+job.on("result", ev => console.log(ev));
+``` 
+### Using console.log from Work Functions
+Every JavaScript programming environment features an implementation of `console.log`, and DCP is no different.  When your work function invokes `console.log()`, the log message is stringified and sent over the network to the scheduler, which relays it to your DCP client application.    To capture these events in your client program, simply ```javascript job.on('console', (message) => console.log(message)); ``` ## Uncaught exceptions in Work Functions If your work function throws an uncaught exception, its details will be relayed back to your client application as an event.  Note that your job will be cancelled by the scheduler if it does this too many times!  To capture events in your client program, simply ```javascript job.on('error', (message) => console.log(message)); ``` 
+
+### ENOPROGRESS
+This exception is thrown when your Work Function has not called the `progress()` function within 30 seconds, or you have not called `progress()` at all during the work function.  Remember that some Worker computers can be much slower than yours!
+
+*Every Work Function must invoke `progress()` at least once.*
+
+The ideal way to invoke `progress()` is to place it somewhere in your inner loop where you can reasonably expect it to be invoked every 3 
+or 4 seconds.  If your program goes crazy and invokes it too many times, DCP will automatically throttle these calls to help your workload run faster. 
+Don't be tempted to use `setInterval()` or `setTimeout()` to invoke `progress()` -- it probably won't behave the way you think it will, unless you are 
+very familiar the inner workings of the JavaScript event loop.
+
+## Debugging
+The DCP Compute API includes a function called `localExec` which  can be used in place of the `exec` method on the JobHandle.  When this function is invoked, a DCP client will create a worker which receives your job from the scheduler, and this job will be limited to that worker. In the browser, this is implemented inside a Web Worker; in NodeJS this is implemented with a standalone worker running within the client process. In either case, it should be possible to use the `debugger` keyword in your work function to trigger a breakpoint in your favourite debugger. 
+
+### niim
+The [`niim`](https://www.npmjs.com/package/niim) debugger is a command-line debugger for Node.js which is a fork of node-inspect. If you are debugging a dcp-client with niim and it asks you for a passphrase, use the send function:
+```send "passpharse\n"```
+
 ## Exposed APIs
 The DCP Client bundle comes with a number of DCP APIs exposed for use in your own programs.
 
@@ -202,7 +235,6 @@ The DCP Client bundle comes with a number of DCP APIs exposed for use in your ow
 
 ### Wallet API
 * provides a JavaScript interface to software developers for the management of Addresses, Wallets, and Keystores. See https://docs.dcp.dev/specs/wallet-api.
-
 
 ### Protocol API
 * provides a JavaScript interface to software developers and the Compute API which enables the transmission of data and work functions between
