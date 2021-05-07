@@ -557,13 +557,20 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   })
 
   /* 4 */
-  if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
-    throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
-
-  if (aggrConfig.scheduler.compatibility)
+  if (aggrConfig.scheduler.configLocation !== false && typeof process.env.DCP_CLIENT_SKIP_VERSION_CHECK === 'undefined')
   {
-    if (!require('semver').satisfies(require('dcp/protocol').version.provides, aggrConfig.scheduler.compatibility.minimum.dcp))
-      throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, aggrConfig.scheduler.compatibility.minimum.dcp, 'EDCP_PROTOCOL_VERSION');    
+    if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
+      throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
+
+    if (aggrConfig.scheduler.compatibility)
+    {
+      let ourVer = require('dcp/protocol').version.provides;
+      let minVer = aggrConfig.scheduler.compatibility.minimum.dcp;
+      let ok = require('semver').satisfies(ourVer, minVer);
+      debugging('version') && console.debug(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
+      if (!ok)
+        throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, minVer, 'EDCP_PROTOCOL_VERSION');
+    }
   }
   
   /* 5 */
