@@ -223,6 +223,8 @@ very familiar the inner workings of the JavaScript event loop.
 ## Debugging
 The DCP Compute API includes a function called `localExec` which  can be used in place of the `exec` method on the JobHandle.  When this function is invoked, a DCP client will create a worker which receives your job from the scheduler, and this job will be limited to that worker. In the browser, this is implemented inside a Web Worker; in NodeJS this is implemented with a standalone worker running within the client process. In either case, it should be possible to use the `debugger` keyword in your work function to trigger a breakpoint in your favourite debugger. 
 
+*Note:* using localExec on Node.js requires that you install `dcp-client`'s peer dependency, `dcp-worker`.
+
 ### niim
 The [`niim`](https://www.npmjs.com/package/niim) debugger is a command-line debugger for Node.js which is a fork of node-inspect. If you are debugging a dcp-client with niim and it asks you for a passphrase, use the send function:
 ```send "passpharse\n"```
