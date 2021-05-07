@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.0.1-a",
+  "version": "4.0.2-a",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -36,7 +36,6 @@
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
-    "md5": "^2.2.1",
     "nanoid": "^2.1.11",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
