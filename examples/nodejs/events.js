@@ -62,8 +62,8 @@ async function main() {
 }
 
 /* Initialize DCP Client and run main() */
-require('dcp-client')
-  .init(SCHEDULER_URL, true)
+require('../..')
+  .init(SCHEDULER_URL)
   .then(main)
   .catch(console.error)
   .finally(process.exit);
