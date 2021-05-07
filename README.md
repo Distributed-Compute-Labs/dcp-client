@@ -11,7 +11,6 @@ DCP is currently (May 2020) in testing for a limited set of developers under our
 
 ### Supported Platforms
 The DCP-Client code can be made to run in nearly any JavaScript environment which supports ES5 and XMLHttpRequest.  Our officially-supported platforms are
-- NodeJS version 10 (LTS)
 - NodeJS version 12 (LTS)
 - BravoJS, latest version
 - Vanilla Web - no module system at all
@@ -20,7 +19,6 @@ The DCP-Client code can be made to run in nearly any JavaScript environment whic
 Other utilities for developers working with DCP can be retrieved via npm, and include:
 
 * [`dcp-util`](https://npmjs.com/package/dcp-util) - a series of utilities for working with DCP; manipulate keystores, cancel jobs, etc.
-* [`dcp-client-examples`](https://npmjs.com/package/dcp-client-examples)  - a series of working examples
 * [`niim`](https://www.npmjs.com/package/niim) - a command-line debugger for NodeJS (fork of node-inspect) which can debug DCP programs (passphrase prompts cause problems with node-inspect mainline)
 * [`bravojs`](https://www.npmjs.com/package/bravojs) - a module system, used internally by DCP, capable of running the same modules in the browser, NodeJS, or a DCP Worker without transpilation, server software, or CORS headaches.
 
