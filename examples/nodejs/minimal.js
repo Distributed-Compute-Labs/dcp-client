@@ -11,7 +11,7 @@
  * @date      Aug 2019, April 2020
  */ 
 
-const SCHEDULER_URL =  new URL('https://scheduler.distributed.computer') ;
+const SCHEDULER_URL =  new URL('http://scheduler.yarn.office.kingsds.network') ;
 
 async function main() {
   const compute = require('dcp/compute');
@@ -36,4 +36,4 @@ async function main() {
   await job.exec(compute.marketValue);
 }
 
-require('dcp-client').init(SCHEDULER_URL, true).then(main);
+require('dcp-client').init(SCHEDULER_URL).then(main);
