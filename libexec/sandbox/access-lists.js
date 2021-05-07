@@ -14,6 +14,13 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
   const whitelist = new Set([
     '__proto__',
+    'hasOwnProperty',     //Properties of __proto__ that need to be whitelisted
+    'toString',
+    'toLocaleString',
+    'propertyIsEnumerable',
+    'isPrototypeOf',
+    'valueOf',
+    'constructor',
     '_console',
     'addEventListener',
     'applyWhitelist',
@@ -385,7 +392,11 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   const blacklistRequirements = {
     OffscreenCanvas: "environment.offscreenCanvas"
   };
-
+  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
+    another bug - DCP-1735
+  */
+  // var recObjList = []
+  // var recPropList = []
   /**
    * Applies a whitelist and a blacklist of properties to an object. After this function, if someone tries
    * to access non-whitelisted or blacklisted properties, a warning is logged and it will return undefined.
@@ -410,6 +421,28 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
               } else {
                 if (prop in polyfills) {
                   return polyfills[prop];
+                  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
+                    another bug - DCP-1735
+                  */
+                  // let indexes = []
+                  // for (let i = 0; i < recObjList.length; i++){
+                  //   if (recObjList[i] == obj){
+                  //     indexes.push(i)
+                  //   }
+                  // }
+                  // for(let index of indexes){
+                  //   if (recPropList[index] === prop){
+                  //     if (!whitelist.has(prop))
+                  //       return undefined
+                  //     return prop
+                  //   }
+                  // }
+                  // recObjList.push(obj)
+                  // recPropList.push(prop)
+                  // let ret = polyfills[prop]
+                  // recObjList.pop()
+                  // recPropList.pop()
+                  // return ret;
                 }
                 return undefined;
               }
@@ -515,13 +548,25 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     } else {
       // We also want to whitelist certain parts of navigator, but not others.
       
-      navWhitelist = new Set(['userAgent','gpu']);
+      navWhitelist = new Set([
+        'userAgent',
+        'gpu',
+        '__proto__',
+        'hasOwnProperty',     //Properties of __proto__ that need to be whitelisted
+        'toString',
+        'toLocaleString',
+        'propertyIsEnumerable',
+        'isPrototypeOf',
+        'valueOf',
+        'constructor',
+      ]);
       let navPolyfill = {
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
         gpu: _GPU 
       };
-      applyAccessLists(navigator.__proto__, navWhitelist, {}, {}, navPolyfill);
-      applyPolyfills(navigator.__proto__, navPolyfill);
+      /*TODO: ask Sam why we used navigator.__proto__ here. It was causing problems*/
+      applyAccessLists(navigator, navWhitelist, {}, {}, navPolyfill);
+      applyPolyfills(navigator, navPolyfill);
     }
   }
 
