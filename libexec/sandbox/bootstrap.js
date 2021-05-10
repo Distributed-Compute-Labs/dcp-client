@@ -165,8 +165,22 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
   };
 
   function workerBootstrap$console(level, ...args) {
+    // wrapper function for stringify in case JSON object is unparsable because it is circular or a bigint
+    function parseJSONString(obj){
+      let curr = "";
+      try{
+        // attempt to stringify
+        curr = JSON.stringify(obj);
+      }
+      catch(e){
+        // console.log will print the exception
+        return e;
+      }
+      return curr;
+    }
+    // if arg is a JSON string, it shall be parsed accordingly, otherwise will be printed as-is
     let message = args.map(a =>
-      (typeof a === 'string'? a : JSON.stringify(a))
+      (typeof a === 'object' ? parseJSONString(a) : a)
     ).join(' ');
 
     flushConsoleMessages({
