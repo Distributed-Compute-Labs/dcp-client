@@ -14,13 +14,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
   const allowList = new Set([
     '__proto__',
-    'hasOwnProperty',     //Properties of __proto__ that need to be allowed
-    'toString',
-    'toLocaleString',
-    'propertyIsEnumerable',
-    'isPrototypeOf',
-    'valueOf',
-    'constructor',
     '_console',
     'addEventListener',
     'applyWhitelist',
@@ -392,11 +385,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   const blockListRequirements = {
     OffscreenCanvas: "environment.offscreenCanvas"
   };
-  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-    another bug - DCP-1735
-  */
-  // var recObjList = []
-  // var recPropList = []
+
   /**
    * Applies a allow list and a block list of properties to an object. After this function, if someone tries
    * to access non-allowed or blocked properties, a warning is logged and it will return undefined.
@@ -421,28 +410,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
               } else {
                 if (prop in polyfills) {
                   return polyfills[prop];
-                  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-                    another bug - DCP-1735
-                  */
-                  // let indexes = []
-                  // for (let i = 0; i < recObjList.length; i++){
-                  //   if (recObjList[i] == obj){
-                  //     indexes.push(i)
-                  //   }
-                  // }
-                  // for(let index of indexes){
-                  //   if (recPropList[index] === prop){
-                  //     if (!allowList.has(prop))
-                  //       return undefined
-                  //     return prop
-                  //   }
-                  // }
-                  // recObjList.push(obj)
-                  // recPropList.push(prop)
-                  // let ret = polyfills[prop]
-                  // recObjList.pop()
-                  // recPropList.pop()
-                  // return ret;
                 }
                 return undefined;
               }
@@ -551,26 +518,15 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
       navAllowlist = new Set([
         'userAgent',
         'gpu',
-        '__proto__',
-        'hasOwnProperty',     //Properties of __proto__ that need to be allowed
-        'toString',
-        'toLocaleString',
-        'propertyIsEnumerable',
-        'isPrototypeOf',
-        'valueOf',
-        'constructor',
       ]);
       let navPolyfill = {
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
         gpu: _GPU 
       };
-      /*TODO: ask Sam why we used navigator.__proto__ here. It was causing problems*/
       applyAccessLists(navigator, navWhitelist, {}, {}, navPolyfill);
       applyPolyfills(navigator, navPolyfill);
     }
   }
-
-  /* --- /Sam's section --- */
 
   /* Polyfill section of workerBootstrap */
 
