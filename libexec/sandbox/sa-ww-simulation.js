@@ -60,8 +60,8 @@ try {
     var eventListeners = {}
     var onHandlerTypes = ['message', 'error']
     var onHandlers = {}
-    var serialize = JSON.stringify
-    var deserialize = JSON.parse
+    var serialize = KVIN.stringify
+    var deserialize = KVIN.parse
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
       send({type: 'workerMessage', message });
