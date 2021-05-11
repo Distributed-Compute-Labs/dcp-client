@@ -10,16 +10,25 @@
  */
 
 (() => {
+  /**
+   * Wrap self.postMessage so we have a ringSource property. Allows checking for
+   * the validity of a message in the sandbox.
+   */
   let currentRing = -1;
+  const currPostMessage = self.postMessage
+  self.postMessage = function (value) {
+    currPostMessage({ ringSource: currentRing, value })
+  }
+
   function wrapPostMessage() {
-    const currentPostMessage = self.postMessage;
     const ringSource = ++currentRing;
-    return self.postMessage = function (value) {
-      currentPostMessage({ ringSource, value });
+    self.postMessage = function (value) {
+      currPostMessage({ ringSource, value })
     }
   }
 
-  const ring0PostMessage = wrapPostMessage();
+  wrapPostMessage()
+  const ring0PostMessage = self.postMessage;
 
   /**
    * This function is used by evaluator scripts to wrap their evaluation so that
@@ -39,7 +48,7 @@
       if (options.ringTransition) {
         wrapPostMessage();
       }
-
+      
       fn(fixedPostMessage, wrapPostMessage);
 
       ring0PostMessage({

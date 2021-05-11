@@ -60,10 +60,22 @@ try {
     var eventListeners = {}
     var onHandlerTypes = ['message', 'error']
     var onHandlers = {}
-    var serialize = KVIN.stringify
-    var deserialize = KVIN.parse
+    var serialize = JSON.stringify
+    var deserialize = JSON.parse
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
+      /**
+       * If our message is either console or complete, we need to serialize the
+       * payload/result because they could potentially be a datatype
+       * json.stringify cannot handle.
+       */
+      if (message.value.request === "console"){
+        message.value.payload = KVIN.marshal(message.value.payload);
+      } else if (message.value.request === "complete"){
+        console.log("made it to the results")
+        message.value.result = KVIN.marshal(message.value.result);
+      }
+
       send({type: 'workerMessage', message });
     }
 
@@ -107,7 +119,7 @@ try {
     /** Send a message to stdout.
      *  This defines the "from evaluator" half of the protocol.
      */
-    function send (outMsg) {
+    function send (outMsg) {      
       outMsg = serialize(outMsg)
       writeln('MSG:' + outMsg)
     }

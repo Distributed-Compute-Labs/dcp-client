@@ -11,6 +11,7 @@
 
 self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (ring1PostMessage, wrapPostMessage) => {
   const ring2PostMessage = self.postMessage;
+  let ring3PostMessage
 
   bravojs.ww = {}
   bravojs.ww.allDeps = []
@@ -81,15 +82,17 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
               exports.job = indirectEval(`(${message.job.workFunction})`)
-
-              /* Now that the evaluator is assigned, wrap post message for ring 3 */
-              wrapPostMessage();
             } catch(e) {
               reportError(e);
               return;
             }
+
             ring2PostMessage({request: 'assigned', jobId: message.job.opaqueId});
-          }); /* end of main module */          
+            /* Now that the evaluator is assigned, wrap post message for ring 3 */
+            wrapPostMessage();
+            delete ring2PostMessage;
+            ring3PostMessage = self.postMessage;
+          }); /* end of main module */
         } catch (error) {
           reportError(error);
         }
@@ -122,17 +125,17 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           const total = performance.now() - t0;
           let webGL = webGLTimer() - offset;
           self.webGLOffset = offset + webGL;
-          postMessage({
+          ring3PostMessage({
             request: 'measurement',
             total,
             webGL,
           });
-          postMessage({
+          ring3PostMessage({
             request: 'complete',
             result:  result
           });
         } catch (error) {
-          postMessage({
+          ring3PostMessage({
             request: 'workError',
             error: {
               message: error.message,
@@ -197,7 +200,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
   }
 
   bravojs.onMainModuleEvaluated = function bravojsEnv$$onMainModuleEvaluated() {
-    ring2PostMessage({
+    ring3PostMessage({
       request: 'mainModuleEvaluated'
     })
   }
