@@ -62,6 +62,7 @@ try {
     var onHandlers = {}
     var serialize = JSON.stringify
     var deserialize = JSON.parse
+    var marshal = KVIN.marshal
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
       /**
@@ -70,10 +71,9 @@ try {
        * json.stringify cannot handle.
        */
       if (message.value.request === "console"){
-        message.value.payload = KVIN.marshal(message.value.payload);
+        message.value.payload = marshal(message.value.payload);
       } else if (message.value.request === "complete"){
-        console.log("made it to the results")
-        message.value.result = KVIN.marshal(message.value.result);
+        message.value.result = marshal(message.value.result);
       }
 
       send({type: 'workerMessage', message });

@@ -90,7 +90,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
             ring2PostMessage({request: 'assigned', jobId: message.job.opaqueId});
             /* Now that the evaluator is assigned, wrap post message for ring 3 */
             wrapPostMessage();
-            delete ring2PostMessage;
             ring3PostMessage = self.postMessage;
           }); /* end of main module */
         } catch (error) {

@@ -393,11 +393,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   const blacklistRequirements = {
     OffscreenCanvas: "environment.offscreenCanvas"
   };
-  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-    another bug - DCP-1735
-  */
-  // var recObjList = []
-  // var recPropList = []
   /**
    * Applies a whitelist and a blacklist of properties to an object. After this function, if someone tries
    * to access non-whitelisted or blacklisted properties, a warning is logged and it will return undefined.
@@ -422,28 +417,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
               } else {
                 if (prop in polyfills) {
                   return polyfills[prop];
-                  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-                    another bug - DCP-1735
-                  */
-                  // let indexes = []
-                  // for (let i = 0; i < recObjList.length; i++){
-                  //   if (recObjList[i] == obj){
-                  //     indexes.push(i)
-                  //   }
-                  // }
-                  // for(let index of indexes){
-                  //   if (recPropList[index] === prop){
-                  //     if (!whitelist.has(prop))
-                  //       return undefined
-                  //     return prop
-                  //   }
-                  // }
-                  // recObjList.push(obj)
-                  // recPropList.push(prop)
-                  // let ret = polyfills[prop]
-                  // recObjList.pop()
-                  // recPropList.pop()
-                  // return ret;
                 }
                 return undefined;
               }
