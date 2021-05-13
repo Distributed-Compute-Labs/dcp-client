@@ -292,6 +292,28 @@ function server(listenAddr, port, files) {
 
     socket.on('data', (chunk) => child.stdin.write(chunk));
 
+    /**
+     * Without the following error handler, the evaluator server crashes when
+     * the work dies unexpectedly. e.g. Sending SIGTERM or SIGQUIT to the
+     * worker, resulting in a ECONNRESET error being thrown.
+     */
+    socket.on('error', (error) => {
+      log('Socket connection received an error');
+      switch (error.code) {
+        case 'ECONNRESET':
+          console.warn(
+            `Warning: Socket connection to worker was interrupted unexpectedly (${error.message})`,
+          );
+          break;
+        default:
+          console.error(
+            'Socket connection to worker threw an unexpected error:',
+            error,
+          );
+          break;
+      }
+    });
+
     socket.on('end', () => {
       log('Socket connection is ending');
       child.stdin.destroy();
