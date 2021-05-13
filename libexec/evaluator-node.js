@@ -27,6 +27,12 @@ try {
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
 
+const log = (...args) => {
+  if (debug) {
+    console.debug('evaluator-node', ...args);
+  }
+};
+
 if (process.getuid && (process.getuid() === 0 || process.geteuid() === 0)) {
   console.error(
     "Running this program as root is a very bad idea. Exiting process..."
@@ -285,12 +291,17 @@ function server(listenAddr, port, files) {
     });
 
     socket.on('data', (chunk) => child.stdin.write(chunk));
-    socket.on('close', () => child.kill('SIGINT'));
+
     socket.on('end', () => {
+      log('Socket connection is ending');
       child.stdin.destroy();
       child.stdout.destroy();
       child.stderr.destroy();
-      setImmediate(() => child.kill());
+    });
+
+    socket.on('close', () => {
+      log('Socket connection is closed');
+      child.kill('SIGINT');
     });
   }
 }
