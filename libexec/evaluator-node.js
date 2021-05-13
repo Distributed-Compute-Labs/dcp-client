@@ -264,7 +264,7 @@ function server(listenAddr, port, files) {
   function handleConnection(socket) {
     const child_process = require('child_process');
 
-    debug && console.log('Spawning child to handle new connection from supervsior');
+    debug && console.log('Spawning child to handle new connection from supervisor');
 
     const child = child_process.spawn(process.execPath, [__filename, ...files]);
     child.stderr.setEncoding('utf-8');
