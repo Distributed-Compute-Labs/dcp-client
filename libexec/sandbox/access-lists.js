@@ -16,7 +16,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     '__proto__',
     '_console',
     'addEventListener',
-    'applyWhitelist',
+    'applyAccesslist',
     'Array',
     'ArrayBuffer',
     'AsyncFunction',
@@ -523,8 +523,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
         gpu: _GPU 
       };
-      applyAccessLists(navigator, navWhitelist, {}, {}, navPolyfill);
-      applyPolyfills(navigator, navPolyfill);
+      applyAccessLists(navigator.__proto__, navAllowlist, {}, {}, navPolyfill);
+      applyPolyfills(navigator.__proto__, navPolyfill);
     }
   }
 
