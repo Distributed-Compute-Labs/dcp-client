@@ -27,6 +27,12 @@ try {
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
 
+const log = (...args) => {
+  if (debug) {
+    console.debug('evaluator-node', ...args);
+  }
+};
+
 if (process.getuid && (process.getuid() === 0 || process.geteuid() === 0)) {
   console.error(
     "Running this program as root is a very bad idea. Exiting process..."
@@ -258,7 +264,7 @@ function server(listenAddr, port, files) {
   function handleConnection(socket) {
     const child_process = require('child_process');
 
-    debug && console.log('Spawning child to handle new connection from supervsior');
+    debug && console.log('Spawning child to handle new connection from supervisor');
 
     const child = child_process.spawn(process.execPath, [__filename, ...files]);
     child.stderr.setEncoding('utf-8');
@@ -285,12 +291,39 @@ function server(listenAddr, port, files) {
     });
 
     socket.on('data', (chunk) => child.stdin.write(chunk));
-    socket.on('close', () => child.kill('SIGINT'));
+
+    /**
+     * Without the following error handler, the evaluator server crashes when
+     * the work dies unexpectedly. e.g. Sending SIGTERM or SIGQUIT to the
+     * worker, resulting in a ECONNRESET error being thrown.
+     */
+    socket.on('error', (error) => {
+      log('Socket connection received an error');
+      switch (error.code) {
+        case 'ECONNRESET':
+          console.warn(
+            `Warning: Socket connection to worker was interrupted unexpectedly (${error.message})`,
+          );
+          break;
+        default:
+          console.error(
+            'Socket connection to worker threw an unexpected error:',
+            error,
+          );
+          break;
+      }
+    });
+
     socket.on('end', () => {
+      log('Socket connection is ending');
       child.stdin.destroy();
       child.stdout.destroy();
       child.stderr.destroy();
-      setImmediate(() => child.kill());
+    });
+
+    socket.on('close', () => {
+      log('Socket connection is closed');
+      child.kill('SIGINT');
     });
   }
 }
