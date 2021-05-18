@@ -388,7 +388,9 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   };
   /**
    * Applies a allow list and a block list of properties to an object. After this function, if someone tries
-   * to access non-allowed or blocked properties, a warning is logged and it will return undefined.
+   * to access non-allowed or blocked properties, a warning is logged and it will return undefined. The allow
+   * list and block list are not mutually exclusive. If an item is in both lists, then the block list will be
+   * enacted upon it.
    *
    * @param {object} obj - The object, which will have the allow list applied to its properties.
    * @param {Set} allowList - A set of properties to allow people to access.
@@ -446,7 +448,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   }
 
   /**
-   * Applies a list of polyfills to symbols not present in the global object
+   * Applies a list of polyfills to symbols not present in the global object. Will apply
+   * this list through the objects entire prototype chain
    * 
    * @param {Object} obj - The global object to add properties on
    * @param {Set} polyfills - An object of property names to create/polyfill 

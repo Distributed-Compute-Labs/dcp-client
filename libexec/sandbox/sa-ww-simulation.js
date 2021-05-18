@@ -60,6 +60,8 @@ try {
     var eventListeners = {}
     var onHandlerTypes = ['message', 'error']
     var onHandlers = {}
+
+    //Will be removing JSON and KVIN in access-lists.js, so need an alias for them
     var serialize = JSON.stringify
     var deserialize = JSON.parse
     var marshal = KVIN.marshal
@@ -166,6 +168,7 @@ try {
     }) /* receiveLine */
   })(writeln, onreadln, die) /* privateScope */
 
+  /* Remove symbols from global scope that may be security leaks*/
   writeln = onreadln = die = undefined
   delete self.writeln
   delete self.onreadln

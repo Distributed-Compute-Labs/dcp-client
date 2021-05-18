@@ -82,6 +82,7 @@ self.wrapScriptLoading({ scriptName: 'primitive-timers' }, () => {
     };
   })(_setTimeout, _clearTimeout, _setImmediate);
 
+  // delete the original timeout's to ensure our polyfill will be used in the work function
   setTimeout = clearTimeout = setInterval = clearInterval = queueMicrotask = undefined;
   delete self.setTimeout;
   delete self.setImmediate;

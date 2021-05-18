@@ -10,7 +10,8 @@
 // @ts-nocheck
 
 self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (ring1PostMessage, wrapPostMessage) => {
-  const ring2PostMessage = self.postMessage;
+  // This file starts at ring 2, but transitions to ring 3 partway through it.
+  const ring2PostMessage = self.postMessage; 
   let ring3PostMessage
 
   bravojs.ww = {}
@@ -20,7 +21,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
   async function flushMicroTaskQueue () {
     await Promise.resolve();
   }
-
+  //Listens for postMessage from the sandbox
   addEventListener('message', async (event) => {
     let message = event.data
     let indirectEval = eval // eslint-disable-line
@@ -71,7 +72,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
 
           self.dcpConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
-
+          // Load bravojs' module.main with the work function
           module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {
             try {
               if (exports.hasOwnProperty('job'))
@@ -103,6 +104,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         // Put job on event loop with timeout
         let launchJob = (async () => {
           try {
+            /* 
+              module.main was initialized in case 'assign', which exports 'job' as the work function. Apply
+              the slice data and any arguments to the function
+            */
             let result = await module.main.job.apply(null,[message.data].concat(module.main.arguments))
             resolveHandle(result);
           } catch (error) {
@@ -197,7 +202,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
       id: id
     })
   }
-
+  /* called when module.main is initialized when assigning the evaluator. This happens in
+   ring 3 because when this is called the sandbox has just finished being assigned and
+   is ready for the 'work' message*/
   bravojs.onMainModuleEvaluated = function bravojsEnv$$onMainModuleEvaluated() {
     ring3PostMessage({
       request: 'mainModuleEvaluated'

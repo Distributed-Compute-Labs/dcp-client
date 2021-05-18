@@ -187,7 +187,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
         fileName: undefined,
         lineNumber: undefined});
   }
-
+  // Polyfill console with our own function. Prevents console statements
+  // within a user's work function from being displayed in a worker's console, and
+  // will properly send it back to the user
   self.console = {
     log:    workerBootstrap$console.bind(null, 'log'),
     debug:  workerBootstrap$console.bind(null, 'debug'),
@@ -216,7 +218,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
       }
     }
   };
-
+  // Ensure all console statements will be sent after a job completes
   self.flushLastLog = function workerBootstrap$flushLastLog(){
     if(!flushedLastConsoleMessage){
         flushConsoleMessages(null); 

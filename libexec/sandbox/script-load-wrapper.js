@@ -12,13 +12,12 @@
 (() => {
   /**
    * Wrap self.postMessage so we have a ringSource property. Allows checking for
-   * the validity of a message in the sandbox.
+   * the validity of a message in the sandbox. Setting currPostMessage - self.postMessage
+   * as a constant, then always re-defining self.postMessage in terms of the initial
+   * currPostMessage ensures we don't recursively add layers to our wrapping of postMessage.
    */
   let currentRing = -1;
-  const currPostMessage = self.postMessage
-  self.postMessage = function (value) {
-    currPostMessage({ ringSource: currentRing, value })
-  }
+  const currPostMessage = self.postMessage;
 
   function wrapPostMessage() {
     const ringSource = ++currentRing;
@@ -26,7 +25,7 @@
       currPostMessage({ ringSource, value })
     }
   }
-
+  //Initialize postMessage to ring 0
   wrapPostMessage()
   const ring0PostMessage = self.postMessage;
 
