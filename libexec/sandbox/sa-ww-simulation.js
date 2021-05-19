@@ -73,7 +73,7 @@ try {
        * json.stringify cannot handle.
        */
       if (message.value.request === "console"){
-        message.value.payload = marshal(message.value.payload);
+        message.value.payload = marshal(message.value.payload.message);
       } else if (message.value.request === "complete"){
         message.value.result = marshal(message.value.result);
       }
