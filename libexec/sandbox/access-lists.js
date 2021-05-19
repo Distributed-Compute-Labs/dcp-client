@@ -28,6 +28,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'ArrayBuffer',
     'AsyncFunction',
     'Atomics',
+    'BigInt',
     'Boolean',
     'Blob',
     'bravojs',
