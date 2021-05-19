@@ -60,10 +60,24 @@ try {
     var eventListeners = {}
     var onHandlerTypes = ['message', 'error']
     var onHandlers = {}
+
+    //Will be removing JSON and KVIN in access-lists.js, so need an alias for them
     var serialize = JSON.stringify
     var deserialize = JSON.parse
+    var marshal = KVIN.marshal
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
+      /**
+       * If our message is either console or complete, we need to serialize the
+       * payload/result because they could potentially be a datatype
+       * json.stringify cannot handle.
+       */
+      if (message.value.request === "console"){
+        message.value.payload = marshal(message.value.payload.message);
+      } else if (message.value.request === "complete"){
+        message.value.result = marshal(message.value.result);
+      }
+
       send({type: 'workerMessage', message });
     }
 
@@ -107,7 +121,7 @@ try {
     /** Send a message to stdout.
      *  This defines the "from evaluator" half of the protocol.
      */
-    function send (outMsg) {
+    function send (outMsg) {      
       outMsg = serialize(outMsg)
       writeln('MSG:' + outMsg)
     }
@@ -154,6 +168,7 @@ try {
     }) /* receiveLine */
   })(writeln, onreadln, die) /* privateScope */
 
+  /* Remove symbols from global scope that may be security leaks*/
   writeln = onreadln = die = undefined
   delete self.writeln
   delete self.onreadln

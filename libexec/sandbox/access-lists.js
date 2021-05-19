@@ -12,18 +12,11 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   const global = typeof globalThis === 'undefined' ? self : globalThis;
 
   // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
-  const whitelist = new Set([
+  const allowList = new Set([
     '__proto__',
-    'hasOwnProperty',     //Properties of __proto__ that need to be whitelisted
-    'toString',
-    'toLocaleString',
-    'propertyIsEnumerable',
-    'isPrototypeOf',
-    'valueOf',
-    'constructor',
     '_console',
     'addEventListener',
-    'applyWhitelist',
+    'applyAccesslist',
     'Array',
     'ArrayBuffer',
     'AsyncFunction',
@@ -143,7 +136,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   // Origin time for performance polyfill
   const pt0 = new Date().getTime(); 
 
-  // Add polyfills for any non-whitelisted symbols
+  // Add polyfills for any non-allowed symbols
   const polyfills = {
     location: {
       search: "",
@@ -386,33 +379,30 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
 
 
   // Set values to true to disallow access to symbols
-  const blacklist = {
+  const blockList = {
     OffscreenCanvas: false,
   };
 
-  const blacklistRequirements = {
+  const blockListRequirements = {
     OffscreenCanvas: "environment.offscreenCanvas"
   };
-  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-    another bug - DCP-1735
-  */
-  // var recObjList = []
-  // var recPropList = []
   /**
-   * Applies a whitelist and a blacklist of properties to an object. After this function, if someone tries
-   * to access non-whitelisted or blacklisted properties, a warning is logged and it will return undefined.
+   * Applies a allow list and a block list of properties to an object. After this function, if someone tries
+   * to access non-allowed or blocked properties, a warning is logged and it will return undefined. The allow
+   * list and block list are not mutually exclusive. If an item is in both lists, then the block list will be
+   * enacted upon it.
    *
-   * @param {object} obj - The object, which will have the whitelist applied to its properties.
-   * @param {Set} whitelist - A set of properties to allow people to access.
-   * @param {Set} blacklist - An object of property names mapping to booleans to indicate whether access is allowed or not.
-   * @param {Set} blacklistRequirements - An object of property names mapping requirement path strings, used to print useful warnings.
+   * @param {object} obj - The object, which will have the allow list applied to its properties.
+   * @param {Set} allowList - A set of properties to allow people to access.
+   * @param {Set} blockList - An object of property names mapping to booleans to indicate whether access is allowed or not.
+   * @param {Set} blockListRequirements - An object of property names mapping requirement path strings, used to print useful warnings.
    * @param {Set} polyfills - An object of property names that have been polyfilled.
    */
-  function applyAccessLists(obj, whitelist, blacklist = {}, blacklistRequirements = {}, polyfills = {}) {
+  function applyAccessLists(obj, allowList, blockList = {}, blockListRequirements = {}, polyfills = {}) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
       if (Object.getOwnPropertyDescriptor(obj, prop).configurable) {
-        if (!whitelist.has(prop)) {
+        if (!allowList.has(prop)) {
           let isSet = false;
           let propValue;
           Object.defineProperty(obj, prop, {
@@ -422,28 +412,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
               } else {
                 if (prop in polyfills) {
                   return polyfills[prop];
-                  /*TODO: Remove or uncommend the code below as needed. Unsure if this is needed due to a block from
-                    another bug - DCP-1735
-                  */
-                  // let indexes = []
-                  // for (let i = 0; i < recObjList.length; i++){
-                  //   if (recObjList[i] == obj){
-                  //     indexes.push(i)
-                  //   }
-                  // }
-                  // for(let index of indexes){
-                  //   if (recPropList[index] === prop){
-                  //     if (!whitelist.has(prop))
-                  //       return undefined
-                  //     return prop
-                  //   }
-                  // }
-                  // recObjList.push(obj)
-                  // recPropList.push(prop)
-                  // let ret = polyfills[prop]
-                  // recObjList.pop()
-                  // recPropList.pop()
-                  // return ret;
                 }
                 return undefined;
               }
@@ -454,14 +422,14 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
             },
             configurable: false
           });
-        } else if (prop in blacklist) {
+        } else if (prop in blockList) {
           let isSet = false;
-          let blacklisted = blacklist[prop];
-          let requirement = blacklistRequirements[prop];
+          let blocked = blockList[prop];
+          let requirement = blockListRequirements[prop];
           let propValue = obj[prop];
           Object.defineProperty(obj, prop, {
             get: function () {
-              if (blacklisted && !isSet) {
+              if (blocked && !isSet) {
                 return undefined;
               } else {
                 return propValue;
@@ -480,7 +448,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   }
 
   /**
-   * Applies a list of polyfills to symbols not present in the global object
+   * Applies a list of polyfills to symbols not present in the global object. Will apply
+   * this list through the objects entire prototype chain
    * 
    * @param {Object} obj - The global object to add properties on
    * @param {Set} polyfills - An object of property names to create/polyfill 
@@ -511,34 +480,34 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
   }
 
   /**
-   * Applies the whitelist and blacklist to all global scopes.
+   * Applies the allowList and blockList to all global scopes.
    * This must be called after the requirements are assigned to the sandbox
-   * so that the blacklist is accessible to modify w/o adding it to the whitelist.
+   * so that the blockList is accessible to modify w/o adding it to the allowList.
    */
   function applyAllAccessLists() {
     // We need to apply the access lists to global, global.__proto__, and global.__proto__.__proto__,
     // because there's networking-accessing functions inside global.__proto__.__proto__, like fetch.
     //
     // If we're in a robust environment (node, browser, WebWorker, basically anything but v8),
-    // then we have to climb the prototype chain and apply the whitelist there, but we have to stop
-    // before we whitelist Object's properties
+    // then we have to climb the prototype chain and apply the allowList there, but we have to stop
+    // before we allow Object's properties
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
-    // Save them in scope because they'll get hidden by the whitelist
-    let _whitelist = whitelist;
-    let _blacklist = blacklist;
+    // Save them in scope because they'll get hidden by the allowList
+    let _allowList = allowList;
+    let _blockList = blockList;
     let _polyfills = polyfills;
 
     // Ternary expression to avoid a ReferenceError on navigator
     let _navigator = typeof navigator !== 'undefined' ? navigator : undefined;
     let _GPU       = ((typeof navigator !== 'undefined') && (typeof navigator.gpu !== 'undefined')) ? navigator.gpu : 
       (typeof GPU !== 'undefined'? GPU : undefined);
-    let _blacklistRequirements = blacklistRequirements;
+    let _blockListRequirements = blockListRequirements;
     let _applyAccessLists = applyAccessLists;
     let _applyPolyfills = applyPolyfills;
 
     for (let g = global; g.__proto__ && (g.__proto__ !== Object); g = g.__proto__) {
-      applyAccessLists(g, whitelist, blacklist, blacklistRequirements, polyfills);
+      applyAccessLists(g, allowList, blockList, blockListRequirements, polyfills);
     }
 
     if (typeof _navigator === 'undefined') {
@@ -547,31 +516,20 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
         gpu: _GPU, 
       };
     } else {
-      // We also want to whitelist certain parts of navigator, but not others.
+      // We also want to allowList certain parts of navigator, but not others.
       
-      navWhitelist = new Set([
+      navAllowlist = new Set([
         'userAgent',
         'gpu',
-        '__proto__',
-        'hasOwnProperty',     //Properties of __proto__ that need to be whitelisted
-        'toString',
-        'toLocaleString',
-        'propertyIsEnumerable',
-        'isPrototypeOf',
-        'valueOf',
-        'constructor',
       ]);
       let navPolyfill = {
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
         gpu: _GPU 
       };
-      /*TODO: ask Sam why we used navigator.__proto__ here. It was causing problems*/
-      applyAccessLists(navigator, navWhitelist, {}, {}, navPolyfill);
-      applyPolyfills(navigator, navPolyfill);
+      applyAccessLists(navigator.__proto__, navAllowlist, {}, {}, navPolyfill);
+      applyPolyfills(navigator.__proto__, navPolyfill);
     }
   }
-
-  /* --- /Sam's section --- */
 
   /* Polyfill section of workerBootstrap */
 
@@ -613,7 +571,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
         // apply restrictions to the environment based on the requirements.
         // Assume the scheduler gave us a nicely-shaped req object.
         const requirements = event.data.requirements;
-        blacklist.OffscreenCanvas = !requirements.environment.offscreenCanvas;
+        blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
         applyAllAccessLists();
 
         ring1PostMessage({ request: 'applyRequirementsDone' });
