@@ -73,10 +73,7 @@ try {
        * json.stringify cannot handle.
        */
       if (message.value.request === "console"){
-        //We want to send a string over the 
-        // message.value.payload.message = message.value.payload.message.map(a =>
-        //     parseJSONString(a)
-        //   ).join(' ');
+        //Because JSON.stringify(a) !== JSON.stringify(JSON.stringify(a)), we need to do this
         message.value.payload.message = serialize(marshal(message.value.payload.message))
       } else if (message.value.request === "complete"){
         message.value.result = marshal(message.value.result);
