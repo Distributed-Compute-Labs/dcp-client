@@ -51,6 +51,6 @@
     "peter": "^2.1.3"
   },
   "peerDependencies": {
-    "dcp-worker": "^2.0.4-a"
+    "dcp-worker": "^3.0.0"
   }
 }
