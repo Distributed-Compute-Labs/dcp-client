@@ -20,6 +20,7 @@ console.log(`Generating sandbox definitions in ${target}`);
 /** All sandbox types use the base files */
 var base = [
   'script-load-wrapper',
+  'primitive-timers',
   'event-loop-virtualization',
   'access-lists',
   'bravojs-init',
@@ -29,12 +30,13 @@ var base = [
   'bootstrap'
 ];
 
-o.browser = base.splice(1, 0, 'primitive-timers')
+o.browser = [].concat(base);
 
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
 
 /** A native-evaluator sandbox needs extra code to emulate a Web Worker */
+o.native.splice(1,1) // Remove the primitive-timers from native
 o.native = [ 'sa-ww-simulation' ].concat(base);
 
 /** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
