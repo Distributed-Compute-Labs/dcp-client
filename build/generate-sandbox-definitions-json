@@ -20,7 +20,6 @@ console.log(`Generating sandbox definitions in ${target}`);
 /** All sandbox types use the base files */
 var base = [
   'script-load-wrapper',
-  'primitive-timers',
   'event-loop-virtualization',
   'access-lists',
   'bravojs-init',
@@ -30,7 +29,7 @@ var base = [
   'bootstrap'
 ];
 
-o.browser = [].concat(base);
+o.browser = base.splice(1, 0, 'primitive-timers')
 
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
