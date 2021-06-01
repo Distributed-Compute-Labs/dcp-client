@@ -35,8 +35,10 @@ o.browser = [].concat(base);
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
 
-/** A native-evaluator sandbox needs extra code to emulate a Web Worker */
-o.native = base.filter(filename => filename !== 'primitive-timers'); // Remove the primitive-timers from native
+/** A native-evaluator sandbox needs extra code to emulate a Web Worker 
+ *  but it does not want the primitive-timers patch
+ */
+o.native = base.filter(filename => filename !== 'primitive-timers');
 o.native = [ 'sa-ww-simulation' ].concat(o.native);
 
 /** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
