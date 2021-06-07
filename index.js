@@ -793,7 +793,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   {
     try {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
-      remoteConfigCode = await require('dcp/utils').justFetch(aggrConfig.scheduler.configLocation)
+      remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
     } catch(e) {
       console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
       console.log(require('dcp/utils').justFetchPrettyError(e));
