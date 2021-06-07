@@ -503,6 +503,8 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   var finalBundleLabel; /* symbolic label used for logs describing the source of the final bundle */
   var ret;              /* the return value of the current function - usually the `dcp` object but
                            possibly edited by the postInitTailHook function. */
+  var schedConfLocFun = require('dcp/protocol-v4').getSchedulerConfigLocation;
+  
   /* 1 */
   if (finalBundleCode) {
     finalBundleLabel = String(finalBundleURL);
@@ -533,6 +535,8 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   injectNsMapModules(nsMap, bundle, finalBundleLabel, true);
   injectModule('dcp/client', exports);
   injectModule('dcp/client-bundle', bundle);
+  if (schedConfLocFun)
+    require('dcp/protocol-v4').getSchedulerConfigLocation = schedConfLocFun;
 
   /* 3 */
   if (global.dcpConfig) {
