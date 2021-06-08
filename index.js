@@ -496,8 +496,6 @@ exports._initHead = function dcpClient$$initHead() {
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
  */
 function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
-  const semver = require('semver');
-  const { patchup: patchUp } = require('dcp/dcp-url');
   var nsMap;            /* the final namespace map to go from bundle->dcp-client environment */
   var bundle;           /* the final bundle, usually a copy of the bootstrap bundle */
   var finalBundleLabel; /* symbolic label used for logs describing the source of the final bundle */
@@ -513,19 +511,31 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
      * The finalBundleCode may include dcpConfig.bank.location.resolve, which
      * means we need to convert the URLs in the bundleSandbox into DcpURLs.
      */
-    patchUp(bundleSandbox);
+    require('dcp/dcp-url').patchup(bundleSandbox);
     bundle = evalStringInSandbox(
       finalBundleCode,
       bundleSandbox,
       finalBundleLabel,
     );
   } else {
-    let bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
+    const bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
     finalBundleLabel = bundleFilename;
+
+    /**
+     * FIXME(bryan-hoang/wesgarland): Re-evaluating the bundle used to bootstrap
+     * config loading will cause some issues w.r.t. closures and `instanceof`
+     * checks. `instanceof` checks fail when these newly evaluated
+     * functions/classes are injected into the module system, which differ from
+     * their instances in the config. e.g. DcpURL
+     *
+     * For now, we're saving the initial references for closures and patching up
+     * instances for DcpURL, but these different instances could cause future
+     * bugs.
+     */
     bundle = evalScriptInSandbox(bundleFilename, bundleSandbox);
   }
   nsMap = bundle.nsMap || require('./ns-map');  /* future: need to move non-bootstrap nsMap into bundle for stable auto-update */
-  
+
   if (bundle.initTailHook) /* for use by auto-update future backwards compat */ 
     bundle.initTailHook(aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
 
@@ -535,8 +545,22 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   injectNsMapModules(nsMap, bundle, finalBundleLabel, true);
   injectModule('dcp/client', exports);
   injectModule('dcp/client-bundle', bundle);
+
+  /**
+   * Preserving the initial instance of the function, else it closes over the
+   * wrong variable and returns `undefined` even though fetch has been used.
+   */
   if (schedConfLocFun)
     require('dcp/protocol-v4').getSchedulerConfigLocation = schedConfLocFun;
+
+  /**
+   * Patch up URLs present in the config AFTER final module injection, else
+   * future `instanceof` checks for DcpURL can break if `initSync` is used.
+   *
+   * Caused by the difference in how `initSync` differs in patching up URLs in
+   * the config during initialization to make it compatible with serialization.
+   */
+  require('dcp/dcp-url').patchup(aggrConfig);
 
   /* 3 */
   if (global.dcpConfig) {
@@ -906,7 +930,6 @@ function fetchAggregateConfig(initArgv) {
   const serializedOutput = String(child.output[3]);
   log('fetchAggregateConfig', 'serializedOutput:', serializedOutput);
   const aggregateConfig = deserialize(serializedOutput);
-  patchUp(aggregateConfig);
   return aggregateConfig;
 }
   
