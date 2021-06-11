@@ -163,6 +163,7 @@ self.wrapScriptLoading(
             bigTexture32768,
           },
         },
+        discrete: true, //allows sandbox to be in a worker that only accepts one slice of a job total
       };
     }
 
