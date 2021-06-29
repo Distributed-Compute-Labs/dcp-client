@@ -88,8 +88,12 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
               return;
             }
 
-            ring2PostMessage({request: 'assigned', jobId: message.job.opaqueId});
-            /* Now that the evaluator is assigned, wrap post message for ring 3 */
+            ring2PostMessage({
+              request: 'assigned',
+              jobAddress: message.job.address,
+            });
+
+            // Now that the evaluator is assigned, wrap post message for ring 3
             wrapPostMessage();
             ring3PostMessage = self.postMessage;
           }); /* end of main module */
@@ -150,6 +154,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
             }
           });
         }
+        break;
+      default:
         break;
     }
   })
