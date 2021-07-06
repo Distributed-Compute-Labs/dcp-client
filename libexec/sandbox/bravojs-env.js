@@ -205,15 +205,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
     ring2PostMessage({
       request: 'dependency',
       data: dependencies,
-      id: id
-    })
-  }
-  /* called when module.main is initialized when assigning the evaluator. This happens in
-   ring 3 because when this is called the sandbox has just finished being assigned and
-   is ready for the 'work' message*/
-  bravojs.onMainModuleEvaluated = function bravojsEnv$$onMainModuleEvaluated() {
-    ring3PostMessage({
-      request: 'mainModuleEvaluated'
-    })
-  }
+      id,
+    });
+  };
 });
