@@ -205,7 +205,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
     ring2PostMessage({
       request: 'dependency',
       data: dependencies,
-      id: id
-    })
-  }
+      id,
+    });
+  };
 });
