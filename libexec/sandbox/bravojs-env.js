@@ -88,8 +88,12 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
               return;
             }
 
-            ring2PostMessage({request: 'assigned', jobId: message.job.opaqueId});
-            /* Now that the evaluator is assigned, wrap post message for ring 3 */
+            ring2PostMessage({
+              request: 'assigned',
+              jobAddress: message.job.address,
+            });
+
+            // Now that the evaluator is assigned, wrap post message for ring 3
             wrapPostMessage();
             ring3PostMessage = self.postMessage;
           }); /* end of main module */
@@ -151,6 +155,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           });
         }
         break;
+      default:
+        break;
     }
   })
 
@@ -199,15 +205,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
     ring2PostMessage({
       request: 'dependency',
       data: dependencies,
-      id: id
-    })
-  }
-  /* called when module.main is initialized when assigning the evaluator. This happens in
-   ring 3 because when this is called the sandbox has just finished being assigned and
-   is ready for the 'work' message*/
-  bravojs.onMainModuleEvaluated = function bravojsEnv$$onMainModuleEvaluated() {
-    ring3PostMessage({
-      request: 'mainModuleEvaluated'
-    })
-  }
+      id,
+    });
+  };
 });
