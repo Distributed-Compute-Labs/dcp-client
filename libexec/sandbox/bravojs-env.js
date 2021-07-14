@@ -63,7 +63,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           if (error.stack)
             error = error.stack.replace(/data:application\/javascript.*?:/g, 'eval:');
 
-          ring2PostMessage({request: 'error', error});
+          ring2PostMessage({request: 'reject', error});
         }
         
         try {
