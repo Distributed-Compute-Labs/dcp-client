@@ -60,4 +60,4 @@ test:
   stage: test
   script:
     # Make test output verbose to help with debugging failing tests in CI
-    - npm test -- -v
+    - npm test -- -v --junit test_report.xml
