@@ -25,7 +25,7 @@ if (typeof module.declare === 'undefined') { /* cjs1 */
 
 module.declare([], function $$nsMap(require, exports, module) {
   var moduleIdentifier;
-  
+
   /* LHS: where symbols appear      RHS: where they come from in dcp-client-bundle-src.js */      
   exports['dcp/build']          = 'dcp-build';
 
@@ -57,6 +57,14 @@ module.declare([], function $$nsMap(require, exports, module) {
     'compute-groups',
   ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
 
+  /** 
+   * LONG TERM PLAN
+   * - put external modules in their own namepsace in webpack bundle - /dcp/internal/ ?
+   * - ensure names in webpack need no translation except adding /dcp (looks good now)
+   * - remove this module
+   * - test all three load modes
+   */
+  
   /* Provide internal copies of third-party npm libraries when external (native?) copies not available */
   for (moduleIdentifier of [
     'ethereumjs-util',

@@ -30,14 +30,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
 
   var _dcpConfig = typeof dcpConfig === 'object' ? dcpConfig : undefined;
   
-  if (typeof module !== 'undefined' && typeof module.declare !== 'undefined') {
-    /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
-    module.declare(['./cjs2-init'], function (require, exports, module) {
-      let other = require('./cjs2-init')
-      Object.assign(exports, other)
-      Object.setPrototypeOf(exports, Object.getPrototypeOf(other))
-    })
-  } else {
+  {
     let allScripts = document.getElementsByTagName('SCRIPT');
     let thisScript = allScripts[allScripts.length - 1];
     let thisScriptURL = new URL(thisScript.src)
@@ -78,17 +71,57 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       } else {
         document.write(configScript.outerHTML);
       }
-      configScript = document.getElementById(configScript.id);
-      configScript.onerror = function(e) {
+      configScript.onerror = (function(e) {
         alert('Error DCP-1001: Could not load or parse scheduler configuration from URL ("' + configScript.getAttribute('src') + '")');
         console.error('dcpConfig load error: ', e);
-      };
+      }).toString();
     }
-    
+
+    /* Shim to make CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) work with dcpClient in requireNative mode */
+    function loadCJS2Shim()
+    {
+      var shimScript = document.createElement('SCRIPT');
+      var shimSrc = thisScript.getAttribute("shim") || (thisScript.src.replace('/dcp-client.js', '/cjs2-shim.js'));
+      var tmp;
+      
+      shimScript.setAttribute('type',    'text/javascript');
+      shimScript.setAttribute('src',     shimSrc);
+      shimScript.setAttribute('id',      '_dcp_client_cjs2_shim');
+      shimScript.setAttribute('dcp-env', 'vanilla-web');
+      shimScript.setAttribute('onerror', `alert('Error DCP-1003: Could not load cjs2 shim from URL ("${shimSrc}")')`);
+
+      document.write(shimScript.outerHTML);
+    }
+
+    /** 
+     * This function is never run directly; it is stringified and emitted in a 
+     * SCRIPT tag that is injected into the document. As such, it cannot close 
+     * over any non-global variables.
+     */
+    function bundleReadyIIFE() {
+      let bundleScript  = document.getElementById("_dcp_client_bundle");
+      let ready         = bundleScript.getAttribute('onready');
+      let dcp           = bundleScript.exports;
+
+      if (typeof module !== 'undefined' && typeof module.declare !== 'undefined')
+        require('/internal/dcp/cjs2-shim').init(bundleScript.exports); /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
+      else
+        window.dcp = dcp; /* vanilla JS */
+
+      /**
+       * Transform instances of Address-like values into Addresses. Necessary since
+       * the config can't access the Address class before the bundle is loaded.
+       */ 
+      dcp.wallet.Address.patchUp(dcpConfig);
+
+      if (ready)
+        window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
+    }
+
     /* Load dcp-client bundle from the same lcoation as this module, extract the exports 
      * from it, and attach them to the global dcp object.
      */
-    function loadBundle() {
+    function loadBundle(shimCallback) {
       var bundleScript = document.createElement('SCRIPT');
       var bundleSrc = thisScript.getAttribute("bundle") || (thisScript.src.replace('/dcp-client.js', '/dist/dcp-client-bundle.js'));
       var tmp;
@@ -103,26 +136,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       bundleScript.setAttribute('onready', thisScript.getAttribute('onready'));
       thisScript.removeAttribute('onready');
       document.write(bundleScript.outerHTML);
-      document.write(`<script>
-;(function bundleReadyIIFE() {
-  let bundleScript = document.getElementById("_dcp_client_bundle");
-  let ready = bundleScript.getAttribute('onready');
-  window.dcp = bundleScript.exports;
-
-  /**
-   * Transform instances of Address-like values into Addresses. Necessary since
-   * the config can't access the Address class before the bundle is loaded.
-   */
-  window.dcp.wallet.Address.patchUp(dcpConfig);
-  if (ready)
-    window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
-})();
-
-/**
- * The script tag is broken up on purpose, to avoid parsing errors by certain
- * browsers.
- */
-</scr` + `ipt>`);
+      document.write(`<script id='_dcp_bundleReadyIIFE'>/* bundleReadyIIFE */;(${bundleReadyIIFE})()</scr` + `ipt>`);
       bundleScript = document.getElementById('_dcp_client_bundle');
       if (bundleScript)
         bundleScript.onerror = function(e) {
@@ -149,8 +163,13 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       head.appendChild(faviconLink);
     }
 
+    let shimCallback;
+    if (typeof module === 'object' && typeof module.declare === 'function')
+      shimCallback = loadCJS2Shim(); /* BravoJS, NobleJS, etc - set up for requireNative */
+
     loadConfig();
-    loadBundle();
+    loadBundle(shimCallback);
     loadLinks();
   }
 })();
+ 
