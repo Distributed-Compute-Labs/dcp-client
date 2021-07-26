@@ -28,6 +28,7 @@
     "vtest": "npx peter -v tests"
   },
   "dependencies": {
+    "atob": "2.1.2",
     "bravojs": "^1.0.15",
     "btoa": "^1.2.1",
     "chalk": "^2.4.2",
