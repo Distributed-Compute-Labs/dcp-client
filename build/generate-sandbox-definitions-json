@@ -54,7 +54,7 @@ o.webGpuNative = o.native.concat(['webgpu-worker-environment.js']);
 
 for (let type in o) {
   o[type].unshift('kvin/kvin.js');
-  if (type !== 'node')
+  if (type !== 'node' && type !== 'nodeTesting')
     o[type].unshift('deny-node');
 }
 
