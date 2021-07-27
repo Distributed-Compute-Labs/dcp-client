@@ -72,6 +72,10 @@ try {
        * payload/result because they could potentially be a datatype
        * json.stringify cannot handle.
        */
+      if (!message.value)
+      {
+        message.value = serialize(marshal(message.value))
+      }
       if (message.value.request === "console"){
         //Because JSON.stringify(a) !== JSON.stringify(JSON.stringify(a)), we need to do this
         message.value.payload.message = serialize(marshal(message.value.payload.message))
