@@ -35,6 +35,9 @@ o.browser = [].concat(base);
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
 
+/** A node-testing evaluator similar to the node evaluator but with an additional testing script loaded */
+o.nodeTesting = ['sa-ww-simulation'].concat(base).concat(['testing.js']);
+
 /** A native-evaluator sandbox needs extra code to emulate a Web Worker 
  *  but it does not want the primitive-timers patch
  */
