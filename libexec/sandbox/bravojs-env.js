@@ -103,10 +103,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         break /* end of assign */
       }
       case 'main':
-        let resolveHandle, rejectHandle;
-        let timeoutPromise = new Promise((...args) => [resolveHandle, rejectHandle] = args);
-        // Put job on event loop with timeout
-        let launchJob = (async () => {
+        let launchJob = (async (resolveHandle, rejectHandle) => {
           try {
             /* 
               module.main was initialized in case 'assign', which exports 'job' as the work function. Apply
@@ -119,18 +116,25 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           }
           try{ flushLastLog(); } catch(e) {/* do nothing */}
         });
-        setTimeout(launchJob);
 
         // wait for the above to fulfill
         try {
-          const t0 = performance.now();
           const webGLTimer = getWebGLTimer;
           const offset = webGLOffset;
           delete webGLOffset;
+
+          // Measure performance directly before and after the job to get as accurate total time as
+          const t0 = performance.now();
+          // Put job on the event loop with a timeout, then await the promise resolution
+          timeoutPromise = new Promise((resolve, reject) => {
+            setTimeout(() => launchJob(resolve, reject));
+          })
           let result = await timeoutPromise;
+          const total = performance.now() - t0;
+
           // clear the above timeout
           await flushMicroTaskQueue();
-          const total = performance.now() - t0;
+
           let webGL = webGLTimer() - offset;
           self.webGLOffset = offset + webGL;
           ring3PostMessage({
