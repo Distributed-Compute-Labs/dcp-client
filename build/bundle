@@ -142,14 +142,14 @@ console.log(JSON.stringify(localConfig));
 EOJS
 
 if [ ! -d "${DCP_SRC}/node_modules" ]; then
-  echo "Cannot find ${DCP_SRC}/node_modules. Please run ${DCP_SRC}/install.sh dcp-client" >&2
+  echo "Cannot find ${DCP_SRC}/node_modules. Please run npm i from ${DCP_SRC}" >&2
   exit 97
 fi
 
 NO_LOG=1 \
 SKIP_SUDO_CHECK=1 \
 DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl" \
-  "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} dcp-client
+  "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} build-dcp-client
 
 EXIT_CODE="$?"
 if [ "$EXIT_CODE" != "0" ]; then
