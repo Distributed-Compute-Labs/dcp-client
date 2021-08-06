@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.1.6-b",
+  "version": "4.1.6-c",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -43,6 +43,7 @@
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "regedit": "^3.0.3",
+    "semver": "^7.3.5",
     "webpack": "^5.46.0",
     "webpack-cli": "^4.7.2",
     "xmlhttprequest-ssl": "^1.6.2",
