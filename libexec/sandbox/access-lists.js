@@ -146,12 +146,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     performance: typeof performance !== 'undefined' ? performance : { 
       now: ()=>{ 
         res = new Date().getTime() - pt0;
-        // Rounding so that small timings don't get marked as 0 every time
-        if (res % 2 === 0) {
-          res += 0.5;
-        } else {
-          res -= 0.5;
-        }
         return res;
       } 
     },
