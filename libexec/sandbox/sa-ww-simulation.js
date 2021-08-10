@@ -155,7 +155,7 @@ try {
           break
         case 'workerMessage':
           if (inMsg.message.request === 'main') {
-            inMsg.message.data = unmarshal(inMsg.message.data)
+            inMsg.message.data = unmarshal(inMsg.message.data);
           }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
