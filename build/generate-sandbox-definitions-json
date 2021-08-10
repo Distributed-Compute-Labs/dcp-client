@@ -34,11 +34,19 @@ o.browser = [].concat(base);
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
 
+/** A node-testing evaluator similar to the node evaluator but with an additional testing script loaded */
+o.nodeTesting = o.node.concat([]);
+
 /** A native-evaluator sandbox needs extra code to emulate a Web Worker
  *  but it does not want the primitive-timers patch
  */
 o.native = base.filter(filename => filename !== 'primitive-timers');
 o.native = ['sa-ww-simulation'].concat(o.native);
+
+/** A testing sandbox is a native sandbox with an additional testing script
+ * injected that can be changed to test global symbols in the evaluator
+ */
+o.testing = o.native.concat([]);
 
 /** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
 o.webGpuNative = o.native.concat(['webgpu-worker-environment.js']);
@@ -47,18 +55,11 @@ for (let type in o) {
   o[type].unshift('kvin/kvin.js');
   if (type !== 'node' && type !== 'nodeTesting')
     o[type].unshift('deny-node');
-
-  /** Bootstrap must be last, aside from "testing.js", below */
   o[type].push('bootstrap');
 }
 
-/** A node-testing evaluator similar to the node evaluator but with an additional testing script loaded */
-o.nodeTesting = ['sa-ww-simulation'].concat(base).concat(['testing.js']);
-
-/** A testing sandbox is a native sandbox with an additional testing script
- * injected that can be changed to test global symbols in the evaluator
- */
-o.testing = o.native.concat(['testing.js'])
+o.nodeTesting.push('testing.js');
+o.testing.push('testing.js');
 
 fs.writeFileSync(path.resolve(__dirname, target), JSON.stringify(o), 'utf-8');
 console.log(`Done - ${Object.keys(o).join(', ')}.`);
