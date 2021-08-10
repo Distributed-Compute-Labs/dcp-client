@@ -1,10 +1,8 @@
 /**
- *  @file       dcp/evaluator/environment/webgpu-worker-environment.js
+ *  @file       libexec/sandbox/webgpu-worker-environment.js
  *  @author     Dominic Cerisano, dcerisano@kingsds.network
  *  @date       May 2020
  */
-
-//web-worker-environment.js must be included before this environment on the command line.
 
 self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, (postMessage)=>{  
   if (typeof GPU !== 'undefined'){
