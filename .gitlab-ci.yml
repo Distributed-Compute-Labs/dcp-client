@@ -47,6 +47,11 @@ before_script:
   - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
 
+  ## Prevent an error due to insecure permissions on client config:
+  - chmod -R o-w /builds/Distributed-Compute-Protocol/dcp-client/
+  - chmod o-w /builds/Distributed-Compute-Protocol
+  - chmod o-w /builds
+
 stages:
   - build
   - test
