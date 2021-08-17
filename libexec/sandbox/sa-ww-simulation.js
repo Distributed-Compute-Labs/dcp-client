@@ -65,6 +65,7 @@ try {
     var serialize = JSON.stringify
     var deserialize = JSON.parse
     var marshal = KVIN.marshal
+    var unmarshal = KVIN.unmarshal
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
       /**
@@ -153,6 +154,9 @@ try {
           outMsg = { type: 'nop', success: true }
           break
         case 'workerMessage':
+          if (inMsg.message.request === 'main') {
+            inMsg.message.data = unmarshal(inMsg.message.data);
+          }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
           break
