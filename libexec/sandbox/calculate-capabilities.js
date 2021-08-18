@@ -23,6 +23,7 @@ self.wrapScriptLoading(
       let bigTexture32768 = false;
       const es7 = false;
       const spidermonkey = false;
+      const chrome = true;
 
       let fdlibmFlag = true;
       const inputFdlibm = [
@@ -154,6 +155,9 @@ self.wrapScriptLoading(
           webgpu,
           offscreenCanvas,
           fdlibm: fdlibmFlag,
+        },
+        browser: {
+          chrome,
         },
         details: {
           offscreenCanvas: {
