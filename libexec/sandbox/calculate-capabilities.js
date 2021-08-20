@@ -23,7 +23,7 @@ self.wrapScriptLoading(
       let bigTexture32768 = false;
       const es7 = false;
       const spidermonkey = false;
-      const chrome = true;
+      const chrome = false;
 
       let fdlibmFlag = true;
       const inputFdlibm = [
