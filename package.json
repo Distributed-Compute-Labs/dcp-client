@@ -32,6 +32,7 @@
     "bravojs": "^1.0.15",
     "btoa": "^1.2.1",
     "chalk": "^2.4.2",
+    "express": "^4.17.1",
     "html-to-text": "^5.1.1",
     "http-agent": "^0.1.2",
     "http-proxy-agent": "^4.0.1",
