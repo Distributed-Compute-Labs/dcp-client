@@ -32,7 +32,6 @@
     "bravojs": "^1.0.15",
     "btoa": "^1.2.1",
     "chalk": "^2.4.2",
-    "express": "^4.17.1",
     "html-to-text": "^5.1.1",
     "http-agent": "^0.1.2",
     "http-proxy-agent": "^4.0.1",
@@ -52,7 +51,8 @@
   "devDependencies": {
     "@kingsds/eslint-config": "1.0.1",
     "eslint": "7.30.0",
-    "peter": "^2.2.0"
+    "peter": "^2.2.0",
+    "express": "^4.17.1"
   },
   "peerDependencies": {
     "dcp-worker": "^3.0.0"
