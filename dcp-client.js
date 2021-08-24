@@ -36,7 +36,8 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     let thisScriptURL = new URL(thisScript.src)
     let schedulerURL;
     let dcpConfigHref = thisScript.getAttribute('dcpConfig');
-
+    let configScript;
+    
     if (_dcpConfig && _dcpConfig.scheduler && _dcpConfig.scheduler.location && _dcpConfig.scheduler.location.href)
       schedulerURL = new URL(_dcpConfig.scheduler.location.href);
     else if (thisScript.getAttribute('scheduler'))
@@ -51,7 +52,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
 
     /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
     function loadConfig() {
-      var configScript = document.createElement('SCRIPT');
+      configScript = document.createElement('SCRIPT');
       configScript.setAttribute('type', 'text/javascript');
       configScript.setAttribute('src', dcpConfigHref);
       configScript.setAttribute('id', '_dcp_config');
@@ -108,6 +109,9 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       else
         window.dcp = dcp; /* vanilla JS */
 
+      /** Let protocol know where we got out config from, so origin can be reasoned about vis a vis security */
+      dcp.protocol.setSchedulerConfigLocation_fromScript(configScript);
+      
       /**
        * Transform instances of Address-like values into Addresses. Necessary since
        * the config can't access the Address class before the bundle is loaded.
@@ -118,7 +122,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
         window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
     }
 
-    /* Load dcp-client bundle from the same lcoation as this module, extract the exports 
+    /* Load dcp-client bundle from the same location as this module, extract the exports 
      * from it, and attach them to the global dcp object.
      */
     function loadBundle(shimCallback) {
