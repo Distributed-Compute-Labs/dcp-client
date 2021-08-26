@@ -65,6 +65,7 @@ try {
     var serialize = JSON.stringify
     var deserialize = JSON.parse
     var marshal = KVIN.marshal
+    var unmarshal = KVIN.unmarshal
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
       /**
@@ -72,6 +73,10 @@ try {
        * payload/result because they could potentially be a datatype
        * json.stringify cannot handle.
        */
+      if (!message.value)
+      {
+        message.value = serialize(marshal(message.value))
+      }
       if (message.value.request === "console"){
         //Because JSON.stringify(a) !== JSON.stringify(JSON.stringify(a)), we need to do this
         message.value.payload.message = serialize(marshal(message.value.payload.message))
@@ -149,6 +154,9 @@ try {
           outMsg = { type: 'nop', success: true }
           break
         case 'workerMessage':
+          if (inMsg.message.request === 'main') {
+            inMsg.message.data = unmarshal(inMsg.message.data);
+          }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
           break
