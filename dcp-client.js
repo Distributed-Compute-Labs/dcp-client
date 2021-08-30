@@ -100,9 +100,10 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
      * over any non-global variables.
      */
     function bundleReadyIIFE() {
-      let bundleScript  = document.getElementById("_dcp_client_bundle");
-      let ready         = bundleScript.getAttribute('onready');
-      let dcp           = bundleScript.exports;
+      const configScript = document.getElementById("_dcp_config");
+      const bundleScript = document.getElementById("_dcp_client_bundle");
+      var ready          = bundleScript.getAttribute('onready');
+      var dcp            = bundleScript.exports;
 
       if (typeof module !== 'undefined' && typeof module.declare !== 'undefined')
         require('/internal/dcp/cjs2-shim').init(bundleScript.exports); /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
