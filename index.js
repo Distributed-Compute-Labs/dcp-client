@@ -78,9 +78,9 @@ const bundleSandbox = {
   Promise,
   require,
   console,
-  setInterval,
-  setTimeout,
-  clearTimeout,
+  setInterval,  clearInterval,
+  setTimeout,   clearTimeout,
+  setImmediate, clearImmediate,
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
   dcpConfig: {
     bundleConfig: true,
