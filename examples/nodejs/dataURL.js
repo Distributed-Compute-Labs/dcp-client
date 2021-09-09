@@ -5,7 +5,10 @@
  * There are two ways to stringify input data before sending on the wire
  * - JSON: It is a default method
  * - KVIN: if kvin.serialize(inputData)is being used we need to define the Content-Type `res.header("Content-Type", "application/x-kvin")`
- *     
+ * 
+ * Note that to allow workers fetch data from URLs, 
+ *  - in the browser worker: in the console run `worker.allowOrigins.any.push('http://localhost:12345', 'http://localhost:12346')`
+ *  - in the node worker: add `-a 'http://localhost:12345' 'http://localhost:12346'` at the end of starting worker command 
  */
 const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
 const kvin = require('kvin');

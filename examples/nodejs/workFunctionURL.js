@@ -3,6 +3,9 @@
 /**
  * Deploy a job using URL for the work function
  * work function should be defined and sent on the wire as a string.
+ * Note that to allow workers fetch the work function from URL, 
+ *  - in the browser worker: in the console run `worker.allowOrigins.any.push('http://localhost:12347')`
+ *  - in the node worker: add `-a 'http://localhost:12347'` at the end of starting worker command 
  */
 const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
 const express = require('express');
