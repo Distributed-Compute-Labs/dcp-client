@@ -7,7 +7,7 @@
  * - KVIN: if kvin.serialize(inputData)is being used we need to define the Content-Type `res.header("Content-Type", "application/x-kvin")`
  *     
  */
-const SCHEDULER_URL = new URL('http://scheduler.nazila.office.kingsds.network/');
+const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
 const kvin = require('kvin');
 const express = require('express');
  
