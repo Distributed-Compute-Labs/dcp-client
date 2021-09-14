@@ -84,29 +84,33 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
     codeGeneration: { strings: true, wasm: true },
   });
 
-  for(const file of files) {
-    fd = fs.openSync(file, 'r');
-    if (mmap) {
-      fs.flockSync(fd, 'sh');
-      bootstrapCode = mmap.map(fs.fstatSync(fd).size, mmap.PROT_READ, mmap.MAP_SHARED, fd, 0, mmap.MADV_SEQUENTIAL).toString('utf8');
-    } else {
-      bootstrapCode = fs.readFileSync(fd, 'utf-8');
-    }
-    fs.closeSync(fd);
+  if(files) {
+    for(const file of files) {
+      fd = fs.openSync(file, 'r');
+      if (mmap) {
+        fs.flockSync(fd, 'sh');
+        bootstrapCode = mmap.map(fs.fstatSync(fd).size, mmap.PROT_READ, mmap.MAP_SHARED, fd, 0, mmap.MADV_SEQUENTIAL).toString('utf8');
+      } else {
+        bootstrapCode = fs.readFileSync(fd, 'utf-8');
+      }
+      fs.closeSync(fd);
 
-    vm.runInContext(bootstrapCode, this.sandboxGlobal, {
-      filename: path.basename(file),
-      lineOffset: 0,
-      columnOffset: 0,
-      contextName: 'Evaluator #' + this.id,
-      contextCodeGeneration: {
-        wasm: true,
-        strings: true
-      },
-      displayErrors: true,
-      timeout: 3600 * 1000,   /* gives us our own event loop; this is max time for one pass run-to-completion */
-      breakOnSigInt: true     /* also gives us our own event loop */
-    });
+      vm.runInContext(bootstrapCode, this.sandboxGlobal, {
+        filename: path.basename(file),
+        lineOffset: 0,
+        columnOffset: 0,
+        contextName: 'Evaluator #' + this.id,
+        contextCodeGeneration: {
+          wasm: true,
+          strings: true
+        },
+        displayErrors: true,
+        timeout: 3600 * 1000,   /* gives us our own event loop; this is max time for one pass run-to-completion */
+        breakOnSigInt: true     /* also gives us our own event loop */
+      });
+    }
+  } else {
+    process.exit(1);
   }
 
   /* Pass any new data on the input stream to the onreadln()
