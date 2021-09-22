@@ -110,6 +110,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
       });
     }
   } else {
+    console.error('There are no files to run in the node evaluator --  this is ok in the presence of other errors.');
     process.exit(1);
   }
 
