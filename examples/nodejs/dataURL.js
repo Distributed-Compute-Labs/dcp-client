@@ -7,8 +7,9 @@
  * - KVIN: if kvin.serialize(inputData)is being used we need to define the Content-Type `res.header("Content-Type", "application/x-kvin")`
  * 
  * Note that to allow workers fetch data from URLs, 
- *  - in the browser worker: in the console run `worker.allowOrigins.any.push('http://localhost:12345', 'http://localhost:12346')`
+ *  - in the browser worker: in the console run `dcpConfig.worker.allowOrigins.any.push('http://localhost:12345', 'http://localhost:12346')`
  *  - in the node worker: add `-a 'http://localhost:12345' 'http://localhost:12346'` at the end of starting worker command 
+ *  - in the localExec: dcpConfig.worker.allowOrigins.any.push('http://localhost:12345' 'http://localhost:12346');
  */
 const SCHEDULER_URL = new URL('https://scheduler.distributed.computer');
 const kvin = require('kvin');
@@ -22,6 +23,8 @@ async function main() {
   const slice1 = express();
   const port1 = 12345;
   slice1.get('/', (req, res) => {
+    res.header("Access-Control-Allow-Headers", "content-type")
+    res.header("Access-Control-Allow-Origin", "*")
     let a = {x:1, y:2};
     res.send(a);
   })
@@ -33,6 +36,8 @@ async function main() {
   const slice2 = express();
   const port2 = 12346;
   slice2.get('/', (req, res) => {
+    res.header("Access-Control-Allow-Headers", "content-type")
+    res.header("Access-Control-Allow-Origin", "*")
     let a = {x:1, y:2};
     res.header("Content-Type", "application/x-kvin");
     res.send(kvin.serialize(a));
