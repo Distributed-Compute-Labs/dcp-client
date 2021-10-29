@@ -24,20 +24,8 @@
   function wrapPostMessage() {
     const ringSource = ++currentRing;
     self.postMessage = function (value) {
-      /**
-       * If our message is either console or complete, we need to serialize the
-       * payload/result because they could potentially be a datatype
-       * json.stringify cannot handle.
-       */
-      if (!value)
-        value = serialize(marshal(value))
-
-      if (value.request === "console")
-        // Because JSON.stringify(a) !== JSON.stringify(JSON.stringify(a)), we need to do this
-        value.payload.message = serialize(marshal(value.payload.message))
-      else if (value.request === 'complete')
-        value.result = marshal(value.result);
-      currPostMessage({ ringSource, value })
+      const updatedMsg = marshal({ ringSource, value })
+      currPostMessage(updatedMsg)
     }
   }
   //Initialize postMessage to ring 0

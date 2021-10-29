@@ -21,6 +21,7 @@ console.log(`Generating sandbox definitions in ${target}`);
 var base = [
   'script-load-wrapper',
   'primitive-timers',
+  'wrap-event-listeners',
   'event-loop-virtualization',
   'access-lists',
   'bravojs-init',

@@ -137,12 +137,12 @@ try {
           outMsg = { type: 'nop', success: true }
           break
         case 'workerMessage':
-          if (inMsg.message.request === 'main') {
-            inMsg.message.data = unmarshal(inMsg.message.data);
-          }
-          if (inMsg.message.request === 'assign') {
-            inMsg.message.job.arguments = unmarshal(inMsg.message.job.arguments);
-          }
+          // if (inMsg.message.request === 'main') {
+          //   inMsg.message.data = unmarshal(inMsg.message.data);
+          // }
+          // if (inMsg.message.request === 'assign') {
+          //   inMsg.message.job.arguments = unmarshal(inMsg.message.job.arguments);
+          // }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
           break
