@@ -18,7 +18,6 @@
    */
   let currentRing = -1;
   const currPostMessage = self.postMessage;
-  const serialize = JSON.stringify
   const marshal = KVIN.marshal
 
   function wrapPostMessage() {
