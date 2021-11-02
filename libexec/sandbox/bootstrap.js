@@ -22,11 +22,11 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
   addEventListener('message', async (event) => {
     try {
       var indirectEval = eval // eslint-disable-line
-      if (event.data.request === 'eval') {
+      if (event.request === 'eval') {
         try {
-          let result = await indirectEval(event.data.data, event.data.filename)
+          let result = await indirectEval(event.data, event.filename)
           ring2PostMessage({
-            request: `evalResult::${event.data.msgId}`,
+            request: `evalResult::${event.msgId}`,
             data: result
           })
         } catch (error) {
@@ -42,7 +42,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
             }
           })
         }
-      } else if (event.data.request === 'resetState') {
+      } else if (event.request === 'resetState') {
         // This event is fired when the web worker is about to be reused with another slice
         lastProgress = 0;
         postMessageSentTime = 0;

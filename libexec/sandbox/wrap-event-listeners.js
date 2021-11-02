@@ -19,13 +19,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, () => {
   self.addEventListener = function workerControl$$Worker$addEventListener (type, listener) {
     if (type === 'message')
     {
-      debugger;
       const wrappedListener = (args) => {
-        debugger;
         if (args.data && args.data._serializeVerId)
         {
-          
-          args.data = unmarshal(args.data)
+          args = unmarshal(args.data)
         }
         listener(args);
       }

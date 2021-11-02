@@ -560,11 +560,11 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
 
   addEventListener('message', async (event) => {
     try {
-      if (event.data.request === 'applyRequirements') {
+      if (event.request === 'applyRequirements') {
         // This event is fired when the worker is initialized with job requirements,
         // apply restrictions to the environment based on the requirements.
         // Assume the scheduler gave us a nicely-shaped req object.
-        const requirements = event.data.requirements;
+        const requirements = event.requirements;
         blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
         applyAllAccessLists();
 

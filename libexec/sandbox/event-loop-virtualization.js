@@ -211,7 +211,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
 
     addEventListener('message', async (event) => {
       try {
-        if (event.data.request === 'clearTimers') {
+        if (event.request === 'clearTimers') {
           clearAllTimers();
           ring0PostMessage({
             request: 'clearTimersDone',
