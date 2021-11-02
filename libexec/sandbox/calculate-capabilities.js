@@ -172,7 +172,6 @@ self.wrapScriptLoading(
     }
 
     addEventListener('message', async (event) => {
-      postMessage("here I am")
       try {
         if (event.request === 'describe') {
           const capabilities = await getCapabilities();
