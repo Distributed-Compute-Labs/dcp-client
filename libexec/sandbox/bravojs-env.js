@@ -67,7 +67,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         }
         
         try {
-          debugger;
           if (typeof module.main !== 'undefined')
             throw new Error('Main module was provided before job assignment');
 
