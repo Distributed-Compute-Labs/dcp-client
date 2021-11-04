@@ -29,13 +29,13 @@
       // is the `arguments` object of any function. In such a case, we need to serialize the message on top of 
       const updatedMsg = marshal({ ringSource, value })
       try {
-        currPostMessage(updatedMsg)
+        currPostMessage(updatedMsg);
       }
       catch {
-        const serializedMessage = serialize({
-          message: updatedMsg,
+        const serializedMessage = {
+          message: serialize(updatedMsg),
           serialized: true,
-        })
+        };
         currPostMessage(serializedMessage);
       }
     }
