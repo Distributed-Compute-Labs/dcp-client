@@ -23,7 +23,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
   }
   //Listens for postMessage from the sandbox
   addEventListener('message', async (event) => {
-    let message = event.data
+    let message = event
     let indirectEval = eval // eslint-disable-line
     switch (message.request) {
       case 'moduleGroup': /* Outside environment is sending us a module group */
