@@ -23,6 +23,7 @@ try {
   fs = require('fs-ext');
 } catch(e) {
   fs = require('fs');
+  delete mmap;
 }
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
