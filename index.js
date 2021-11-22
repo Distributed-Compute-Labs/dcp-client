@@ -29,6 +29,7 @@ const os      = require('os');
 const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
+const kvin    = require('kvin');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const { createContext, runInContext } = require('vm');
@@ -810,7 +811,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== false) {
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
-      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.js`)
+      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin`)
     });
   }
 
@@ -822,6 +823,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     try {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
+      remoteConfigCode = kvin.deserialize(remoteConfigCode);
     } catch(e) {
       console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
       console.log(require('dcp/utils').justFetchPrettyError(e));
