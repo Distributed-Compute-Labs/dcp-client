@@ -65,7 +65,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
           thisScript.localDcpConfig = _dcpConfig;
           html += `Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);`;
         }
-        debugger
         if (schedulerURL)
           html += `dcpConfig.scheduler.location=new URL("${schedulerURL}");`;
         html += '</scr'+'ipt>\n';
