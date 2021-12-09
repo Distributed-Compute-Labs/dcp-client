@@ -64,26 +64,9 @@ try {
     //Will be removing JSON and KVIN in access-lists.js, so need an alias for them
     var serialize = JSON.stringify
     var deserialize = JSON.parse
-    var marshal = KVIN.marshal
     var unmarshal = KVIN.unmarshal
 
     self.postMessage = function workerControl$$Worker$postMessage (message) {
-      /**
-       * If our message is either console or complete, we need to serialize the
-       * payload/result because they could potentially be a datatype
-       * json.stringify cannot handle.
-       */
-      if (!message.value)
-      {
-        message.value = serialize(marshal(message.value))
-      }
-      if (message.value.request === "console"){
-        //Because JSON.stringify(a) !== JSON.stringify(JSON.stringify(a)), we need to do this
-        message.value.payload.message = serialize(marshal(message.value.payload.message))
-      } else if (message.value.request === "complete"){
-        message.value.result = marshal(message.value.result);
-      }
-
       send({type: 'workerMessage', message });
     }
 
@@ -154,12 +137,12 @@ try {
           outMsg = { type: 'nop', success: true }
           break
         case 'workerMessage':
-          if (inMsg.message.request === 'main') {
-            inMsg.message.data = unmarshal(inMsg.message.data);
-          }
-          if (inMsg.message.request === 'assign') {
-            inMsg.message.job.arguments = unmarshal(inMsg.message.job.arguments);
-          }
+          // if (inMsg.message.request === 'main') {
+          //   inMsg.message.data = unmarshal(inMsg.message.data);
+          // }
+          // if (inMsg.message.request === 'assign') {
+          //   inMsg.message.job.arguments = unmarshal(inMsg.message.job.arguments);
+          // }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
           break

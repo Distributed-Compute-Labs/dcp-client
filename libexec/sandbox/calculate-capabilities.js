@@ -173,7 +173,7 @@ self.wrapScriptLoading(
 
     addEventListener('message', async (event) => {
       try {
-        if (event.data.request === 'describe') {
+        if (event.request === 'describe') {
           const capabilities = await getCapabilities();
           ring2PostMessage({
             capabilities,
