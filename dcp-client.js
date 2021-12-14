@@ -45,9 +45,9 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
 
     if (!dcpConfigHref) {
       if (schedulerURL)
-        dcpConfigHref = schedulerURL.origin + schedulerURL.pathname + 'etc/dcp-config.kvin' + (schedulerURL.search || thisScriptURL.search);
+        dcpConfigHref = schedulerURL.origin + schedulerURL.pathname + 'etc/dcp-config.js' + (schedulerURL.search || thisScriptURL.search);
       else
-        dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.kvin') + thisScriptURL.search;
+        dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
     }
 
     /** Load dcp-config.kvin from scheduler, and merge with running dcpConfig */
