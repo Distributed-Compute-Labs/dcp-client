@@ -826,7 +826,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
       remoteConfigCode = kvin.deserialize(remoteConfigCode);
     } catch(e) {
       console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
-      console.log(require('dcp/utils').justFetchPrettyError(e));
+      console.error(require('dcp/utils').justFetchPrettyError(e));
       throw e;
     }
     if (remoteConfigCode.length === 0)
