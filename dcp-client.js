@@ -118,6 +118,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
        * the config can't access the Address class before the bundle is loaded.
        */ 
       dcp.wallet.Address.patchUp(dcpConfig);
+      dcp['dcp-url'].patchup(dcpConfig);
 
       if (ready)
         window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);
