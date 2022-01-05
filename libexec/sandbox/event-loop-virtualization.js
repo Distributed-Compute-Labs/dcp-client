@@ -1,18 +1,17 @@
 /**
  *  @file       event-loop-virtualization.js
  *              
- *  File that takes control of our regular evaluator event loops.
- *  This gives DCP introspection capability to see how long a job
- *  should take, and how we can pay DCCs accordingly.
+ *  File that creates an event loop using a reactor pattern
+ *  for handling timers on the event loop. This is made to
+ *  be similar to the event loops in nodejs and browsers with respect
+ *  to timers 
  * 
- *  The node, v8, and web worker evaluators have been modified to
- *  provide the following primitive functions onto the global object
- *  when this program is evaluated:
+ *  The node and web worker evaluators already have an event loop, along with
+ *  their own timer functions, so only the v8 evaluator needs to be modified. Before
+ *  this, it has only the following primitive functions:
  *  - ontimer             will be invoked by the reactor when there are timers that
  *                        should need servicing based on the information provided to nextTimer().    
  *  - nextTimer()         sets when the next timer will be fired (in ms)
- *  - evalTimer           evaluates using either the actual setImmediate/setTimeout or uses 
- *                        Promise.resolve.then as a fallback
  *  
  *  Once this file has run, the following methods will be
  *  available on the global object for every evaluator:
@@ -20,9 +19,12 @@
  *  - clearTimeout()      clear the timeout created by setTimeout
  *  - setInterval()       recurringly execute callback after minimum timeout time in ms
  *  - clearInterval()     clear the interval created by setInterval
+ *  - setImmediate()       execute callback after 0ms, immediately when the event loop allows
+ *  - clearImmediate()     clear the Immediate created by setImmediate
  *  - queueMicrotask()    add a microtask to the microtask queue, bypassing 4ms timeout clamping 
  *
  *  @author     Parker Rowe, parker@kingsds.network
+ *              Ryan Saweczko, ryansaweczko@kingsds.network
  *  @date       August 2020
  * 
  *  @note       Unusual function scoping is done to eliminate spurious symbols
@@ -33,14 +35,9 @@
  */
 /* globals self, ontimer, nextTimer, evalTimer */
 
-self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMessage) => {
-  let lastTimeStamp;
-  
-  if (typeof self.evalTimer === 'undefined'){
-    self.evalTimer = (func) => Promise.resolve().then(func);
-  }
+self.wrapScriptLoading({ scriptName: 'native-event-loop' }, (ring0PostMessage) => {
 
-  (function privateScope(ontimer, nextTimer, evalTimer) {
+  (function privateScope(ontimer, nextTimer) {
     const timers = [];
     timers.serial = 0; /* If this isn't set, it becomes NaN */
 
@@ -51,41 +48,31 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
     /* Fire any timers which are ready to run, being careful not to
      * get into a recurring timer death loop without reactor mediation.
      */
-    ontimer(function fireTimerCallbacks() {
-      let now = Date.now();
-
+    function fireTimerCallbacks()
+    {
       sortTimers();
-      for (let i = 0; i < timers.length; ++i) {
-        let timer = timers[i];
-        if (timer.when > now) {
+      let timer;
+      while ((timer = timers.shift()))
+      {
+        let now =  Date.now();
+        if (timer.when > now)
+        {
+          timers.push(timer);
           break;
         }
+        timer.fn.apply(null, timer.args);
 
-        let measurementWrapper = async () => {
-          if (lastTimeStamp) {
-            ring0PostMessage({
-              request: 'measurement',
-              idle: performance.now() - lastTimeStamp
-            });
-          }
-
-          lastTimeStamp = performance.now();
-          await timer.fn();
-          lastTimeStamp = performance.now();
-        }
-        Promise.resolve().then(measurementWrapper);
-
-        if (timer.recur) {
+        if (timer.recur)
+        {
           timer.when = Date.now() + timer.recur;
-        } else {
-          timers.splice(i--, 1);
+          timers.push(timer);
         }
-      }
-      if (timers.length) {
         sortTimers();
-        nextTimer(timers[0].when);
       }
-    });
+      if (timers.length)
+        nextTimer(timers[0].when);
+    }
+    ontimer(fireTimerCallbacks);
 
     /** Execute callback after at least timeout ms. 
      * 
@@ -120,7 +107,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         valueOf: function () { return this.serial; }
       }
       timers.push(timer);
-      lastTimeStamp = performance.now();
       if (timer.when <= timers[0].when) {
         sortTimers();
         nextTimer(timers[0].when);
@@ -188,12 +174,24 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
       return timer;
     }
 
+    /** Execute callback after 0 ms, immediately when the event loop allows.
+     * 
+     *  @param    callback          {function} Callback function to fire after a minimum callback time
+     *  @param    arg               array of arguments to be applied to the callback function
+     *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
+     */
+    self.setImmediate = function eventLoop$$Worker$setImmediate(callback, arg) {
+      let timer = self.setTimeout(callback, 0, arg);
+      return timer;
+    }
+
     /** Remove an interval timer from the list of pending interval timers, regardless of its current
      *  status. (Same as clearTimeout)
      *
      *  @param    intervalId         {object} The value, returned from setInterval(), identifying the timer.
      */
     self.clearInterval = self.clearTimeout;
+    self.clearImmediate = self.clearTimeout;
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
@@ -206,7 +204,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
     function clearAllTimers() {
       timers.length = 0;
       nextTimer(0);
-      lastTimeStamp = null;
     }
 
     addEventListener('message', async (event) => {
@@ -228,7 +225,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         });
       }
     });
-  })(self.ontimer, self.nextTimer, self.evalTimer);
+  })(self.ontimer, self.nextTimer);
 
   ontimer = nextTimer = evalTimer = undefined;
   delete self.ontimer;
