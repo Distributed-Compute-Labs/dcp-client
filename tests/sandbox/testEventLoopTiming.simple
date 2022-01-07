@@ -36,7 +36,7 @@ function outputTests(message)
 
   if (message.value.request === 'totalCPUTime')
   {
-    const timeTaken = message.value.time;
+    const timeTaken = message.value.CPU;
     // Give 5% buffer for allowable times - can drift a little due to timeout etc
     if (timeTaken*1.05 > loopDelay * 2 && timeTaken*.95 < loopDelay * 2)
       expectedOutputs.cpuTime = true;

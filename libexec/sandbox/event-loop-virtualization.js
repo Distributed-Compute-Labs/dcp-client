@@ -43,7 +43,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         const event = events.shift();
         if (event.eventType === 'timer')
         {
-          serviceEvents.executingTimeout = realSetImmediate(event.fn, event.args);
+          serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
           if (event.recur)
           {
             event.when = Date.now() + event.recur;
@@ -212,7 +212,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
       events.length = 0;
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);
-      realClearImmediate(serviceEvents.executingTimeout);
+      realClearTimeout(serviceEvents.executingTimeout);
     }
 
     addEventListener('message', async (event) => {
@@ -229,7 +229,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
           totalCPUTime = 0;
           ring0PostMessage({
             request: 'totalCPUTime',
-            time: cpuTime
+            CPU: cpuTime
           })
         }
       } catch (error) {
