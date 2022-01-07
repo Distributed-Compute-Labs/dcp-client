@@ -13,9 +13,8 @@
 
 const fs = require('fs');
 
-exports.init = function init(files, outputTesting, onreadlnFunction)
+exports.init = function init(files, outputTesting)
 {
-  onreadlnFunction = onreadlnFunction || ((cb) => (line) => { cb(line) })
   let code = ''
   for (const file of files)
   {
@@ -24,10 +23,18 @@ exports.init = function init(files, outputTesting, onreadlnFunction)
     fs.closeSync(fd);
   }
 
-  // Fill in functions that the scripts want to exist but don't
+  // The node worker injects several symbols into the context of the evaluator when it
+  // is started. These symbols are expected to exist on the global object within the evaluator.
+  // Emulate the expected global symbols that are most commonly used.
   self = global;
   global.KVIN = require('kvin');
   global.performance = { now: Date.now };
+
+  // postMessage is:
+  //   a) expected to be a symbol in the evaluator
+  //   b) the method almost always used to get information out of the evaluator.
+  // for this purpose, a callback function should be defined in each test to check
+  // whatever desired functionality works.
   // eslint-disable-next-line vars-on-top
   global.postMessage = (line) =>
   {
@@ -35,8 +42,9 @@ exports.init = function init(files, outputTesting, onreadlnFunction)
     if (typeof outputTesting === 'function')
       outputTesting(line);
   }
+
+  // Simulate die with process.exit
   global.die = process.exit
-  global.onreadln = onreadlnFunction;
 
   // Very, very, very badly created event listener implementation - but suits the needs
   const eventsListening = {}
@@ -50,7 +58,7 @@ exports.init = function init(files, outputTesting, onreadlnFunction)
   {
     if (eventsListening[event])
       for (let cb of eventsListening[event])
-        cb.call(null, data);
+        process.nextTick(() => cb.call(null, data));
   }
 
   const indirectEval = eval
