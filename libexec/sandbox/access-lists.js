@@ -84,6 +84,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'Set',
     'setInterval',
     'setTimeout',
+    'setImmediate',
     'sleep',
     'String',
     'Symbol',

@@ -161,6 +161,9 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, (ring0PostMessage) =
       }
     }
 
+    // Memoise the original setTimeout for use in interval/immediate
+    const innerSetTimeout = setTimeout;
+
     /** Execute callback after at least interval ms, regularly, at least interval ms apart.
      * 
      *  @param    callback          {function} Callback function to fire after a minimum callback time
@@ -169,7 +172,7 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, (ring0PostMessage) =
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearInterval()
      */
     self.setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg) {
-      let timer = self.setTimeout(callback, +interval || 0, arg);
+      let timer = innerSetTimeout(callback, +interval || 0, arg);
       timer.recur = interval;
       return timer;
     }
@@ -181,7 +184,7 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, (ring0PostMessage) =
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
      */
     self.setImmediate = function eventLoop$$Worker$setImmediate(callback, arg) {
-      let timer = self.setTimeout(callback, 0, arg);
+      let timer = innerSetTimeout(callback, 0, arg);
       return timer;
     }
 

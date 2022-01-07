@@ -30,7 +30,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
 
     function serviceEvents()
     {
-      postMessage("here")
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = true;
@@ -44,7 +43,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         const event = events.shift();
         if (event.eventType === 'timer')
         {
-          realSetImmediate(event.fn, event.args);
+          serviceEvents.executingTimeout = realSetImmediate(event.fn, event.args);
           if (event.recur)
           {
             event.when = Date.now() + event.recur;
@@ -56,7 +55,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
       }
 
       // Measure the time on the event loop after everything has executed
-      realSetImmediate(endOfRealEventCycle);
+      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
@@ -80,7 +79,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
-      timeout = timeout || 0;//asdfasdfasdfasdf
+      timeout = timeout || 0;
       let timer, args;
       if (typeof callback === 'string') {
         let code = callback;
@@ -199,6 +198,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      *  @param    intervalId         {object} The value, returned from setInterval(), identifying the timer.
      */
     clearInterval = clearTimeout;
+    clearImmediate = clearTimeout
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
@@ -211,6 +211,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
     function clearAllTimers() {
       events.length = 0;
       realClearTimeout(serviceEvents.timeout);
+      realClearTimeout(serviceEvents.measurerTimeout);
+      realClearImmediate(serviceEvents.executingTimeout);
     }
 
     addEventListener('message', async (event) => {
@@ -221,11 +223,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
             request: 'clearTimersDone',
           });
         }
-        else if (event.request === 'getCPUTime')
+        else if (event.request === 'resetAndGetCPUTime')
         {
+          const cpuTime = totalCPUTime;
+          totalCPUTime = 0;
           ring0PostMessage({
-            request: 'getCPUTime',
-            time: totalCPUTime
+            request: 'totalCPUTime',
+            time: cpuTime
           })
         }
       } catch (error) {
