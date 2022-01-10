@@ -1,6 +1,12 @@
 /**
  *  @file       primitive-timers.js
  *              
+ * 
+ * 
+ * DEPRECATED: left for reference if a similar schema is required in the future.
+ * 
+ * 
+ * 
  *  Intermediate file that takes existing implementations of 
  *  setTimeout, setInterval, clearTimeout, clearInterval from 
  *  "Browser Evaluator" web worker API, & Node, and dumbs them down into
