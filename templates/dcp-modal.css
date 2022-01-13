@@ -1,12 +1,16 @@
 /**************************\
   Basic Modal Styles
 \**************************/
-.dcp-modal {
+.dcp-modal > DIV,
+.dcp-modal > DIV *,
+.dcp-modal DIV,
+.dcp-modal
+{
   font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
   font-size: 16px;
 }
 
-.dcp-modal-overlay {
+.dcp-modal .dcp-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -18,7 +22,7 @@
   align-items: center;
 }
 
-.dcp-modal-container {
+.dcp-modal .dcp-modal-container {
   background-color: #fff;
   padding: 30px;
   max-width: 450px;
@@ -29,13 +33,13 @@
   box-sizing: border-box;
 }
 
-.dcp-modal-header {
+.dcp-modal .dcp-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.dcp-modal-title {
+.dcp-modal .dcp-modal-title {
   margin-top: 0;
   margin-bottom: 0;
   font-weight: 600;
@@ -45,7 +49,7 @@
   box-sizing: border-box;
 }
 
-.dcp-modal-remember {
+.dcp-modal .dcp-modal-remember {
   margin-top: 0;
   margin-bottom: 0;
   font-weight: 500;
@@ -55,20 +59,20 @@
   box-sizing: border-box;
 }
 
-.dcp-modal-close {
+.dcp-modal .dcp-modal-close {
   background: transparent;
   border: 0;
 }
 
-.dcp-modal-header .dcp-modal-close:before { content: "\2715"; }
+.dcp-modal .dcp-modal-header .dcp-modal-close:before { content: "\2715"; }
 
-.dcp-modal-content {
+.dcp-modal .dcp-modal-content {
   margin: 1rem 0;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
 }
 
-.dcp-modal-logo-link {
+.dcp-modal .dcp-modal-logo-link {
   display: block;
   position: relative;
   width: 40px;
@@ -78,7 +82,7 @@
   float: right;
 }
 
-.dcp-modal-content > p {
+.dcp-modal .dcp-modal-content > p {
   margin-bottom: 0;
 }
 
@@ -88,7 +92,7 @@
   color: red;
 }
 
-.dcp-modal-btn {
+.dcp-modal .dcp-modal-btn {
   font-size: .875rem;
   padding-left: 1rem;
   padding-right: 1rem;
@@ -121,19 +125,19 @@
   transform: scale(1.05);
 }
 
-.dcp-modal-btn-primary {
+.dcp-modal .dcp-modal-btn-primary {
   background-color: #444;
   color: #fff;
 }
 
-.dcp-modal-btn-positive {
+.dcp-modal .dcp-modal-btn-positive {
   background-color: #444;
   color: #fff;
   margin: 0px 0.5em 0px 0.5em;
 
 }
 
-.dcp-modal-btn-negative {
+.dcp-modal .dcp-modal-btn-negative {
   background-color: #fff;
   color: #444;
   border: solid 1px gray;
@@ -141,7 +145,7 @@
 
 }
 
-.invisible {
+.dcp-modal .invisible {
   visibility: hidden;
 }
 

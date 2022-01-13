@@ -141,14 +141,14 @@ console.log(JSON.stringify(localConfig));
 EOJS
 
 if [ ! -d "${DCP_SRC}/node_modules" ]; then
-  echo "Cannot find ${DCP_SRC}/node_modules. Please run ${DCP_SRC}/install.sh dcp-client" >&2
+  echo "Cannot find ${DCP_SRC}/node_modules. Please run npm i from ${DCP_SRC}" >&2
   exit 97
 fi
 
 NO_LOG=1 \
 SKIP_SUDO_CHECK=1 \
 DCP_LOCAL_CONFIG_EXTRAS="${BUNDLE_TMP}/local-config.incl" \
-  "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} dcp-client
+  "${DCP_SRC}/install.sh" -NI ${DCP_INSTALL_FLAGS} build-dcp-client
 
 EXIT_CODE="$?"
 if [ "$EXIT_CODE" != "0" ]; then
@@ -164,8 +164,14 @@ cd "${myDir}/.."
 
 # Copy all generated files tracked by the repo into this repo
 git ls-tree --full-tree -r --name-only HEAD dist |\
-(cd "${BUNDLE_TMP}" && [ "$DCP_BUILD" = "debug" ] && while read file; do ls "$file" 2>/dev/null; done || cat) |\
-(cd "${BUNDLE_TMP}" && tar -T - -cf -) | tar -xvf - | sed 's/^/ - /'
+  (cd "${BUNDLE_TMP}" && [ "$DCP_BUILD" = "debug" ] && while read file;
+   do
+     ls "$file" 2>/dev/null
+   done || cat)  > "${BUNDLE_TMP}/flist"
+
+[ "$DEBUG_BUNDLE" ] && echo "Files to copy:" && cat "${BUNDLE_TMP}/flist" | sed 's/^/ - /'
+
+(cd "${BUNDLE_TMP}" && tar -T ./flist -cf -) | tar -xvf - | sed 's/^/ - /'
 STATUS=$?
 echo "Done."
 exit $STATUS

@@ -1,7 +1,7 @@
 # This file is a template, and might need editing before it works on your project.
 # Official framework image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/node/tags/
-image: node:10
+image: node:12
 
 # This folder is cached between builds
 # http://docs.gitlab.com/ee/ci/yaml/README.html#cache
@@ -47,6 +47,11 @@ before_script:
   - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
 
+  ## Prevent an error due to insecure permissions on client config:
+  - chmod -R o-w /builds/Distributed-Compute-Protocol/dcp-client/
+  - chmod o-w /builds/Distributed-Compute-Protocol
+  - chmod o-w /builds
+
 stages:
   - build
   - test
@@ -59,4 +64,12 @@ build:
 test:
   stage: test
   script:
-    - npm test
+    # Make test output verbose to help with debugging failing tests in CI
+    - npm test -- -v --junit test_report.xml
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+      - test_report.xml
+    reports:
+      junit: test_report.xml

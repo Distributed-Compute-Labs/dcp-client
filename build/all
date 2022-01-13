@@ -1,0 +1,15 @@
+#! /bin/bash -e
+
+oldDir="`pwd`"
+cd `dirname $0`
+myDir="`pwd`"
+
+if [ ! -d "$myDir/node_modules" ]; then
+  cd "$myDir"
+  npm ci
+fi
+
+cd "$oldDir"
+"${myDir}/generate-sandbox-definitions-json"
+echo
+"${myDir}/bundle" "$@"
