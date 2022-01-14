@@ -23,7 +23,7 @@ try {
   fs = require('fs-ext');
 } catch(e) {
   fs = require('fs');
-  delete mmap;
+  mmap = null;
 }
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
@@ -88,7 +88,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
   if(files) {
     for(const file of files) {
       fd = fs.openSync(file, 'r');
-      if (mmap) {
+      if (mmap && fs.flockSync) {
         fs.flockSync(fd, 'sh');
         bootstrapCode = mmap.map(fs.fstatSync(fd).size, mmap.PROT_READ, mmap.MAP_SHARED, fd, 0, mmap.MADV_SEQUENTIAL).toString('utf8');
       } else {
