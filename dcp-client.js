@@ -50,7 +50,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
         dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
     }
 
-    /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
+    /** Load dcp-config.kvin from scheduler, and merge with running dcpConfig */
     function loadConfig() {
       configScript = document.createElement('SCRIPT');
       configScript.setAttribute('type', 'text/javascript');
@@ -118,6 +118,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
        * the config can't access the Address class before the bundle is loaded.
        */ 
       dcp.wallet.Address.patchUp(dcpConfig);
+      dcp['dcp-url'].patchup(dcpConfig);
 
       if (ready)
         window.setTimeout(function bundleReadyFire() { let indirectEval=eval; indirectEval(ready) }, 0);

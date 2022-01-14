@@ -5,87 +5,71 @@
  *  This gives DCP introspection capability to see how long a job
  *  should take, and how we can pay DCCs accordingly.
  * 
- *  The node, v8, and web worker evaluators have been modified to
- *  provide the following primitive functions onto the global object
- *  when this program is evaluated:
- *  - ontimer             will be invoked by the reactor when there are timers that
- *                        should need servicing based on the information provided to nextTimer().    
- *  - nextTimer()         sets when the next timer will be fired (in ms)
- *  - evalTimer           evaluates using either the actual setImmediate/setTimeout or uses 
- *                        Promise.resolve.then as a fallback
- *  
- *  Once this file has run, the following methods will be
- *  available on the global object for every evaluator:
- *  - setTimeout()        execute callback after minimum timeout time in ms
- *  - clearTimeout()      clear the timeout created by setTimeout
- *  - setInterval()       recurringly execute callback after minimum timeout time in ms
- *  - clearInterval()     clear the interval created by setInterval
- *  - queueMicrotask()    add a microtask to the microtask queue, bypassing 4ms timeout clamping 
+ *  All evaluators have their own implementation of the event loop at this
+ *  point, with corresponding timeout functions for their loop. This file will
+ *  create a wrapper for each of the timeouts, with a virtual event loop
+ *  to control code execution. 
  *
- *  @author     Parker Rowe, parker@kingsds.network
- *  @date       August 2020
+ *              Ryan Saweczko, ryansaweczko@kingsds.network
+ *  @date       January 2022
  * 
- *  @note       Unusual function scoping is done to eliminate spurious symbols
- *              from being accessible from the global object, to mitigate
- *              certain classes of security risks.  The global object here is
- *              the top of the scope chain (ie global object) for all code run
- *              by hosts in this environment.
  */
-/* globals self, ontimer, nextTimer, evalTimer */
+/* globals self */
+
 
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMessage) => {
-  let lastTimeStamp;
-  
-  if (typeof self.evalTimer === 'undefined'){
-    self.evalTimer = (func) => Promise.resolve().then(func);
-  }
 
-  (function privateScope(ontimer, nextTimer, evalTimer) {
-    const timers = [];
-    timers.serial = 0; /* If this isn't set, it becomes NaN */
+  (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
+    let totalCPUTime = 0;
+    const events = [];
+    events.serial = 0;
 
-    function sortTimers() {
-      timers.sort(function (a, b) { return a.when - b.when; });
+    function sortEvents() {
+      events.sort(function (a, b) { return a.when - b.when; });
     }
 
-    /* Fire any timers which are ready to run, being careful not to
-     * get into a recurring timer death loop without reactor mediation.
-     */
-    ontimer(function fireTimerCallbacks() {
+    function serviceEvents()
+    {
+      serviceEvents.timeout = null;
+      serviceEvents.nextTimeout = null;
+      serviceEvents.servicing = true;
+
+      const startTime = performance.now();
       let now = Date.now();
 
-      sortTimers();
-      for (let i = 0; i < timers.length; ++i) {
-        let timer = timers[i];
-        if (timer.when > now) {
-          break;
-        }
-
-        let measurementWrapper = async () => {
-          if (lastTimeStamp) {
-            ring0PostMessage({
-              request: 'measurement',
-              idle: performance.now() - lastTimeStamp
-            });
+      sortEvents();
+      if (events[0].when <= now)
+      {
+        const event = events.shift();
+        if (event.eventType === 'timer')
+        {
+          serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+          if (event.recur)
+          {
+            event.when = Date.now() + event.recur;
+            events.push(event);
+            sortEvents();
           }
-
-          lastTimeStamp = performance.now();
-          await timer.fn();
-          lastTimeStamp = performance.now();
         }
-        Promise.resolve().then(measurementWrapper);
+        // Can add handles for events to the event loop as needed (ie messages)
+      }
 
-        if (timer.recur) {
-          timer.when = Date.now() + timer.recur;
-        } else {
-          timers.splice(i--, 1);
+      // Measure the time on the event loop after everything has executed
+      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);
+      function endOfRealEventCycle()
+      {
+        serviceEvents.servicing = false;
+        const endTime = performance.now();
+        totalCPUTime += endTime - startTime;
+
+        // Set timeout to rerun this function if there are events remaining that just can't be used yet
+        if (events.length > 0)
+        {
+          serviceEvents.nextTimeout = events[0].when
+          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
         }
       }
-      if (timers.length) {
-        sortTimers();
-        nextTimer(timers[0].when);
-      }
-    });
+    }
 
     /** Execute callback after at least timeout ms. 
      * 
@@ -94,7 +78,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
-    self.setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
+    setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
+      timeout = timeout || 0;
       let timer, args;
       if (typeof callback === 'string') {
         let code = callback;
@@ -112,18 +97,30 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
       }
 
-      timers.serial = +timers.serial + 1;
+      events.serial = +events.serial + 1;
       timer = {
+        eventType: 'timer',
         fn: callback,
         when: Date.now() + (+timeout || 0),
-        serial: timers.serial,
+        serial: events.serial,
         valueOf: function () { return this.serial; }
       }
-      timers.push(timer);
-      lastTimeStamp = performance.now();
-      if (timer.when <= timers[0].when) {
-        sortTimers();
-        nextTimer(timers[0].when);
+      events.push(timer);
+      sortEvents();
+      if (!serviceEvents.servicing)
+      {
+        if (!serviceEvents.nextTimeout)
+        {
+          realSetTimeout(serviceEvents, events[0].when - Date.now());
+        }
+        else
+        {
+          if (serviceEvents.nextTimeout > events[0].when)
+          {
+            realClearTimeout(serviceEvents.timeout);
+            realSetTimeout(serviceEvents, events[0].when - Date.now())
+          }
+        }
       }
       return timer;
     }
@@ -133,42 +130,38 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      * 
      *  @param    timeoutId         {object} The value, returned from setTimeout(), identifying the timer.
      */
-    self.clearTimeout = function eventLoop$$Worker$clearTimeout(timeoutId) {
-      if (typeof timeoutId === "object") {
-        let i = timers.indexOf(timeoutId);
-        if (i != -1) {
-          timers.splice(i, 1);
-
-          /* if there is a timer at the top of the timers list, set that to be the nextTimer to fire
-           * otherwise, tell the event loop that there are no more timers to fire, and end the loop accordingly.
-           * this fixes a bug where you clear a timeout, but the program still waits that time before ending,
-           * despite never calling the callback function
-           * 
-           * for example:
-           * const timeout = setTimeout(() => console.log("hi"), 10000);
-           * clearTimeout(timeout); 
-           * 
-           * used to still wait 10 seconds before closing the program, despite never printing hi to the console
-           */
-          if (timers.length) {
-            nextTimer(timers[0].when);
+    clearTimeout = function eventLoop$$Worker$clearTimeout(timeoutId)
+    {
+      function checkService()
+      {
+        if (!serviceEvents.servicing)
+        {
+          if (events.length)
+          {
+            realClearTimeout(serviceEvents.timeout);
+            realSetTimeout(serviceEvents, events[0].when - Date.now())
           }
-          else {
-            nextTimer(0);
-          }
+          else
+            realClearTimeout(serviceEvents.timeout);
         }
-      } else if (typeof timeoutId === "number") { /* slow path - object has been reinterpreted in terms of valueOf() */
-        for (let i = 0; i < timers.length; i++) {
-          if (timers[i].serial === timeoutId) {
-            timers.splice(i, 1);
-
-            if (timers.length) {
-              nextTimer(timers[0].when);
-            }
-            else {
-              nextTimer(0);
-            }
-
+      }
+      if (typeof timeoutId === "object")
+      {
+        let i = events.indexOf(timeoutId);
+        if (i !== -1)
+          events.splice(i, 1);
+        if (i === 0)
+          checkService()
+      }
+      else if (typeof timeoutId === "number")
+      { /* slow path - object has been reinterpreted in terms of valueOf() */
+        for (let i = 0; i < events.length; i++)
+        {
+          if (events[i].serial === timeoutId)
+          {
+            events.splice(i, 1);
+            if (i === 0)
+              checkService()
             break;
           }
         }
@@ -182,9 +175,20 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearInterval()
      */
-    self.setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg) {
-      let timer = self.setTimeout(callback, +interval || 0, arg);
+    setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg)
+    {
+      let timer = setTimeout(callback, +interval || 0, arg);
       timer.recur = interval;
+      return timer;
+    }
+    /** Execute callback after 0 ms, immediately when the event loop allows.
+     * 
+     *  @param    callback          {function} Callback function to fire after a minimum callback time
+     *  @param    arg               array of arguments to be applied to the callback function
+     *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
+     */
+     setImmediate = function eventLoop$$Worker$setImmediate(callback, arg) {
+      let timer = setTimeout(callback, 0, arg);
       return timer;
     }
 
@@ -193,20 +197,22 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
      *
      *  @param    intervalId         {object} The value, returned from setInterval(), identifying the timer.
      */
-    self.clearInterval = self.clearTimeout;
+    clearInterval = clearTimeout;
+    clearImmediate = clearTimeout
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
      *  @param    callback          {function} Callback function to fire
      */
-    self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback) {
+    queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback) {
       Promise.resolve().then(callback);
     }
 
     function clearAllTimers() {
-      timers.length = 0;
-      nextTimer(0);
-      lastTimeStamp = null;
+      events.length = 0;
+      realClearTimeout(serviceEvents.timeout);
+      realClearTimeout(serviceEvents.measurerTimeout);
+      realClearTimeout(serviceEvents.executingTimeout);
     }
 
     addEventListener('message', async (event) => {
@@ -216,6 +222,15 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
           ring0PostMessage({
             request: 'clearTimersDone',
           });
+        }
+        else if (event.request === 'resetAndGetCPUTime')
+        {
+          const cpuTime = totalCPUTime;
+          totalCPUTime = 0;
+          ring0PostMessage({
+            request: 'totalCPUTime',
+            CPU: cpuTime
+          })
         }
       } catch (error) {
         ring0PostMessage({
@@ -228,10 +243,12 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
         });
       }
     });
-  })(self.ontimer, self.nextTimer, self.evalTimer);
+  })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate);
 
-  ontimer = nextTimer = evalTimer = undefined;
-  delete self.ontimer;
-  delete self.nextTimer;
-  delete self.evalTimer;
+  self.setTimeout = setTimeout;
+  self.setInterval = setInterval;
+  self.setImmediate = setImmediate;
+  self.clearTimeout = clearTimeout;
+  self.clearInterval = clearInterval;
+  self.clearImmediate = clearImmediate;
 });

@@ -9,7 +9,7 @@ const process = require('process');
 require('./setup-testenv');
 
 process.env.DCP_CONFIG_LOCATION =
-  'https://scheduler.distributed.computer/etc/dcp-config.js';
+  'https://scheduler.distributed.computer/etc/dcp-config.kvin';
 
 require('..').initSync(undefined, true);
 
