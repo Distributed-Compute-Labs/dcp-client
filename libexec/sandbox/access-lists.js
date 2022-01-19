@@ -75,6 +75,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'pt0',
     'RangeError',
     'ReferenceError',
+    'Reflect',
     'RegExp',
     'removeEventListener',
     'requestAnimationFrame',
