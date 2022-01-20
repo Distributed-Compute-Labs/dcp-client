@@ -29,7 +29,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'clearTimeout',
     'console',
     'constructor',
-    'dcpConfig',
     'DataView',
     'Date',
     'decodeURI',
