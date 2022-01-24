@@ -109,6 +109,14 @@ fi >/dev/stderr
 
 echo "Building DCP Client bundle from DCP in ${DCP_SRC}"
 
+case "${DCP_BUILD}" in
+  debug|release)
+  ;;
+  *)
+  echo "Unknown build type: ${DCP_BUILD}" >/dev/stderr
+  exit 96
+esac
+
 # Write cache
 [ -d "${myDir}/etc" ] || mkdir -p "${myDir}/etc"
 cat > "${myDir}/etc/config.cache" << EOF
@@ -161,7 +169,7 @@ echo
 echo "Importing DCP Client Bundle"
 cd "${myDir}/.."
 [ "$?" = "0" ] || exit 4
-[ "${DEBUG}" ] || [ "${BUNDLE_DEBUG}" ] && find "${BUNDLE_TMP}" -ls
+[ "${DEBUG}" ] || [ "${DEBUG_DEBUG}" ] && find "${BUNDLE_TMP}" -ls
 
 # Copy all generated files tracked by the repo into this repo
 git ls-tree --full-tree -r --name-only HEAD dist |\
