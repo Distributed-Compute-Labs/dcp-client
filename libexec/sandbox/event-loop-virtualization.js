@@ -213,6 +213,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);
       realClearTimeout(serviceEvents.executingTimeout);
+      serviceEvents.timeout = null;
+      serviceEvents.nextTimeout = null;
+      serviceEvents.servicing = false;
     }
 
     addEventListener('message', async (event) => {
