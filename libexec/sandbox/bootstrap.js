@@ -11,7 +11,8 @@
 
 /* globals self */
 
-self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2PostMessage) => {
+self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function bootstrap$$fn(protectedStorage, ring2PostMessage)
+{
   let lastProgress = 0,
       postMessageSentTime = 0,
       throttledProgress = 0, // how many progress events were throttled since last update

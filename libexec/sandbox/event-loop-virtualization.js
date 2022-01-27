@@ -16,9 +16,8 @@
  */
 /* globals self */
 
-
-self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMessage) => {
-
+self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
+{
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
     let totalCPUTime = 0;
     const events = [];
