@@ -8,7 +8,8 @@
  *  @date       Sept 2020
  */
 
-self.wrapScriptLoading({ scriptName: 'bravojs-init' }, bravojsInit$$fn(protectedStorage) => {
+self.wrapScriptLoading({ scriptName: 'bravojs-init' }, function bravojsInit$$fn(protectedStorage)
+{
   self.bravojs = {
     url: '/bravojs/bravo.js',
     mainModuleDir: '.'

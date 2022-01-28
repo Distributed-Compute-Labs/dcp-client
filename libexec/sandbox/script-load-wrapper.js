@@ -17,7 +17,7 @@
   const protectedStorage = {}; 
   
   /* Add a console symbol to protectedStorage which is either the "real" console or a group of noops */
-  const protectedStorage.console = console || { };
+  protectedStorage.console = console || { };
   for (let method of ['log', 'error', 'debug', 'trace', 'warn'])
     if (typeof protectedStorage.console[method] !== 'function')
       protectedStorage.console[method] = function(){};

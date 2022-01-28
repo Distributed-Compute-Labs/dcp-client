@@ -219,7 +219,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   }
   
   /**
-   * Actual mechanics for running a work function. This function will never reject.
+   * Actual mechanics for running a work function. ** This function will never reject **
    *
    * @param     successCallback         callback to invoke when the work function has finished running;
    *                                    it receives as its argument the resolved promise returned from
@@ -228,14 +228,15 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    *                                    as its argument the error that it rejected with.
    * @returns   unused promise   
    */
-  async function runWorkFunction_inner(successCallback, errorCallback)
+  async function runWorkFunction_inner(datum, successCallback, errorCallback)
   {
-    let rejection = false;
-
+    var rejection = false;
+    var result;
+    
     try
     {
       /* module.main.job is the work function; left by assign message */ 
-      let result = await module.main.job.apply(null,[message.data].concat(module.main.arguments))
+      result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
     }
     catch (error)
     {
@@ -249,7 +250,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try { flushLastLog(); } catch(e) {};
 
     if (rejection)
-      errorCallback(error);
+      errorCallback(rejection);
     else
       successCallback(result);
 
@@ -266,11 +267,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     // Measure performance directly before and after the job to get as accurate total time as
     const t0 = performance.now();
-    
+
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkerFunction_inner((result) => reportResult(t0, result), reportError));
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError));
   }
 }); /* end of fn */
