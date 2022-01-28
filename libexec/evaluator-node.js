@@ -95,18 +95,22 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
       }
       fs.closeSync(fd);
 
-      vm.runInContext(bootstrapCode, this.sandboxGlobal, {
+      const script = new vm.Script(bootstrapCode, {
         filename: path.basename(file),
         lineOffset: 0,
-        columnOffset: 0,
+        columnOffset: 0
+      });
+      
+      script.runInContext(this.sandboxGlobal, {
         contextName: 'Evaluator #' + this.id,
         contextCodeGeneration: {
           wasm: true,
           strings: true
         },
         displayErrors: true,
-        timeout: 3600 * 1000,   /* gives us our own event loop; this is max time for one pass run-to-completion */
-        breakOnSigInt: true     /* also gives us our own event loop */
+        microtaskMode: 'afterEvaluate',
+        timeout: 4294967295 /*max*/,   /* gives us our own event loop; this is max time for one pass run-to-completion */
+        breakOnSigInt: true,           /* also gives us our own event loop */
       });
     }
   } else {
