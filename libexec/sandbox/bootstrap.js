@@ -153,6 +153,13 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
     });
   }
 
+  function workerBootstrap$work$reject(reason = false) {
+    postMessage({
+      request: 'reject',
+      why: reason
+    });
+  }
+
   self.work = {
     emit: workerBootstrap$work$emit,
     job: {
@@ -161,7 +168,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
         description: 'Discreetly making the world smarter', /* in user's language */
         link: 'https://distributed.computer/about',
       }
-    }
+    },
+    reject: workerBootstrap$work$reject,
   };
 
   function workerBootstrap$console(level, ...args) {
