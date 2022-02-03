@@ -153,7 +153,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
     });
   }
 
-  function workerBootstrap$work$reject(reason = false) {
+  function workerBootstrap$work$reject(reason = null) {
     postMessage({
       request: 'reject',
       why: reason
