@@ -8,8 +8,20 @@
  *  @author     Ryan Rossiter, ryan@kingsds.network
  *  @date       September 2020
  */
-
-(() => {
+(function scriptLoadWrapper()
+{
+  /* protectedStorage - passed as 1st arg to all script wrapScriptLoading fns. Private memo area where
+   * various scripts can leave each things they will need but cannot share in global scope. Must not
+   * leak any of these properties to work functions.
+   */
+  const protectedStorage = {}; 
+  
+  /* Add a console symbol to protectedStorage which is either the "real" console or a group of noops */
+  protectedStorage.console = console || { };
+  for (let method of ['log', 'error', 'debug', 'trace', 'warn'])
+    if (typeof protectedStorage.console[method] !== 'function')
+      protectedStorage.console[method] = function(){};
+  
   /**
    * Wrap self.postMessage so we have a ringSource property. Allows checking for
    * the validity of a message in the sandbox. Setting currPostMessage - self.postMessage
@@ -63,7 +75,7 @@
         wrapPostMessage();
       }
       
-      fn(fixedPostMessage, wrapPostMessage);
+      fn(protectedStorage, fixedPostMessage, wrapPostMessage)
 
       ring0PostMessage({
         request: 'scriptLoaded',

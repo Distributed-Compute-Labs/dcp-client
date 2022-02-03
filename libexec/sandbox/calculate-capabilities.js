@@ -11,9 +11,8 @@
 /* global WebGPUWindow GPU */
 // @ts-nocheck
 
-self.wrapScriptLoading(
-  { scriptName: 'calculate-capabilities' },
-  (ring2PostMessage) => {
+self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calculateCapabilities$$fn(protectedStorage, ring2PostMessage)
+{
     async function getCapabilities() {
       let offscreenCanvas = false;
       let webgpu = false;
