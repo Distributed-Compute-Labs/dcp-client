@@ -10,8 +10,8 @@
  *  @date       Oct 2021
  *
  */
-self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, () => {
-
+self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function wrapEventListeners$$fn(protectedStorage)
+{
   // Will be removing KVIN in access-lists.js, so need an alias for them
   var unmarshal = KVIN.unmarshal
 

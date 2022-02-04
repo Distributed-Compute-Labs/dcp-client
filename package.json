@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.1.16",
+  "version": "4.1.19",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -37,14 +37,14 @@
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
-    "kvin": "^1.2.5",
-    "nanoid": "^2.1.11",
+    "kvin": "^1.2.7",
+    "nanoid": "^3.2.0",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "regedit": "^3.0.3",
     "semver": "^7.3.5",
-    "webpack": "^5.46.0",
+    "webpack": "^5.67.0",
     "webpack-cli": "^4.7.2",
     "xmlhttprequest-ssl": "^1.6.2",
     "yargs": "16.2.0"

@@ -16,9 +16,8 @@
  */
 /* globals self */
 
-
-self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMessage) => {
-
+self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
+{
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
     let totalCPUTime = 0;
     const events = [];
@@ -213,6 +212,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, (ring0PostMe
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);
       realClearTimeout(serviceEvents.executingTimeout);
+      serviceEvents.timeout = null;
+      serviceEvents.nextTimeout = null;
+      serviceEvents.servicing = false;
     }
 
     addEventListener('message', async (event) => {
