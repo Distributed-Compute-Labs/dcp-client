@@ -109,17 +109,17 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     if (!Number.isNaN(progress))
       lastProgress = progress;
     
-    if (!self.dcpConfig)
-      self.dcpConfig = {};
-    if (!self.dcpConfig.worker)
-      self.dcpConfig.worker = {};
-    if (!self.dcpConfig.worker.sandbox)
-      self.dcpConfig.worker.sandbox = {};
-    if (!self.dcpConfig.worker.sandbox.progressThrottle)
-      self.dcpConfig.worker.sandbox.progressThrottle = 0.1;
+    if (!protectedStorage.dcpConfig)
+      protectedStorage.dcpConfig = {};
+    if (!protectedStorage.dcpConfig.worker)
+      protectedStorage.dcpConfig.worker = {};
+    if (!protectedStorage.dcpConfig.worker.sandbox)
+      protectedStorage.dcpConfig.worker.sandbox = {};
+    if (!protectedStorage.dcpConfig.worker.sandbox.progressThrottle)
+      protectedStorage.dcpConfig.worker.sandbox.progressThrottle = 0.1;
     
     indeterminateProgress &= isIndeterminate;
-    const throttleTime = self.dcpConfig.worker.sandbox.progressThrottle * 1000;
+    const throttleTime = protectedStorage.dcpConfig.worker.sandbox.progressThrottle * 1000;
     if (Date.now() - postMessageSentTime >= throttleTime) {
       postMessageSentTime = Date.now();
       postMessage({
