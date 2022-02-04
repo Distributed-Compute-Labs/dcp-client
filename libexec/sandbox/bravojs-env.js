@@ -77,7 +77,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           if (typeof module.main !== 'undefined')
             throw new Error('Main module was provided before job assignment');
 
-          protectedStorage.progressThrottle = message.sandboxConfig.sandboxThrottle;
+          protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
           module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {

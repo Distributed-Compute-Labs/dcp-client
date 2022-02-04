@@ -110,7 +110,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       lastProgress = progress;
     
     indeterminateProgress &= isIndeterminate;
-    const throttleTime = (protectedStorage.progressThrottle || 0.1) * 1000;
+    const throttleTime = ((protectedStorage.sandboxConfig && protectedStorage.sandboxConfig.progressThrottle) || 0.1) * 1000;
     if (Date.now() - postMessageSentTime >= throttleTime) {
       postMessageSentTime = Date.now();
       postMessage({
