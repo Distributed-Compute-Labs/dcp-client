@@ -109,8 +109,6 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     if (!Number.isNaN(progress))
       lastProgress = progress;
     
-      protectedStorage.dcpConfig.worker.sandbox.progressThrottle = 0.1;
-    
     indeterminateProgress &= isIndeterminate;
     const throttleTime = (protectedStorage.progressThrottle || 0.1) * 1000;
     if (Date.now() - postMessageSentTime >= throttleTime) {
