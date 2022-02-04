@@ -4,7 +4,8 @@
  *  @date       May 2020
  */
 
-self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, (postMessage)=>{
+self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorkerEnvironment$$fn(protectedStorage, postMessage)
+{                      
   if (typeof GPU !== 'undefined'){
     try{
       GPU.$setPlatform("linux");
