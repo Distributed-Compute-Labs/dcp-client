@@ -177,6 +177,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
           },
         },
         discrete: true, //allows sandbox to be in a worker that only accepts one slice of a job total
+        useStrict,      // strict-mode in the work function
       };
     }
 
