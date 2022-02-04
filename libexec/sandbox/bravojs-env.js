@@ -89,7 +89,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
               message.job.requirePath.map(p => require.paths.push(p));
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
-              exports.job = indirectEval(`(${message.job.workFunction})`)
+
+              if (message.job.useStrict)
+                exports.job = eval(`"use strict"; (${message.job.workFunction})`);
+              else
+                exports.job = indirectEval(`(${message.job.workFunction})`);
             } catch(e) {
               reportError(e);
               return;
