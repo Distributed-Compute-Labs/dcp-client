@@ -162,7 +162,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
 
     let workRejectSymbol = Symbol('workReject');
     protectedStorage.rejections = workRejectSymbol;
-    return workRejectSymbol;
+    throw workRejectSymbol;
   }
 
   self.work = {
