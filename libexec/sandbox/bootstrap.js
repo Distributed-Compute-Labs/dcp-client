@@ -159,6 +159,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       request: 'reject',
       why: reason
     });
+    
+    return Symbol('work reject');
   }
 
   self.work = {
