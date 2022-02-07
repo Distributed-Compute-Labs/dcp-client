@@ -97,18 +97,22 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
       }
       fs.closeSync(fd);
 
-      vm.runInContext(bootstrapCode, this.sandboxGlobal, {
+      const script = new vm.Script(bootstrapCode, {
         filename: path.basename(file),
         lineOffset: 0,
-        columnOffset: 0,
+        columnOffset: 0
+      });
+      
+      script.runInContext(this.sandboxGlobal, {
         contextName: 'Evaluator #' + this.id,
         contextCodeGeneration: {
           wasm: true,
           strings: true
         },
         displayErrors: true,
-        timeout: 3600 * 1000,   /* gives us our own event loop; this is max time for one pass run-to-completion */
-        breakOnSigInt: true     /* also gives us our own event loop */
+        microtaskMode: 'afterEvaluate',
+        timeout: 4294967295 /*max*/,   /* gives us our own event loop; this is max time for one pass run-to-completion */
+        breakOnSigInt: true,           /* also gives us our own event loop */
       });
     }
   } else {
@@ -335,6 +339,23 @@ function server(listenAddr, port, files) {
   }
 }
 
+function setupErrorHandlers()
+{
+  function unhandledRejectionHandler(error)
+  {
+    console.error(' *** Unhandled Rejection in evaluator-node:', error);
+    process.exit(98);
+  }
+  function uncaughtExceptionHandler(error)
+  {
+    console.error(' *** Uncaught Exception in evaluator-node:', error);
+    process.exit(97);
+  }
+
+  process.on('unhandledRejection', unhandledRejectionHandler);
+  process.on('uncaughtException',  uncaughtExceptionHandler);
+}
+
 /** Main program entry point; either establishes a server that listens for tcp
  *  connections, or falls back to inetd single sandbox mode.
  *
@@ -342,6 +363,8 @@ function server(listenAddr, port, files) {
  *          it is used as a program module.
  */
 function main() {
+  setupErrorHandlers();
+  
   const argv = require('yargs')
   .usage('Node Evaluator - Copyright (c) 2020-2021 Kings Distributed Systems, Ltd. All Rights Reserved.'
     + 'Usage: dcp-evaluator [options] [<file.js> <file.js> ...]')
