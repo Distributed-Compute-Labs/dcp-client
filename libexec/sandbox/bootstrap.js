@@ -160,7 +160,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       why: reason
     });
 
-    return Symbol('work-reject');
+    return Symbol('workReject');
   }
 
   self.work = {
