@@ -114,7 +114,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       {
         try
         {
-          runWorkFunction(message.data);
+          runWorkFunction(message.data, protectedStorage);
         }
         catch (error)
         {

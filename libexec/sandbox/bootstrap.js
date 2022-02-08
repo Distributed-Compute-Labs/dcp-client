@@ -159,9 +159,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       request: 'reject',
       why: reason
     });
-
-    let workRejectSymbol = Symbol.for('workReject');
-    throw workRejectSymbol;
+    protectedStorage.workRejectReason = reason;
+    throw Symbol.for('workReject');
   }
 
   self.work = {
