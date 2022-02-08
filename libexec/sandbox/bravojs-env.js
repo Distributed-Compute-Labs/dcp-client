@@ -114,7 +114,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       {
         try
         {
-          runWorkFunction(message.data, protectedStorage);
+          runWorkFunction(message.data);
         }
         catch (error)
         {
@@ -228,11 +228,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    *                                    as its argument the error that it rejected with.
    * @returns   unused promise   
    */
-  async function runWorkFunction_inner(datum, successCallback, errorCallback)
+  async function runWorkFunction_inner(datum, successCallback, errorCallback, protectedStorage)
   {
     var rejection = false;
     var result;
-    
+    let memos = protectedStorage;
     try
     {
       /* module.main.job is the work function; left by assign message */ 
@@ -272,6 +272,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError));
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError, protectedStorage));
   }
 }); /* end of fn */
