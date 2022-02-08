@@ -177,7 +177,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   };
 
   /* Report an error from the work function to the supervisor */
-  function reportError (error)
+  function reportError (error, protectedStorage)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
@@ -189,6 +189,13 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           err[prop] = error[prop];
       }
       catch(e){};
+    }
+
+    if (error === Symbol.for('workReject')) {
+      err['message'] = protectedStorage.workRejectReason;
+      err['name'] = 'Work Rejected';
+
+
     }
 
     ring3PostMessage({request: 'workError', error: err});
@@ -228,11 +235,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    *                                    as its argument the error that it rejected with.
    * @returns   unused promise   
    */
-  async function runWorkFunction_inner(datum, successCallback, errorCallback, protectedStorage)
+  async function runWorkFunction_inner(datum, successCallback, errorCallback)
   {
     var rejection = false;
     var result;
-    let memos = protectedStorage;
+    
     try
     {
       /* module.main.job is the work function; left by assign message */ 
@@ -250,7 +257,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try { flushLastLog(); } catch(e) {};
 
     if (rejection)
-      errorCallback(rejection);
+      errorCallback(rejection, protectedStorage);
     else
       successCallback(result);
 
@@ -272,6 +279,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError, protectedStorage));
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError));
   }
 }); /* end of fn */
