@@ -193,7 +193,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
     if (error === Symbol.for('workReject')) {
       err['message'] = protectedStorage.workRejectReason;
-      err['name'] = 'Work Rejected';
+      err['name'] = 'EWORKREJECT';
     }
 
     ring3PostMessage({request: 'workError', error: err});
