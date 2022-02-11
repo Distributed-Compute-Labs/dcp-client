@@ -114,7 +114,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       {
         try
         {
-          runWorkFunction(message.data);
+          runWorkFunction(message.data, protectedStorage);
         }
         catch (error)
         {
@@ -177,7 +177,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   };
 
   /* Report the GPU metrics for a slice that was rejected */
-  function reportRejectedGPU () {
+  function reportRejectedGPU (t0) {
     try
     {
       const webGLTimer = getWebGLTimer;
@@ -195,7 +195,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   }
 
   /* Report an error from the work function to the supervisor */
-  function reportError (error, protectedStorage)
+  function reportError (t0, error, protectedStorage)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
@@ -213,7 +213,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportRejectedGPU();
+      reportRejectedGPU(t0);
     }
 
     ring3PostMessage({request: 'workError', error: err});
@@ -275,7 +275,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try { flushLastLog(); } catch(e) {};
 
     if (rejection)
-      errorCallback(rejection, protectedStorage);
+      errorCallback(rejection);
     else
       successCallback(result);
 
@@ -288,7 +288,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    *
    * @param {datam}     an element of the input set
    */
-  function runWorkFunction(datum)
+  function runWorkFunction(datum, protectedStorage)
   {
     // Measure performance directly before and after the job to get as accurate total time as
     const t0 = performance.now();
@@ -297,6 +297,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), reportError));
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection, protectedStorage)));
   }
 }); /* end of fn */
