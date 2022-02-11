@@ -227,7 +227,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         }
         else if (event.request === 'resetAndGetCPUTime')
         {
-          debugger;
           const cpuTime = totalCPUTime;
           totalCPUTime = 0;
           ring0PostMessage({
