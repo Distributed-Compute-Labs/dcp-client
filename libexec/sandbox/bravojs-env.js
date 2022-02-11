@@ -176,6 +176,24 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     });
   };
 
+  /* Report the GPU metrics for a slice that was rejected */
+  function reportRejectedGPU () {
+    try
+    {
+      const webGLTimer = getWebGLTimer;
+      const offset = webGLOffset;
+      const total = performance.now() - t0;
+
+      let webGL = webGLTimer() - offset;
+      self.webGLOffset = offset + webGL;
+      ring3PostMessage({ request: 'measurement', total, webGL });
+    }
+    catch (error)
+    {
+      ring3PostMessage({ request: 'sandboxError', error });
+    }
+  }
+
   /* Report an error from the work function to the supervisor */
   function reportError (error, protectedStorage)
   {
@@ -194,6 +212,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     if (error === Symbol.for('workReject')) {
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
+      err['stack'] = 'Slice was rejected in the sandbox by work.reject'
+      reportRejectedGPU();
     }
 
     ring3PostMessage({request: 'workError', error: err});
