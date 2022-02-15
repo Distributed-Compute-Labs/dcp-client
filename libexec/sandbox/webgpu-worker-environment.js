@@ -5,7 +5,7 @@
  */
 
 self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorkerEnvironment$$fn(protectedStorage, postMessage)
-{                      
+{
   if (typeof GPU !== 'undefined'){
     try{
       GPU.$setPlatform("linux");
@@ -22,10 +22,11 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 
         function deviceTick()
         {
-          for (let ii = 0; ii < self.devices.length; ++ii) {
-            /*if (!device.isDestroyed) */
-            self.devices[ii].tick();
-          };
+          if (self.devices) {
+            for (let ii = 0; ii < self.devices.length; ++ii) {
+              self.devices[ii].tick();
+            };
+          }
         }
 
         self.setTimeout(deviceTick, self.nextTickTimeout);
