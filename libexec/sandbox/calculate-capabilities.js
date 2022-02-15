@@ -23,6 +23,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
       const es7 = false;
       const spidermonkey = false;
       const chrome = undefined;
+      let useStrict = true;
 
       let fdlibmFlag = true;
       const inputFdlibm = [
@@ -40,6 +41,12 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         18909231.8632431328296661376953125,
         1525.965888988744154630694538354874,
       ];
+      let testCode = `
+      "use strict";
+      (function testFun(a) {
+        a=a+1;
+        return arguments[0];
+      });`
 
       webgpu =
         typeof GPU !== 'undefined' ||
@@ -145,6 +152,9 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         fdlibmFlag = false;
       }
 
+      if(eval(testCode)(1) !== 1)
+        useStrict = false;      
+
       return {
         engine: {
           es7,
@@ -167,6 +177,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
           },
         },
         discrete: true, //allows sandbox to be in a worker that only accepts one slice of a job total
+        useStrict,      // strict-mode in the work function
       };
     }
 

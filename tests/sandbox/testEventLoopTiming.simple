@@ -41,7 +41,7 @@ function outputTests(message)
     if (timeTaken*1.05 > loopDelay * 2 && timeTaken*.95 < loopDelay * 2)
       expectedOutputs.cpuTime = true;
     else
-      expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}`;
+      expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}, expected ${loopDelay * 2}±5%`;
   }
   // If all of my expected outputs have been met, set the exit code to 0 since all was ok.
   if (Object.values(expectedOutputs).every((ele) =>  ele))
@@ -52,6 +52,11 @@ function outputTests(message)
 const realSetTimeout = setTimeout;
 require('./globalPolyfillHelper').init(files, outputTests)
 
+// For some reason, setting `self.setTimeout` in event-loop-virtualization
+// doesn't clobber the supposedly-global `setTimeout` we are referencing in
+// the `setTimeout`, below. This forces us to use the correct,
+// worker-internal, virtual setTimeout in order to get our timing counted
+setTimeout = self.setTimeout;
 
 setTimeout(async () => {
   let time = Date.now();

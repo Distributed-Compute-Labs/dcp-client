@@ -77,7 +77,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           if (typeof module.main !== 'undefined')
             throw new Error('Main module was provided before job assignment');
 
-          self.dcpConfig = message.sandboxConfig;
+          protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
           module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {
@@ -89,7 +89,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
               message.job.requirePath.map(p => require.paths.push(p));
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
-              exports.job = indirectEval(`(${message.job.workFunction})`)
+
+              if (message.job.useStrict)
+                exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
+              else
+                exports.job = indirectEval(`(${message.job.workFunction})`);
             } catch(e) {
               reportError(e);
               return;

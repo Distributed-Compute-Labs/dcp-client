@@ -17,12 +17,14 @@
 const process = require('process');
 const vm = require('vm');
 const path = require('path');
-let fs, mmap;
+const fs = require('fs');
+let flockSync, mmap;
 try {
   mmap = require('mmap-io');
-  fs = require('fs-ext');
+  flockSync = require('fs-ext').flockSync;
 } catch(e) {
-  fs = require('fs');
+  mmap = null;
+  flockSync = null;
 }
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
@@ -87,8 +89,8 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
   if(files) {
     for(const file of files) {
       fd = fs.openSync(file, 'r');
-      if (mmap) {
-        fs.flockSync(fd, 'sh');
+      if (mmap && flockSync) {
+        flockSync(fd, 'sh');
         bootstrapCode = mmap.map(fs.fstatSync(fd).size, mmap.PROT_READ, mmap.MAP_SHARED, fd, 0, mmap.MADV_SEQUENTIAL).toString('utf8');
       } else {
         bootstrapCode = fs.readFileSync(fd, 'utf-8');
