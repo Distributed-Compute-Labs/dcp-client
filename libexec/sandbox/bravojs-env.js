@@ -176,8 +176,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     });
   };
 
-  /* Report the GPU metrics for a slice that was rejected */
-  function reportRejectedGPU (t0) {
+  /* Report the GPU and total metrics for a slice that was rejected */
+  function reportRejectedGPUandTotal (t0) {
     try
     {
       const webGLTimer = getWebGLTimer;
@@ -213,7 +213,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportRejectedGPU(t0);
+      reportRejectedGPUandTotal(t0);
     }
 
     ring3PostMessage({request: 'workError', error: err});
