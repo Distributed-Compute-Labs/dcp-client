@@ -44,13 +44,13 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
                 //Polyfill for process.nextTick
                 self.setTimeout(() => {
                   switch (type) {
-                  case "Error": throw new Error(msg); break;
-                  case "Type": throw new TypeError(msg); break;
-                  case "Range": throw new RangeError(msg); break;
-                  case "Reference": throw new ReferenceError(msg); break;
-                  case "Internal": throw new InternalError(msg); break;
-                  case "Syntax": throw new SyntaxError(msg); break;
-                  default: throw new Error(msg); break;
+                  case "Error": throw new Error(msg);
+                  case "Type": throw new TypeError(msg);
+                  case "Range": throw new RangeError(msg);
+                  case "Reference": throw new ReferenceError(msg);
+                  case "Internal": throw new InternalError(msg);
+                  case "Syntax": throw new SyntaxError(msg);
+                  default: throw new Error(msg);
                   };
                 }, self.immediateTimeout);
               };
