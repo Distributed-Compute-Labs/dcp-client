@@ -26,9 +26,9 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 
         function deviceTick()
         {
-          if (self.devices) {
-            for (let ii = 0; ii < self.devices.length; ++ii) {
-              self.devices[ii].tick();
+          if (devices) {
+            for (let ii = 0; ii < devices.length; ++ii) {
+              devices[ii].tick();
             };
           }
         }
