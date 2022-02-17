@@ -64,7 +64,6 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 
       //Return a promise instead of a callback
 
-      {
       GPUFence.prototype.onCompletion = function(completionValue) {
         return new Promise(resolve => {
           //Polyfill for setImmediate
@@ -73,9 +72,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
           }, self.immediateTimeout);
         });
       };
-      }
 
-      {
       GPUBuffer.prototype.mapReadAsync = function() {
         return new Promise(resolve => {
           //Polyfill for setImmediate
@@ -84,9 +81,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
           }, self.immediateTimeout);
         });
       };
-      }
 
-      {
       GPUBuffer.prototype.mapWriteAsync = function() {
         return new Promise(resolve => {
           //Polyfill for setImmediate
@@ -95,9 +90,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
           }, self.immediateTimeout);
         });
       };
-      }
 
-      {
       GPUDevice.prototype.createBufferMappedAsync = function(descriptor) {
         return new Promise(resolve => {
           //Polyfill for setImmediate
@@ -106,9 +99,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
           }, self.immediateTimeout);
         });
       };
-      }
 
-      {
       GPUDevice.prototype.createBufferMapped = function(descriptor) {
         return new Promise(resolve => {
           //Polyfill for setImmediate
@@ -117,11 +108,9 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
           }, self.immediateTimeout);
         });
       };
-      }
 
     } catch(err) {
       console.log("ERROR: ", err);
     }
-
-  };
+  }
 });
