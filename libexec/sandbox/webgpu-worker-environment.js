@@ -6,9 +6,12 @@
 
 self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorkerEnvironment$$fn(protectedStorage, postMessage)
 {
-  if (typeof GPU !== 'undefined'){
-    try{
+  if (typeof GPU !== 'undefined') {
+    try {
       GPU.$setPlatform("linux");
+
+      self.navigator = {"gpu": GPU};
+
       {
         let devices = [];
 
@@ -61,61 +64,61 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
       //Return a promise instead of a callback
 
       {
-        GPUFence.prototype.onCompletion = function(completionValue) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._onCompletion(completionValue, resolve);
-            }, self.immediateTimeout);
-          });
-        };
+      GPUFence.prototype.onCompletion = function(completionValue) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._onCompletion(completionValue, resolve);
+          }, self.immediateTimeout);
+        });
+      };
       }
 
       {
-        GPUBuffer.prototype.mapReadAsync = function() {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._mapReadAsync(resolve);
-            }, self.immediateTimeout);
-          });
-        };
+      GPUBuffer.prototype.mapReadAsync = function() {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._mapReadAsync(resolve);
+          }, self.immediateTimeout);
+        });
+      };
       }
 
       {
-        GPUBuffer.prototype.mapWriteAsync = function() {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._mapWriteAsync(resolve);
-            }, self.immediateTimeout);
-          });
-        };
+      GPUBuffer.prototype.mapWriteAsync = function() {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._mapWriteAsync(resolve);
+          }, self.immediateTimeout);
+        });
+      };
       }
 
       {
-        GPUDevice.prototype.createBufferMappedAsync = function(descriptor) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._createBufferMappedAsync(descriptor, resolve);
-            }, self.immediateTimeout);
-          });
-        };
+      GPUDevice.prototype.createBufferMappedAsync = function(descriptor) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._createBufferMappedAsync(descriptor, resolve);
+          }, self.immediateTimeout);
+        });
+      };
       }
 
       {
-        GPUDevice.prototype.createBufferMapped = function(descriptor) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._createBufferMapped(descriptor, resolve);
-            }, self.immediateTimeout);
-          });
-        };
+      GPUDevice.prototype.createBufferMapped = function(descriptor) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._createBufferMapped(descriptor, resolve);
+          }, self.immediateTimeout);
+        });
+      };
       }
 
-    }catch(err){
+    } catch(err) {
       console.log("ERROR: ", err);
     }
 
