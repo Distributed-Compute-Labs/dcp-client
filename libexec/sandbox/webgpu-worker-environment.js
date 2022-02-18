@@ -8,9 +8,6 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 {
   if (typeof GPU !== 'undefined') {
     try {
-      // TODO: Set to the windows string on Windows
-      GPU.$setPlatform("linux");
-
       self.navigator = {"gpu": GPU};
 
       {
