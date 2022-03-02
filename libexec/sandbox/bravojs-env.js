@@ -114,7 +114,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       {
         try
         {
-          runWorkFunction(message.data, protectedStorage);
+          runWorkFunction(message.data);
         }
         catch (error)
         {
@@ -195,7 +195,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   }
 
   /* Report an error from the work function to the supervisor */
-  function reportError (t0, error, protectedStorage)
+  function reportError (t0, error)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
@@ -288,7 +288,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    *
    * @param {datam}     an element of the input set
    */
-  function runWorkFunction(datum, protectedStorage)
+  function runWorkFunction(datum)
   {
     // Measure performance directly before and after the job to get as accurate total time as
     const t0 = performance.now();
@@ -297,6 +297,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection, protectedStorage)));
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection)));
   }
 }); /* end of fn */
