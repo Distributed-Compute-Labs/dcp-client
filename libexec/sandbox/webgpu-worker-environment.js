@@ -2,6 +2,10 @@
  *  @file       libexec/sandbox/webgpu-worker-environment.js
  *  @author     Dominic Cerisano, dcerisano@kingsds.network
  *  @date       May 2020
+ *  @author     Jason Erb, jason@kingsds.network
+ *  @date       February 2022
+ *  @note       Adapted from:
+ *              https://github.com/Kings-Distributed-Systems/webgpu/blob/dcp/release/index.js
  */
 
 self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorkerEnvironment$$fn(protectedStorage, postMessage)
