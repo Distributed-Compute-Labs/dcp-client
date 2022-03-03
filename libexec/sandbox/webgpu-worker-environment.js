@@ -15,7 +15,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
       if (typeof self.navigator === 'undefined') {
         self.navigator = {};
       }
-      self.navigator.gpu = new GPU();
+      self.navigator.gpu = GPU;
 
       {
         let devices = [];
