@@ -113,7 +113,7 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
         });
       };
 
-    } catch(err) {
+    } catch (err) {
       console.log("ERROR: ", err);
     }
   }
