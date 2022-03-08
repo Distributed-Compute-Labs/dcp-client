@@ -145,6 +145,11 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     });
   }
 
+  function workerBootstrap$work$reject(reason = 'false') {
+    protectedStorage.workRejectReason = reason; // Memoize reason
+    throw Symbol.for('workReject');
+  }
+
   self.work = {
     emit: workerBootstrap$work$emit,
     job: {
@@ -153,7 +158,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         description: 'Discreetly making the world smarter', /* in user's language */
         link: 'https://distributed.computer/about',
       }
-    }
+    },
+    reject: workerBootstrap$work$reject,
   };
 
   function workerBootstrap$console(level, ...args) {

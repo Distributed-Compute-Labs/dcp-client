@@ -2,13 +2,21 @@
  *  @file       libexec/sandbox/webgpu-worker-environment.js
  *  @author     Dominic Cerisano, dcerisano@kingsds.network
  *  @date       May 2020
+ *  @author     Jason Erb, jason@kingsds.network
+ *  @date       February 2022
+ *  @note       Adapted from:
+ *              https://github.com/Kings-Distributed-Systems/webgpu/blob/dcp/release/index.js
  */
 
 self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorkerEnvironment$$fn(protectedStorage, postMessage)
 {
-  if (typeof GPU !== 'undefined'){
-    try{
-      GPU.$setPlatform("linux");
+  if (typeof GPU !== 'undefined') {
+    try {
+      if (typeof self.navigator === 'undefined') {
+        self.navigator = {};
+      }
+      self.navigator.gpu = GPU;
+
       {
         let devices = [];
 
@@ -22,9 +30,9 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 
         function deviceTick()
         {
-          if (self.devices) {
-            for (let ii = 0; ii < self.devices.length; ++ii) {
-              self.devices[ii].tick();
+          if (devices) {
+            for (let ii = 0; ii < devices.length; ++ii) {
+              devices[ii].tick();
             };
           }
         }
@@ -40,13 +48,13 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
                 //Polyfill for process.nextTick
                 self.setTimeout(() => {
                   switch (type) {
-                  case "Error": throw new Error(msg); break;
-                  case "Type": throw new TypeError(msg); break;
-                  case "Range": throw new RangeError(msg); break;
-                  case "Reference": throw new ReferenceError(msg); break;
-                  case "Internal": throw new InternalError(msg); break;
-                  case "Syntax": throw new SyntaxError(msg); break;
-                  default: throw new Error(msg); break;
+                  case "Error": throw new Error(msg);
+                  case "Type": throw new TypeError(msg);
+                  case "Range": throw new RangeError(msg);
+                  case "Reference": throw new ReferenceError(msg);
+                  case "Internal": throw new InternalError(msg);
+                  case "Syntax": throw new SyntaxError(msg);
+                  default: throw new Error(msg);
                   };
                 }, self.immediateTimeout);
               };
@@ -60,64 +68,53 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 
       //Return a promise instead of a callback
 
-      {
-        GPUFence.prototype.onCompletion = function(completionValue) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._onCompletion(completionValue, resolve);
-            }, self.immediateTimeout);
-          });
-        };
-      }
+      GPUFence.prototype.onCompletion = function(completionValue) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._onCompletion(completionValue, resolve);
+          }, self.immediateTimeout);
+        });
+      };
 
-      {
-        GPUBuffer.prototype.mapReadAsync = function() {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._mapReadAsync(resolve);
-            }, self.immediateTimeout);
-          });
-        };
-      }
+      GPUBuffer.prototype.mapReadAsync = function() {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._mapReadAsync(resolve);
+          }, self.immediateTimeout);
+        });
+      };
 
-      {
-        GPUBuffer.prototype.mapWriteAsync = function() {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._mapWriteAsync(resolve);
-            }, self.immediateTimeout);
-          });
-        };
-      }
+      GPUBuffer.prototype.mapWriteAsync = function() {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._mapWriteAsync(resolve);
+          }, self.immediateTimeout);
+        });
+      };
 
-      {
-        GPUDevice.prototype.createBufferMappedAsync = function(descriptor) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._createBufferMappedAsync(descriptor, resolve);
-            }, self.immediateTimeout);
-          });
-        };
-      }
+      GPUDevice.prototype.createBufferMappedAsync = function(descriptor) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._createBufferMappedAsync(descriptor, resolve);
+          }, self.immediateTimeout);
+        });
+      };
 
-      {
-        GPUDevice.prototype.createBufferMapped = function(descriptor) {
-          return new Promise(resolve => {
-            //Polyfill for setImmediate
-            self.setTimeout(() => {
-              this._createBufferMapped(descriptor, resolve);
-            }, self.immediateTimeout);
-          });
-        };
-      }
+      GPUDevice.prototype.createBufferMapped = function(descriptor) {
+        return new Promise(resolve => {
+          //Polyfill for setImmediate
+          self.setTimeout(() => {
+            this._createBufferMapped(descriptor, resolve);
+          }, self.immediateTimeout);
+        });
+      };
 
-    }catch(err){
+    } catch (err) {
       console.log("ERROR: ", err);
     }
-
-  };
+  }
 });
