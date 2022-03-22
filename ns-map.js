@@ -69,7 +69,6 @@ module.declare([], function $$nsMap(require, exports, module) {
   for (moduleIdentifier of [
     'ethereumjs-util',
     'ethereumjs-wallet',
-    'ethereumjs-tx',
     'bignumber.js',
     'socket.io-client',
   ]) {
