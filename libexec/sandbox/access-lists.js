@@ -7,7 +7,8 @@
  *  @date       Sept 2020
  */
 
-self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ring0PostMessage) => {
+self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, function accessLists$$fn(protectedStorage, ring0PostMessage)
+{
   const ring1PostMessage = self.postMessage;
   const global = typeof globalThis === 'undefined' ? self : globalThis;
 
@@ -29,7 +30,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'clearTimeout',
     'console',
     'constructor',
-    'dcpConfig',
     'DataView',
     'Date',
     'decodeURI',
@@ -75,6 +75,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, (ri
     'pt0',
     'RangeError',
     'ReferenceError',
+    'Reflect',
     'RegExp',
     'removeEventListener',
     'requestAnimationFrame',

@@ -9,7 +9,8 @@
 /* global self, bravojs, addEventListener, postMessage */
 // @ts-nocheck
 
-self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (ring1PostMessage, wrapPostMessage) => {
+self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, function bravojsEvn$$fn(protectedStorage, ring1PostMessage, wrapPostMessage)
+{
   // This file starts at ring 2, but transitions to ring 3 partway through it.
   const ring2PostMessage = self.postMessage; 
   let ring3PostMessage
@@ -18,9 +19,13 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
   bravojs.ww.allDeps = []
   bravojs.ww.provideCallbacks = {}
 
-  async function flushMicroTaskQueue () {
+  async function tryFlushMicroTaskQueue()
+  {
+    await Promise.resolve();
+    await Promise.resolve();
     await Promise.resolve();
   }
+  
   //Listens for postMessage from the sandbox
   addEventListener('message', async (event) => {
     let message = event
@@ -53,9 +58,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         if (bravojs.ww.provideCallbacks.hasOwnProperty(message.id) && bravojs.ww.provideCallbacks[message.id].onerror) {
           bravojs.ww.provideCallbacks[message.id].onerror()
         } else {
-          console.log('moduleGroupError ', message.stack)
+          console.error('moduleGroupError ', message.stack)
         }
         break
+
+      /* Sandbox assigned a specific job by supervisor */
       case 'assign': {
         let reportError = function bravojsEnv$$sandboxAssignment$reportError(e) {
           var error = Object.assign({}, e);
@@ -70,7 +77,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
           if (typeof module.main !== 'undefined')
             throw new Error('Main module was provided before job assignment');
 
-          self.dcpConfig = message.sandboxConfig;
+          protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
           module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {
@@ -82,7 +89,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
               message.job.requirePath.map(p => require.paths.push(p));
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
-              exports.job = indirectEval(`(${message.job.workFunction})`)
+
+              if (message.job.useStrict)
+                exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
+              else
+                exports.job = indirectEval(`(${message.job.workFunction})`);
             } catch(e) {
               reportError(e);
               return;
@@ -102,63 +113,19 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
         }
         break /* end of assign */
       }
+      /* Supervisor has asked us to execute the work function. message.data is input datum. */
       case 'main':
-        let launchJob = (async (resolveHandle, rejectHandle) => {
-          try {
-            /* 
-              module.main was initialized in case 'assign', which exports 'job' as the work function. Apply
-              the slice data and any arguments to the function
-            */
-            let result = await module.main.job.apply(null,[message.data].concat(module.main.arguments))
-            resolveHandle(result);
-          } catch (error) {
-            rejectHandle(error);
-          }
-          try{ flushLastLog(); } catch(e) {/* do nothing */}
-        });
-
-        // wait for the above to fulfill
-        try {
-          const webGLTimer = getWebGLTimer;
-          const offset = webGLOffset;
-          delete webGLOffset;
-
-          // Measure performance directly before and after the job to get as accurate total time as
-          const t0 = performance.now();
-          // Put job on the event loop with a timeout, then await the promise resolution
-          timeoutPromise = new Promise((resolve, reject) => {
-            setTimeout(() => launchJob(resolve, reject));
-          })
-          let result = await timeoutPromise;
-          const total = performance.now() - t0;
-
-          // clear the above timeout
-          await flushMicroTaskQueue();
-
-          let webGL = webGLTimer() - offset;
-          self.webGLOffset = offset + webGL;
-          ring3PostMessage({
-            request: 'measurement',
-            total,
-            webGL,
-          });
-          ring3PostMessage({
-            request: 'complete',
-            result:  result
-          });
-        } catch (error) {
-          ring3PostMessage({
-            request: 'workError',
-            error: {
-              message: error.message,
-              name: error.name,
-              lineNumber: error.lineNumber,
-              columnNumber: error.columnNumber,
-              stack: error.stack
-            }
-          });
+      {
+        try
+        {
+          runWorkFunction(message.data);
+        }
+        catch (error)
+        {
+          ring3PostMessage({ request: 'sandboxError', error });
         }
         break;
+      }
       default:
         break;
     }
@@ -212,4 +179,128 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, (rin
       id,
     });
   };
-});
+
+  /* Report the GPU and total metrics for a slice that was rejected */
+  function reportRejectedGPUandTotal (t0) {
+    try
+    {
+      const webGLTimer = getWebGLTimer;
+      const offset = webGLOffset;
+      const total = performance.now() - t0;
+
+      let webGL = webGLTimer() - offset;
+      self.webGLOffset = offset + webGL;
+      ring3PostMessage({ request: 'measurement', total, webGL });
+    }
+    catch (error)
+    {
+      ring3PostMessage({ request: 'sandboxError', error });
+    }
+  }
+
+  /* Report an error from the work function to the supervisor */
+  function reportError (t0, error)
+  {
+    let err = { message: 'initial state', name: 'initial state' };
+
+    for (prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
+    {
+      try
+      {
+        if (typeof error[prop] !== 'undefined')
+          err[prop] = error[prop];
+      }
+      catch(e){};
+    }
+
+    if (error === Symbol.for('workReject')) {
+      err['message'] = protectedStorage.workRejectReason;
+      err['name'] = 'EWORKREJECT';
+      err['stack'] = 'Slice was rejected in the sandbox by work.reject'
+      reportRejectedGPUandTotal(t0);
+    }
+
+    ring3PostMessage({request: 'workError', error: err});
+  }
+
+  /**
+   * Report a result from work function and metrics to the supervisor.
+   * @param     t0      timestamp when work began
+   * @param     result  the value that the work function returned promise resolved to
+   */
+  function reportResult (t0, result)
+  {
+    try
+    {
+      const webGLTimer = getWebGLTimer;
+      const offset = webGLOffset;
+      const total = performance.now() - t0;
+
+      let webGL = webGLTimer() - offset;
+      self.webGLOffset = offset + webGL;
+      ring3PostMessage({ request: 'measurement', total, webGL });
+      ring3PostMessage({ request: 'complete', result });
+    }
+    catch(error)
+    {
+      ring3PostMessage({ request: 'sandboxError', error });
+    }
+  }
+  
+  /**
+   * Actual mechanics for running a work function. ** This function will never reject **
+   *
+   * @param     successCallback         callback to invoke when the work function has finished running;
+   *                                    it receives as its argument the resolved promise returned from
+   *                                    the work function
+   * @param     errorCallback           callback to invoke when the work function rejects. It receives
+   *                                    as its argument the error that it rejected with.
+   * @returns   unused promise   
+   */
+  async function runWorkFunction_inner(datum, successCallback, errorCallback)
+  {
+    var rejection = false;
+    var result;
+    
+    try
+    {
+      /* module.main.job is the work function; left by assign message */ 
+      result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
+    }
+    catch (error)
+    {
+      rejection = error;
+    }
+
+    /* try to flush any pending tasks on the microtask queue, then flush any pending console events, 
+     * especially in the case of a repeating message that hasn't been emitted yet
+     */
+    try { await tryFlushMicroTaskQueue(); } catch(e) {};
+    try { flushLastLog(); } catch(e) {};
+
+    if (rejection)
+      errorCallback(rejection);
+    else
+      successCallback(result);
+
+    /* CPU time measurement ends when this function's return value is resolved or rejected */
+  }
+
+  /**
+   * Run the work function, returning a promise that resolves once the function has finished
+   * executing.
+   *
+   * @param {datam}     an element of the input set
+   */
+  function runWorkFunction(datum)
+  {
+    // Measure performance directly before and after the job to get as accurate total time as
+    const t0 = performance.now();
+
+    /* Use setTimeout trampoline to
+     * 1. shorten stack
+     * 2. initialize the event loop measurement code
+     */
+    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection)));
+  }
+}); /* end of fn */

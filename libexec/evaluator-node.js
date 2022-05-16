@@ -17,12 +17,14 @@
 const process = require('process');
 const vm = require('vm');
 const path = require('path');
-let fs, mmap;
+const fs = require('fs');
+let flockSync, mmap;
 try {
   mmap = require('mmap-io');
-  fs = require('fs-ext');
+  flockSync = require('fs-ext').flockSync;
 } catch(e) {
-  fs = require('fs');
+  mmap = null;
+  flockSync = null;
 }
 
 let debug = process.env.DCP_DEBUG_EVALUATOR;
@@ -87,26 +89,30 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
   if(files) {
     for(const file of files) {
       fd = fs.openSync(file, 'r');
-      if (mmap) {
-        fs.flockSync(fd, 'sh');
+      if (mmap && flockSync) {
+        flockSync(fd, 'sh');
         bootstrapCode = mmap.map(fs.fstatSync(fd).size, mmap.PROT_READ, mmap.MAP_SHARED, fd, 0, mmap.MADV_SEQUENTIAL).toString('utf8');
       } else {
         bootstrapCode = fs.readFileSync(fd, 'utf-8');
       }
       fs.closeSync(fd);
 
-      vm.runInContext(bootstrapCode, this.sandboxGlobal, {
+      const script = new vm.Script(bootstrapCode, {
         filename: path.basename(file),
         lineOffset: 0,
-        columnOffset: 0,
+        columnOffset: 0
+      });
+      
+      script.runInContext(this.sandboxGlobal, {
         contextName: 'Evaluator #' + this.id,
         contextCodeGeneration: {
           wasm: true,
           strings: true
         },
         displayErrors: true,
-        timeout: 3600 * 1000,   /* gives us our own event loop; this is max time for one pass run-to-completion */
-        breakOnSigInt: true     /* also gives us our own event loop */
+        microtaskMode: 'afterEvaluate',
+        timeout: 4294967295 /*max*/,   /* gives us our own event loop; this is max time for one pass run-to-completion */
+        breakOnSigInt: true,           /* also gives us our own event loop */
       });
     }
   } else {
@@ -333,6 +339,23 @@ function server(listenAddr, port, files) {
   }
 }
 
+function setupErrorHandlers()
+{
+  function unhandledRejectionHandler(error)
+  {
+    console.error(' *** Unhandled Rejection in evaluator-node:', error);
+    process.exit(98);
+  }
+  function uncaughtExceptionHandler(error)
+  {
+    console.error(' *** Uncaught Exception in evaluator-node:', error);
+    process.exit(97);
+  }
+
+  process.on('unhandledRejection', unhandledRejectionHandler);
+  process.on('uncaughtException',  uncaughtExceptionHandler);
+}
+
 /** Main program entry point; either establishes a server that listens for tcp
  *  connections, or falls back to inetd single sandbox mode.
  *
@@ -340,6 +363,8 @@ function server(listenAddr, port, files) {
  *          it is used as a program module.
  */
 function main() {
+  setupErrorHandlers();
+  
   const argv = require('yargs')
   .usage('Node Evaluator - Copyright (c) 2020-2021 Kings Distributed Systems, Ltd. All Rights Reserved.'
     + 'Usage: dcp-evaluator [options] [<file.js> <file.js> ...]')

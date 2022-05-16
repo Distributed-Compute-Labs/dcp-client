@@ -35,8 +35,8 @@
  */
 /* globals self, ontimer, nextTimer, evalTimer */
 
-self.wrapScriptLoading({ scriptName: 'native-event-loop' }, (ring0PostMessage) => {
-
+self.wrapScriptLoading({ scriptName: 'native-event-loop' }, function nativeEventLoop$$fn(protectedStorage, ring0PostMessage)
+{
   (function privateScope(ontimer, nextTimer) {
     const timers = [];
     timers.serial = 0; /* If this isn't set, it becomes NaN */

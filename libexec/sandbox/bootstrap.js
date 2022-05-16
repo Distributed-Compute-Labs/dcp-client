@@ -11,7 +11,8 @@
 
 /* globals self */
 
-self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2PostMessage) => {
+self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function bootstrap$$fn(protectedStorage, ring2PostMessage)
+{
   let lastProgress = 0,
       postMessageSentTime = 0,
       throttledProgress = 0, // how many progress events were throttled since last update
@@ -108,17 +109,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
     if (!Number.isNaN(progress))
       lastProgress = progress;
     
-    if (!self.dcpConfig)
-      self.dcpConfig = {};
-    if (!self.dcpConfig.worker)
-      self.dcpConfig.worker = {};
-    if (!self.dcpConfig.worker.sandbox)
-      self.dcpConfig.worker.sandbox = {};
-    if (!self.dcpConfig.worker.sandbox.progressThrottle)
-      self.dcpConfig.worker.sandbox.progressThrottle = 0.1;
-    
     indeterminateProgress &= isIndeterminate;
-    const throttleTime = self.dcpConfig.worker.sandbox.progressThrottle * 1000;
+    const throttleTime = ((protectedStorage.sandboxConfig && protectedStorage.sandboxConfig.progressThrottle) || 0.1) * 1000;
     if (Date.now() - postMessageSentTime >= throttleTime) {
       postMessageSentTime = Date.now();
       postMessage({
@@ -153,6 +145,11 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
     });
   }
 
+  function workerBootstrap$work$reject(reason = 'false') {
+    protectedStorage.workRejectReason = reason; // Memoize reason
+    throw Symbol.for('workReject');
+  }
+
   self.work = {
     emit: workerBootstrap$work$emit,
     job: {
@@ -161,7 +158,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, (ring2Pos
         description: 'Discreetly making the world smarter', /* in user's language */
         link: 'https://distributed.computer/about',
       }
-    }
+    },
+    reject: workerBootstrap$work$reject,
   };
 
   function workerBootstrap$console(level, ...args) {
