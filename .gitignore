@@ -2,3 +2,4 @@ build/etc/config.cache
 node_modules
 *~
 .vscode
+test_report.xml
