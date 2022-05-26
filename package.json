@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.2.5",
+  "version": "4.2.6",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -16,7 +16,7 @@
   "license": "MIT",
   "author": "Kings Distributed Systems",
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=14.0.0"
   },
   "main": "index.js",
   "directories": {
