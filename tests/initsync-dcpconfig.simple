@@ -24,8 +24,8 @@ async function main()
   assert.equal(typeof identity, 'string'); /* this should be Address someday */
 
   assert(dcpConfig === require('dcp/dcp-config'));
-  return 0;
+  process.exitCode = 0;
 }
 
 require('../index').initSync();
-process.exit(main());
+main();

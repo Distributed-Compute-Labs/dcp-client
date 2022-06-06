@@ -27,4 +27,4 @@ async function main()
   return 0;
 }
 
-require('../index').init().then(main().then(process.exit));
+require('../index').init().then(main).then(process.exit);
