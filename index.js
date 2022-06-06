@@ -36,6 +36,7 @@ const vm = require('vm');
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
+let originalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
 
 function debugging(what = 'dcp-client') {
   const debugSyms = []
@@ -118,11 +119,11 @@ function runSandboxedCode(sandbox, code, options)
   if (typeof runSandboxedCode.extraGlobalProps === 'undefined')
     runSandboxedCode.extraGlobalProps = {};
 
-  for (let prop in bundleSandbox)
+  for (let prop in sandbox)
   {
     if (!globalThis.hasOwnProperty(prop) || runSandboxedCode.extraGlobalProps.hasOwnProperty(prop))
     {
-      globalThis[prop] = bundleSandbox[prop];
+      globalThis[prop] = sandbox[prop];
       runSandboxedCode.extraGlobalProps[prop] = true; /* Memoize global prop list mutation to allow re-mutation */
     }
   }
@@ -593,7 +594,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   require('dcp/dcp-url').patchup(aggrConfig);
 
   /* 3 */
-  if (global.dcpConfig) {
+  if (originalDcpConfig) {
     /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
     debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(require('dcp/dcp-config'), global.dcpConfig);
