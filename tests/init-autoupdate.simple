@@ -11,7 +11,7 @@ const { assertNeq3 } = require('dcp/dcp-assert').always;
 require('./setup-testenv');
 
 process.env.DCP_CONFIG_LOCATION =
-  'https://scheduler.distributed.computer/etc/dcp-config.js';
+  'https://scheduler.distributed.computer/etc/dcp-config.kvin';
 
 async function main() {
   await dcpClient.init(undefined, true);
@@ -22,4 +22,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((e) => console.error(e) && process.exit(1));
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
