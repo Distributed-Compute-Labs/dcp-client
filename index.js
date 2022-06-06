@@ -32,7 +32,7 @@ const process = require('process');
 const kvin    = require('kvin');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
-const { createContext, runInContext } = require('vm');
+const vm = require('vm');
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
@@ -107,6 +107,30 @@ const bundleSandbox = {
   },
 };
 
+function runSandboxedCode(sandbox, code, options)
+{
+  if (process.env.DCP_CLIENT_LEGACY_CONTEXT_SANDBOXING)
+  {
+    const script = new vm.Script(code, options);
+    return script.runInNewContext(vm.createContext(sandbox), options);
+  }
+
+  if (typeof runSandboxedCode.extraGlobalProps === 'undefined')
+    runSandboxedCode.extraGlobalProps = {};
+
+  for (let prop in bundleSandbox)
+  {
+    if (!globalThis.hasOwnProperty(prop) || runSandboxedCode.extraGlobalProps.hasOwnProperty(prop))
+    {
+      globalThis[prop] = bundleSandbox[prop];
+      runSandboxedCode.extraGlobalProps[prop] = true; /* Memoize global prop list mutation to allow re-mutation */
+    }
+  }
+  
+  const script = new vm.Script(code, options);
+  return script.runInThisContext(options);
+}
+
 /** Evaluate a file in a sandbox without polluting the global object.
  *  @param      filename        {string}    The name of the file to evaluate, relative to
  *  @param      sandbox         {object}    A sandbox object, used for injecting 'global' symbols as needed
@@ -114,7 +138,6 @@ const bundleSandbox = {
  */
 function evalScriptInSandbox(filename, sandbox, olFlag) {
   var code
-  var context = createContext(sandbox)
   try {
     code = fs.readFileSync(path.resolve(distDir, filename), 'utf-8')
     if (olFlag)
@@ -126,7 +149,8 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
     throw e
   }
 
-  return runInContext(code, context, filename, 0);
+
+  return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
 }
 
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
@@ -134,18 +158,12 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
  *  during config file processing.
  *
  *  @param      code     {string}        The code to eval
- *  @param      context  {object}        An object that has been initialized as a context
- *                                       that will act like the context's global object
+ *  @param      sandbox  {object}        A sandbox object, used for injecting 'global' symbols as needed
  *  @param      filename {string}        The name of the file we're evaluating for stack-
  *                                       trace purposes.
  */
-function evalStringInSandbox(
-  code,
-  sandbox,
-  filename = '(dcp-client$$evalStringInSandbox)',
-) {
-  const context = createContext(sandbox);
-
+function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringInSandbox)')
+{
   /**
    * Remove comments and then decide if this config file contains an IIFE. If
    * not, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
@@ -167,7 +185,7 @@ function evalStringInSandbox(
    * printed.
    */
   try {
-    result = runInContext(code, context, {
+    result = runSandboxedCode(sandbox, code, {
       filename,
       lineOffset,
       /**
