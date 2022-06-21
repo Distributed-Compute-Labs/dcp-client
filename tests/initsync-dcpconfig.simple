@@ -1,0 +1,31 @@
+#! /usr/bin/env node
+/**
+ * @file                initsync-dcpconfig.simple
+ *                      This test ensures that the dcpConfig is probably correctly
+ *                      initialized from the running scheduler when loaded via initSync.
+ *
+ * @author              Wes Garland, wes@kingsds.network
+ * @date                Jun 2022
+ */
+
+process.exitCode = 1;
+const assert = require('assert').strict;  
+
+async function main()
+{
+  const wallet = require('dcp/wallet');
+
+  if (!global.hasOwnProperty('dcpConfig'))
+    global.dcpConfig = require('dcp/dcp-config');
+
+  assert.equal(dcpConfig.scheduler.location.constructor.name, "dcpUrl$$DcpURL");
+  assert.equal(dcpConfig.scheduler.identity instanceof Promise, true);
+  const identity = await dcpConfig.scheduler.identity;
+  assert.equal(typeof identity, 'string'); /* this should be Address someday */
+
+  assert(dcpConfig === require('dcp/dcp-config'));
+  process.exitCode = 0;
+}
+
+require('../index').initSync();
+main();
