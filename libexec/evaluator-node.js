@@ -66,7 +66,7 @@ exports.Evaluator = function Evaluator(inputStream, outputStream, files) {
   /* Add properties to sandbox global scope */
   Object.assign(this.sandboxGlobal, {
     self: this.sandboxGlobal,
-    die: (exitCode) => { this.destroy(); process.exit(exitCode); },
+    die: () => { this.destroy(); },
     writeln: (string)  => { this.writeln(string) },
     onreadln: (handler) => { this.onreadlnHandler = handler },
     setTimeout,

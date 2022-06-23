@@ -135,6 +135,7 @@ try {
           serialize = newSerializer.serialize
           deserialize = newSerializer.deserialize
           outMsg = { type: 'nop', success: true }
+          send(outMsg);
           break
         case 'workerMessage':
           // if (inMsg.message.request === 'main') {
@@ -145,6 +146,7 @@ try {
           // }
           emitEvent('message', {data: inMsg.message})
           outMsg.success = true
+          send(outMsg)
           break
         case 'die':
           writeln('DIE: ' + Date())
@@ -157,7 +159,6 @@ try {
         outMsg.success = false
         outMsg.exception = { name: e.name, message: e.message, fileName: e.fileName, lineNumber: e.lineNumber, stack: e.stack }
         outMsg.e = e
-      } finally {
         send(outMsg)
       }
     }) /* receiveLine */
