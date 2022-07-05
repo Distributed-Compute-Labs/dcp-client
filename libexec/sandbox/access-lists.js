@@ -23,6 +23,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'AsyncFunction',
     'Atomics',
     'BigInt',
+    'BigInt64Array',
+    'BigUint64Array',
     'Boolean',
     'Blob',
     'bravojs',
