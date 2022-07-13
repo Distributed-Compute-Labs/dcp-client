@@ -234,7 +234,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     {
       const webGLTimer = getWebGLTimer;
       const offset = webGLOffset;
-      const total = performance.now() - t0;
+      const total = performance.now() - t0 + 1; /* +1 to ensure we never have "0 second slices" */
 
       let webGL = webGLTimer() - offset;
       self.webGLOffset = offset + webGL;
@@ -277,6 +277,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      */
     try { await tryFlushMicroTaskQueue(); } catch(e) {};
     try { flushLastLog(); } catch(e) {};
+    try { protectedStorage.markCPUTimeAsDone(); } catch(e) {};
 
     if (rejection)
       errorCallback(rejection);
