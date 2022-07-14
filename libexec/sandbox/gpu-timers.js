@@ -21,7 +21,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
       
       context[prop] = function wrappedWebGLFunction(...args)
       {
-        originalFn(...args);
+        return originalFn(...args);
       }
     }
   
