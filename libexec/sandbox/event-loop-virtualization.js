@@ -135,6 +135,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       return timer;
     }
 
+    /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
+    protectedStorage.setTimeout = setTimeout;
+
     /** Remove a timeout from the list of pending timeouts, regardless of its current
      *  status.
      * 
