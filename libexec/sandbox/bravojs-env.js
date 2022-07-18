@@ -186,6 +186,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     {
       const total = performance.now() - t0;
       const webGL = protectedStorage.getAndResetWebGLTimer();
+      protectedStorage.subtractWebGLTimeFromCPUTime(webGL);
       ring3PostMessage({ request: 'measurement', total, webGL });
     }
     catch (error)
@@ -230,6 +231,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     {
       const total = performance.now() - t0 + 1; /* +1 to ensure we never have "0 second slices" */
       const webGL = protectedStorage.getAndResetWebGLTimer();
+      protectedStorage.subtractWebGLTimeFromCPUTime(webGL); /* Because webGL is sync but doesn't use CPU */
       ring3PostMessage({ request: 'measurement', total, webGL });
       ring3PostMessage({ request: 'complete', result });
     }

@@ -13,6 +13,12 @@
 
 self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
+  /* Default if we don't have webGL */
+  protectedStorage.getAndResetWebGLTimer = function defaultTimer()
+  {
+    return 0;
+  }
+
   if (OffscreenCanvas && new OffscreenCanvas(1,1))
   {
     let time = 0;
@@ -24,6 +30,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
     }
     protectedStorage.getAndResetWebGLTimer = getAndResetWebGLTimer;
 
+    /* Factory to wrap a function from a context with a timer */
     function timeWebGLFactory(context, prop)
     {
       let originalFn = context[prop].bind(context);
@@ -46,6 +53,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
       }
     }
   
+    /* Update all functions on the OffscreenCanvas getContext prototype to have timers */
     let oldGetContext = OffscreenCanvas.prototype.getContext;
     OffscreenCanvas.prototype.getContext = function(type, options)
     {

@@ -79,6 +79,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         totalCPUTime += endTime - startTime;
         serviceEvents.sliceIsFinished = true;
       }
+
+      protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
+      {
+        totalCPUTime -= time;
+      }
     }
 
     /** Execute callback after at least timeout ms. 
