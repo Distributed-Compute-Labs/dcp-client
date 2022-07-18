@@ -15,13 +15,34 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
 {
   if (OffscreenCanvas && new OffscreenCanvas(1,1))
   {
+    let time = 0;
+    function getAndResetWebGLTimer()
+    {
+      const tmp = time;
+      time = 0;
+      return tmp;
+    }
+    protectedStorage.getAndResetWebGLTimer = getAndResetWebGLTimer;
+
     function timeWebGLFactory(context, prop)
     {
       let originalFn = context[prop].bind(context);
       
       context[prop] = function wrappedWebGLFunction(...args)
       {
-        return originalFn(...args);
+        var returnValue;
+        const start = performance.now();
+        try
+        {
+          returnValue =  originalFn(...args);
+          time += performance.now() - start;
+        }
+        catch(e)
+        {
+          time += performance.now() - start;
+          throw e;
+        }
+        return returnValue;
       }
     }
   
