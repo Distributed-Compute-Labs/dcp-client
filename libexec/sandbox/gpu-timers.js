@@ -19,7 +19,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
     return 0;
   }
 
-  if (OffscreenCanvas && new OffscreenCanvas(1,1))
+  if (self.OffscreenCanvas && new OffscreenCanvas(1,1))
   {
     let time = 0;
     function getAndResetWebGLTimer()

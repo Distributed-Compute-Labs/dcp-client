@@ -22,6 +22,7 @@ var base = [
   'script-load-wrapper',
   'wrap-event-listeners',
   'event-loop-virtualization',
+  'gpu-timers',
   'access-lists',
   'bravojs-init',
   'bravojs/bravo.js',
@@ -30,7 +31,6 @@ var base = [
 ];
 
 o.browser = [].concat(base);
-o.browser.splice(3, 0, 'gpu-timers');
 
 /** A node-evaluator sandbox needs extra code to emulate a Web Worker */
 o.node = ['sa-ww-simulation'].concat(base);
