@@ -320,7 +320,7 @@ function addConfig (existing, neo) {
         existing[prop] = new (existing[prop].constructor)(neo[prop]);
       continue;
     }
-    if (typeof neo[prop] === 'object' && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name)) {
+    if (typeof neo[prop] === 'object' && neo[prop] !== null && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name)) {
       if (typeof existing[prop] === 'undefined') {
         existing[prop] = {}
       }
