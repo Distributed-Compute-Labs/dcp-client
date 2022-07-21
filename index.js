@@ -853,8 +853,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
       remoteConfigCode = kvin.deserialize(remoteConfigCode);
-      delete remoteConfigCode.worker;
-      delete remoteConfigCode.standaloneWorker;
     } catch(e) {
       console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
       throw e;
@@ -872,6 +870,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     let remoteConfig = {};
     let newConfig = {};
     addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
+    delete remoteConfig.worker;
+    delete remoteConfig.standaloneWorker;
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
 
     /* remote config has lower precedence than local modifications, but gets loaded
