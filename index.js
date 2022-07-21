@@ -766,6 +766,10 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
 
   const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   const home = process.env.DCP_HOMEDIR || os.homedir();
+  if (defaultConfig.worker)
+    delete defaultConfig.worker;
+  if (defaultConfig.standaloneWorker)
+    delete defaultConfig.standaloneWorker;
 
   /* 1 - create local config */
   addConfig(aggrConfig, defaultConfig);
