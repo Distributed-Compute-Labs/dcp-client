@@ -782,14 +782,14 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-  addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
   addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
-  programName && addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
   programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
   addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
   programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
-  addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
-  programName && addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
 
   // Sort out polymorphic arguments: 'passed-in configuration'.
   if (initArgv[0]) {
