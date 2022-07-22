@@ -9,6 +9,9 @@ process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-
 process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../tests-etc');
 // if (!process.env.DCP_CONFIG_LOCATION)
 //   process.env.DCP_CONFIG_LOCATION = '';
+// unset env variable for scheduler if it exists as override test will fail otherwise
+if (process.env.DCP_SCHEDULER_LOCATION)
+  process.env.DCP_SCHEDULER_LOCATION = '';
 process.env.DCP_REGISTRY_BASEKEY = `Software\\Kings Distributed Systems\\DCP-Client-Tests\\Peter`;
 
 if (require('os').platform() === 'win32')

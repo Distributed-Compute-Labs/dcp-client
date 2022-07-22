@@ -466,7 +466,11 @@ function addConfigFile(existing /*, file path components ... */) {
  *  becomes the neo config.
  */
 async function addConfigRKey(existing, hive, keyTail) {
-  var neo = await require('./windows-registry').getObject(hive, keyTail);
+  var neo;
+  // make sure RKey calls do not execute the windows registry calls on non-windows platforms
+  if (os.platform() !== 'win32')
+    return;
+  neo = await require('./windows-registry').getObject(hive, keyTail);
   debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
   if (neo)
     addConfig(existing, neo);
@@ -778,13 +782,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-                 await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-                 await addConfigFile(config, etc,    'dcp-client/dcp-config.js');
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && await addConfigFile(config, etc,    `dcp-client/${programName}/dcp-config.js`);
-  await addConfigFile(config, home,   '.dcp/dcp-client/dcp-config.js');
-  programName && await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
-                 await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
 
   // Sort out polymorphic arguments: 'passed-in configuration'.
@@ -806,9 +810,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (initArgv[2])
     addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
-  await addConfigEnviron(localConfig, 'DCP_CONFIG_');
-  await addConfigFile(localConfig, etc,    `override/dcp-config.js`);
-  await addConfigRKey(localConfig, 'HKLM', 'override/dcp-config');
+  addConfigEnviron(localConfig, 'DCP_CONFIG_');
+  addConfigFile(localConfig, etc, 'dcp/override/dcp-config.js');
   addConfig(aggrConfig, localConfig);
 
   /**
