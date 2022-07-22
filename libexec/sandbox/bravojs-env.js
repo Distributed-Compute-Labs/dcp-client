@@ -184,12 +184,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function reportRejectedGPUandTotal (t0) {
     try
     {
-      const webGLTimer = getWebGLTimer;
-      const offset = webGLOffset;
       const total = performance.now() - t0;
-
-      let webGL = webGLTimer() - offset;
-      self.webGLOffset = offset + webGL;
+      const webGL = protectedStorage.getAndResetWebGLTimer();
+      protectedStorage.subtractWebGLTimeFromCPUTime(webGL);
       ring3PostMessage({ request: 'measurement', total, webGL });
     }
     catch (error)
@@ -232,12 +229,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     try
     {
-      const webGLTimer = getWebGLTimer;
-      const offset = webGLOffset;
-      const total = performance.now() - t0;
-
-      let webGL = webGLTimer() - offset;
-      self.webGLOffset = offset + webGL;
+      const total = performance.now() - t0 + 1; /* +1 to ensure we never have "0 second slices" */
+      const webGL = protectedStorage.getAndResetWebGLTimer();
+      protectedStorage.subtractWebGLTimeFromCPUTime(webGL); /* Because webGL is sync but doesn't use CPU */
       ring3PostMessage({ request: 'measurement', total, webGL });
       ring3PostMessage({ request: 'complete', result });
     }
@@ -277,6 +271,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      */
     try { await tryFlushMicroTaskQueue(); } catch(e) {};
     try { flushLastLog(); } catch(e) {};
+    try { protectedStorage.markCPUTimeAsDone(); } catch(e) {};
 
     if (rejection)
       errorCallback(rejection);
@@ -301,6 +296,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection)));
+    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection)));
   }
 }); /* end of fn */

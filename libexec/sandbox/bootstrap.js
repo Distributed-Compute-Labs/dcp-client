@@ -131,15 +131,16 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     return true;
   }
 
-  function workerBootstrap$work$emit(eventName, value) {
-    if (typeof eventName !== 'string') {
-      throw new Error(`Event name passed to work.emit must be a string, not ${eventName}.`);
+  function workerBootstrap$work$emit(customEvent, value) {
+    if (typeof customEvent !== 'string') {
+      throw new Error(`Event name passed to work.emit must be a string, not ${customEvent}.`);
     }
 
     postMessage({
       request: 'emitEvent',
       payload: {
-        eventName,
+        eventName: 'custom',
+        customEvent,
         data: value,
       },
     });

@@ -32,6 +32,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = true;
+      serviceEvents.sliceIsFinished = false;
 
       const startTime = performance.now();
       let now = Date.now();
@@ -58,15 +59,30 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
+        if (!serviceEvents.sliceIsFinished)
+        {
+          const endTime = performance.now();
+          totalCPUTime += endTime - startTime;
+  
+          // Set timeout to rerun this function if there are events remaining that just can't be used yet
+          if (events.length > 0)
+          {
+            serviceEvents.nextTimeout = events[0].when
+            serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
+          }
+        }
+      }
+
+      protectedStorage.markCPUTimeAsDone = function markCPUTimeAsDone()
+      {
         const endTime = performance.now();
         totalCPUTime += endTime - startTime;
+        serviceEvents.sliceIsFinished = true;
+      }
 
-        // Set timeout to rerun this function if there are events remaining that just can't be used yet
-        if (events.length > 0)
-        {
-          serviceEvents.nextTimeout = events[0].when
-          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
-        }
+      protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
+      {
+        totalCPUTime -= time;
       }
     }
 
@@ -123,6 +139,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
       return timer;
     }
+
+    /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
+    protectedStorage.setTimeout = setTimeout;
 
     /** Remove a timeout from the list of pending timeouts, regardless of its current
      *  status.
@@ -215,6 +234,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = false;
+      serviceEvents.sliceIsFinished = false;
     }
 
     addEventListener('message', async (event) => {

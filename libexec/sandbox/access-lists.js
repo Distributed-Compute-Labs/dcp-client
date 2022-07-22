@@ -23,6 +23,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'AsyncFunction',
     'Atomics',
     'BigInt',
+    'BigInt64Array',
+    'BigUint64Array',
     'Boolean',
     'Blob',
     'bravojs',
@@ -45,7 +47,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Float32Array',
     'Float64Array',
     'Function',
-    'getWebGLTimer',
     'Headers',
     'Infinity',
     'Int16Array',
@@ -108,7 +109,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'WeakSet',
     'WebAssembly',
     'WebGL2RenderingContext',
-    'webGLOffset',
     'WebGLTexture',
     'WorkerGlobalScope',
     // Our own Webgpu symbols
@@ -122,18 +122,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'work',
     'flushLastLog'
   ]);
-
-  // webGL timer getter to be overwritten in calculate-capabilities
-  self.getWebGLTimer = (function monkeypatchWebGL() {
-    let timer = 0;
-    function getTimer() {
-      return timer;
-    }
-    return getTimer;
-  })();
-
-  // Offset time for webGL when sandbox is re-used
-  self.webGLOffset = 0;
 
   // Origin time for performance polyfill
   const pt0 = new Date().getTime(); 
