@@ -873,8 +873,10 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     let remoteConfig = {};
     let newConfig = {};
     addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
+    delete remoteConfig.worker;
+    delete remoteConfig.standaloneWorker;
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
-
+    delete remoteConfig.worker.trustComputeGroupOrigins;
     /* remote config has lower precedence than local modifications, but gets loaded
      * later because the local scheduler config tells us where to find it, so we
      * rebuild the aggregate config object in order to get correct override precedence.
