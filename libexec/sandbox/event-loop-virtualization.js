@@ -20,6 +20,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 {
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
     let totalCPUTime = 0;
+    let startTime;
     const events = [];
     events.serial = 0;
 
@@ -34,7 +35,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.servicing = true;
       serviceEvents.sliceIsFinished = false;
 
-      const startTime = performance.now();
+      startTime = performance.now();
       let now = Date.now();
 
       sortEvents();
@@ -72,18 +73,17 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
           }
         }
       }
+    }
+    protectedStorage.markCPUTimeAsDone = function markCPUTimeAsDone()
+    {
+      const endTime = performance.now();
+      totalCPUTime += endTime - startTime;
+      serviceEvents.sliceIsFinished = true;
+    }
 
-      protectedStorage.markCPUTimeAsDone = function markCPUTimeAsDone()
-      {
-        const endTime = performance.now();
-        totalCPUTime += endTime - startTime;
-        serviceEvents.sliceIsFinished = true;
-      }
-
-      protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
-      {
-        totalCPUTime -= time;
-      }
+    protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
+    {
+      totalCPUTime -= time;
     }
 
     /** Execute callback after at least timeout ms. 
