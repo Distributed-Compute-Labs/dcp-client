@@ -489,11 +489,10 @@ function addConfigEnviron(existing, prefix) {
       continue
     }
     if (process.env[v][0] === '{') {
-      // FIXME(bryan-hoang): fixCase is not defined.
       let prop = fixCase(v.slice(prefix.length))
       if (typeof neo[prop] !== 'object') {
         neo[prop] = {}
-        addConfig(neo[prop], JSON.parse(process.env[v]))
+        addConfig(neo[prop], eval(`"use strict"; (${process.env[v]})`));
       } else {
         if (typeof neo[prop] === "object") {
           throw new Error("Cannot override configuration property " + prop + " with a string (is an object)")
@@ -504,6 +503,18 @@ function addConfigEnviron(existing, prefix) {
   }
 
   addConfig(existing, neo);
+}
+
+/** Turn UGLY_STRING into uglyString */
+function fixCase(ugly)
+{
+  var fixed = ugly.toLowerCase();
+  var idx;
+
+  while ((idx = fixed.indexOf('_')) !== -1)
+    fixed = fixed.slice(0, idx) + fixed[idx + 1].toUpperCase() + fixed.slice(idx + 2);
+
+  return fixed;
 }
 
 /** 
