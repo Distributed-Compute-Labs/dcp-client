@@ -1,11 +1,13 @@
 /**
  * @file        setup-testenv.js
- *              Library code tosSet up the test environment for Peter .simple tests, so that the tests
+ *              Library code to set up the test environment for Peter .simple tests, so that the tests
  *              do not require a running scheduler, and are not influenced by the testing user's personal
  *              nor machine-wide configs, nor the scheduler's configs.
  * @author      Wes Garland, wes@kingsds.network
  * @date        Sep 2020
  */
+'use strict';
+
 const path = require('path');
 
 process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');

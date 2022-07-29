@@ -1,4 +1,11 @@
 #! /usr/bin/env node
+/**
+ * @file                initsync.simple
+ *                      Smoke test for initSync
+ *
+ * @author              Wes Garland, wes@kingsds.network
+ * @date                Jun 2022
+ */
 
 require('./setup-testenv');
 require('..').initSync();

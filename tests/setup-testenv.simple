@@ -8,6 +8,7 @@
  */
 'use strict';
 
+process.exitCode = 1;
 async function main()
 {
   const { assert, assertEq3 } = require('dcp/dcp-assert').always;
@@ -23,11 +24,13 @@ async function main()
 
   /* Make sure the bundle pulled in at least 20 modules */
   assert(Object.keys(require('module')._cache).filter((x) => x.startsWith('dcp')).length);
+
+  process.exitCode = 0;
 }
 
 require('./setup-testenv');
 require('..').init().then(main).catch(err => {
   console.error(err.stack.split('\n')[0]);
   console.log('dcpConfig =', dcpConfig);
-  process.exit(1);
+  process.exit(2);
 });
