@@ -1,11 +1,17 @@
 #! /usr/bin/env node
+/**
+ * @file        init-override-sched.simple
+ *              Test that overriding the scheduler location in dcp-client ini
+ *              affects dcpConfig.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
+ */
+require('./setup-testenv');
+
 const dcpClient = require('..');
 const { assertEq2, assertEq3 } = require('dcp/dcp-assert').always;
 const alternateScheduler = 'ftp://anvil.acme.com/';
-
-require('./setup-testenv');
-
-assertEq3(true, false);
 
 dcpClient.init(alternateScheduler).then(() => {
   let dcpConfig = require('dcp/dcp-config');
