@@ -1,0 +1,33 @@
+#! /usr/bin/env node
+/**
+ * @file        setup-testenv.simple
+ *              Test to ensure that the setup-testenv.js script is working properly.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        July 2022
+ */
+'use strict';
+
+async function main()
+{
+  const { assert, assertEq3 } = require('dcp/dcp-assert').always;
+
+  /* Ensure dcpConfig.build is correct */
+  assertEq3(require('dcp/build').config.build, dcpConfig.build);
+
+  /* Make sure we are running without a full scheduler conf */
+  assert(typeof dcpConfig.scheduler.services === 'undefined');
+
+  /* Make sure our homedir isn't the real homdir */
+  assert(require('dcp/dcp-dot-dir').getHomeDir().endsWith('tests-homedir'));
+
+  /* Make sure the bundle pulled in at least 20 modules */
+  assert(Object.keys(require('module')._cache).filter((x) => x.startsWith('dcp')).length);
+}
+
+require('./setup-testenv');
+require('..').init().then(main).catch(err => {
+  console.error(err.stack.split('\n')[0]);
+  console.log('dcpConfig =', dcpConfig);
+  process.exit(1);
+});
