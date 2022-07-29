@@ -18,6 +18,7 @@ async function main()
   if (!global.hasOwnProperty('dcpConfig'))
     global.dcpConfig = require('dcp/dcp-config');
 
+  debugger;
   assert.equal(dcpConfig.scheduler.location.constructor.name, "dcpUrl$$DcpURL");
   assert.equal(dcpConfig.scheduler.identity instanceof Promise, true);
   const identity = await dcpConfig.scheduler.identity;
