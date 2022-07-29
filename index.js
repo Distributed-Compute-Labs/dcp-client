@@ -96,6 +96,7 @@ const bundleSandbox = {
   setImmediate, clearImmediate,
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
   dcpConfig: {
+    build: 'bootstrap',
     bundleConfig: true,
     scheduler: {},
     bank: {
@@ -621,6 +622,8 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
     bundleSandbox.dcpConfig = defaultConfig;
   }
 
+  bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+
   Object.defineProperty(exports, 'distDir', {
     value: function dcpClient$$distDir$getter() {
       return distDir;
@@ -672,6 +675,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
+  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
   return ret;
 }
 
