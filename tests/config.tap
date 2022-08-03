@@ -1,3 +1,12 @@
+/**
+ * @file        config.tap
+ *              In conjunction with test-etc/override/dcp-config.js, ensure correct
+ *              precendence of dcpConfig sources.
+ *
+ * @author      KC Erb
+ * @date        Jul 2020
+ */
+'use strict';
 const { test } = require('zora');
 const os = require('os');
 const dcpClient = require('..');

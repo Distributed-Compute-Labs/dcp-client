@@ -1,4 +1,12 @@
 #! /usr/bin/env node
+/**
+ * @file        tests/homedir-override-scheduler.simple
+ *              Using files in ../tests-homedir as if they were the user's homedir, 
+ *              ensure correct dcpConfig inheritance
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
+ */
+'use strict';
 
 require('./setup-testenv');
 

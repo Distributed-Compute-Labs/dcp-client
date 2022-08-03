@@ -1,15 +1,20 @@
 /**
+ * @file        initsync-autoupdate.simple
+ *              Smoke test for dcp-client.init()
+ *
  * Note: this test assumes that the local DCP-client and the production
  * DCP-client bundle were built at different times.  If this test is run from
  * the same bootstrap bundle as the published bundle, it will fail, because it
  * can't detect the update.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
  */
 
 const process = require('process');
 require('./setup-testenv');
 
-process.env.DCP_CONFIG_LOCATION =
-  'https://scheduler.distributed.computer/etc/dcp-config.kvin';
+process.env.DCP_CONFIG_LOCATION = 'https://scheduler.distributed.computer/etc/dcp-config.kvin';
 
 require('..').initSync(undefined, true);
 

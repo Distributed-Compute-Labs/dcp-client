@@ -14,9 +14,9 @@
     "url": "git+ssh://git@github.com/Distributed-Compute-Labs/dcp-client.git"
   },
   "license": "MIT",
-  "author": "Kings Distributed Systems",
+  "author": "Distributive",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.15.0"
   },
   "main": "index.js",
   "directories": {
@@ -53,7 +53,7 @@
     "@kingsds/eslint-config": "1.0.1",
     "eslint": "7.30.0",
     "express": "^4.17.1",
-    "peter": "^2.3.2"
+    "peter": "^2.3.3"
   },
   "peerDependencies": {
     "dcp-worker": "^3.0.0"

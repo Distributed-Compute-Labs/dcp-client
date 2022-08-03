@@ -1,3 +1,9 @@
+/**
+ * @file        tests-homedir/.dcp/dcp-client/config.tap/dcp-config.js
+ *              a config fragment file for the tests to use for program-specific overrides
+ * @author      KC Erb
+ * @date        Sep 2020
+ */
 // Note: we are also using these test configs to test accepted forms
 // this form simply contains an object
 {

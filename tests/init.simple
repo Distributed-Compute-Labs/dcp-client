@@ -1,4 +1,11 @@
 #! /usr/bin/env node
+/**
+ * @file        init.simple
+ *              Smoke test for dcp-client.init()
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
+ */
 
 require('./setup-testenv');
 require('..').init();

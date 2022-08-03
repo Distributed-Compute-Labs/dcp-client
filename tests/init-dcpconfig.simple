@@ -25,7 +25,6 @@ async function main()
 
   assert(dcpConfig === require('dcp/dcp-config'));
 
-  // Test succeeded, return 0 as exit code for process.exit in .then
   return 0;
 }
 
