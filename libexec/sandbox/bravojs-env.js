@@ -2,7 +2,7 @@
  *  This file extends BravoJS, creating a CommonJS Modules/2.0
  *  environment for WebWorkers and similar environments.
  *
- *  Copyright (c) 2018, Kings Distributed Systems, Ltd.  All Rights Reserved.
+ *  Copyright (c) 2018-2022, Distributive, Ltd.  All Rights Reserved.
  *  Wes Garland, wes@kingsds.network
  */
 

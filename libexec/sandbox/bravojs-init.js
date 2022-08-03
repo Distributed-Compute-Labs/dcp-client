@@ -1,8 +1,8 @@
 /**
  *  @file       worker/evaluator-lib/bravojs-init.js
- *              Copyright (c) 2018, Kings Distributed Systems, Ltd.  All Rights Reserved.
+ *              Copyright (c) 2020-2022, Distributive, Ltd. All Rights Reserved.
  *
- *              This file sets up the environment for bravojs to load properly.
+ *              This file sets up the environment for BravoJS to load properly.
  *
  *  @author     Ryan Rossiter, ryan@kingsds.network
  *  @date       Sept 2020

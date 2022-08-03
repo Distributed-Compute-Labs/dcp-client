@@ -366,7 +366,7 @@ function main() {
   setupErrorHandlers();
   
   const argv = require('yargs')
-  .usage('Node Evaluator - Copyright (c) 2020-2021 Kings Distributed Systems, Ltd. All Rights Reserved.'
+  .usage('Node Evaluator - Copyright (c) 2020-2022 Distributive, Ltd. All Rights Reserved.'
     + 'Usage: dcp-evaluator [options] [<file.js> <file.js> ...]')
   .options({
     port: {
