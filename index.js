@@ -96,6 +96,7 @@ const bundleSandbox = {
   setImmediate, clearImmediate,
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
   dcpConfig: {
+    build: 'bootstrap',
     bundleConfig: true,
     scheduler: {},
     bank: {
@@ -466,7 +467,11 @@ function addConfigFile(existing /*, file path components ... */) {
  *  becomes the neo config.
  */
 async function addConfigRKey(existing, hive, keyTail) {
-  var neo = await require('./windows-registry').getObject(hive, keyTail);
+  var neo;
+  // make sure RKey calls do not execute the windows registry calls on non-windows platforms
+  if (os.platform() !== 'win32')
+    return;
+  neo = await require('./windows-registry').getObject(hive, keyTail);
   debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
   if (neo)
     addConfig(existing, neo);
@@ -485,11 +490,10 @@ function addConfigEnviron(existing, prefix) {
       continue
     }
     if (process.env[v][0] === '{') {
-      // FIXME(bryan-hoang): fixCase is not defined.
       let prop = fixCase(v.slice(prefix.length))
       if (typeof neo[prop] !== 'object') {
         neo[prop] = {}
-        addConfig(neo[prop], JSON.parse(process.env[v]))
+        addConfig(neo[prop], eval(`"use strict"; (${process.env[v]})`));
       } else {
         if (typeof neo[prop] === "object") {
           throw new Error("Cannot override configuration property " + prop + " with a string (is an object)")
@@ -500,6 +504,18 @@ function addConfigEnviron(existing, prefix) {
   }
 
   addConfig(existing, neo);
+}
+
+/** Turn UGLY_STRING into uglyString */
+function fixCase(ugly)
+{
+  var fixed = ugly.toLowerCase();
+  var idx;
+
+  while ((idx = fixed.indexOf('_')) !== -1)
+    fixed = fixed.slice(0, idx) + fixed[idx + 1].toUpperCase() + fixed.slice(idx + 2);
+
+  return fixed;
 }
 
 /** 
@@ -606,6 +622,8 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
     bundleSandbox.dcpConfig = defaultConfig;
   }
 
+  bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+
   Object.defineProperty(exports, 'distDir', {
     value: function dcpClient$$distDir$getter() {
       return distDir;
@@ -657,6 +675,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
+  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
   return ret;
 }
 
@@ -778,13 +797,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-                 await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-                 await addConfigFile(config, etc,    'dcp-client/dcp-config.js');
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && await addConfigFile(config, etc,    `dcp-client/${programName}/dcp-config.js`);
-  await addConfigFile(config, home,   '.dcp/dcp-client/dcp-config.js');
-  programName && await addConfigFile(config, home,   `.dcp/dcp-client/${programName}/dcp-config.js`); 
-                 await addConfigRKey(config, 'HKCU', `dcp-client/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
 
   // Sort out polymorphic arguments: 'passed-in configuration'.
@@ -806,9 +825,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (initArgv[2])
     addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
-  await addConfigEnviron(localConfig, 'DCP_CONFIG_');
-  await addConfigFile(localConfig, etc,    `override/dcp-config.js`);
-  await addConfigRKey(localConfig, 'HKLM', 'override/dcp-config');
+  addConfigEnviron(localConfig, 'DCP_CONFIG_');
+  addConfigFile(localConfig, etc, 'dcp/override/dcp-config.js');
   addConfig(aggrConfig, localConfig);
 
   /**

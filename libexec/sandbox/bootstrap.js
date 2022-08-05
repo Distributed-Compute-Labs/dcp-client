@@ -1,6 +1,6 @@
 /**
  *  @file       worker/evaluator-lib/bootstrap.js
- *              Copyright (c) 2018, Kings Distributed Systems, Ltd.  All Rights Reserved.
+ *              Copyright (c) 2018-2022, Distributive, Ltd.  All Rights Reserved.
  *
  *              Final evaluator bootstrap code for defining functions to be used in the work function.
  *

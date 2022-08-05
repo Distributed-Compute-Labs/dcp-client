@@ -1,3 +1,8 @@
 #! /usr/bin/env node
-
+/**
+ * @file        load.simple
+ *              smoke test to insure library will load
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
+ */
 require('..');

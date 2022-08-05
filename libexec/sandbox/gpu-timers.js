@@ -1,6 +1,7 @@
 /**
  *  @file       gpu-timers.js
- *              Copyright (c) 2018, Kings Distributed Systems, Ltd.  All Rights Reserved. @todo: is this correct lol?
+ *              Copyright (c) 2022, Distributive, Ltd.
+ *              All Rights Reserved. Licensed under the terms of the MIT License.
  *
  *              This file adds wrappers for webGL and webGPU functions so we can measure their GPU time
  *

@@ -1,6 +1,6 @@
 /**
  *  @file       worker/evaluator-lib/calculate-capabilities.js
- *              Copyright (c) 2018, Kings Distributed Systems, Ltd.  All Rights Reserved.
+ *              Copyright (c) 2020-2022, Distributive. All Rights Reserved.
  *
  *              This file provides a message handler for handling capabilities requests.
  *

@@ -4,14 +4,9 @@ This is the official client library for DCP, the Distributed Compute Protocol.  
 
 ## Release Notes
 
-### Implementation Status
-DCP is currently (May 2021) in testing for a limited set of developers under our Early Developer Preview program.  If you would like to be part of our *First Dev* cohort, visit https://dcp.dev/ and sign up! We expect the network to be ready for at-scale, arbitrary workload in June 2021.
-
-**Note:** This document discusses [BravoJS](https://github.com/wesgarland/bravojs), however, BravoJS support is not ready at this time. It will be finished during the Early Developer Preview, in time for our general public release; the documentation is geared toward that release.
-
 ### Supported Platforms
 The DCP-Client code can be made to run in nearly any JavaScript environment which supports ES5 and XMLHttpRequest.  Our officially-supported platforms are
-- Node.js version 12 (LTS)
+- Node.js version 14 (LTS)
 - BravoJS, latest version
 - Vanilla Web - no module system at all
 
@@ -38,9 +33,16 @@ If you are a web developer looking to get started quickly, there are is a sample
 #### Self-Hosted Bundle
 To host the bundle on your own server, simply acquire the dcp-client package and copy the files `dcp-client.js` and `dcp-client.css` into a directory on your web server that your web clients can access. We recommend using the `dcp/` directory under your document root.
 
-### BravoJS (EDP: not implemented)
+### BravoJS
 To use the DCP Client library with BravoJS, you must make the bundle and the loader visible to your web application.
 
+```html
+  <script src="/path/to/bravojs/bravo.js"></script>
+  <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+  <script>
+    const compute = require('dcp/compute');
+  </script>
+```
 ## DCP-Client API
 While methods of initializing dcp-client vary somewhat from platform to platform or framework to framework (see below), after initializing, you will have a way to access the key exports of the dcp-client library:
 1. `compute` - Compute API; `compute.run`, `compute.for`, etc.

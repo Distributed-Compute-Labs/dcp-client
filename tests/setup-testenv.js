@@ -1,15 +1,22 @@
-/** Set up the test environment for Peter .simple tests, so that the tests 
- *  do not require a running scheduler (except when absolutely necessary),
- *  and are not influenced by the testing user's personal nor machine-wide
- *  configs.
+/**
+ * @file        setup-testenv.js
+ *              Library code to set up the test environment for Peter .simple tests, so that the tests
+ *              do not require a running scheduler, and are not influenced by the testing user's personal
+ *              nor machine-wide configs, nor the scheduler's configs.
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Sep 2020
  */
+'use strict';
+
 const path = require('path');
 
 process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');
 process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../tests-etc');
-// if (!process.env.DCP_CONFIG_LOCATION)
-//   process.env.DCP_CONFIG_LOCATION = '';
-process.env.DCP_REGISTRY_BASEKEY = `Software\\Kings Distributed Systems\\DCP-Client-Tests\\Peter`;
+if (!process.env.DCP_CONFIG_LOCATION)
+   process.env.DCP_CONFIG_LOCATION = '';
+if (process.env.DCP_SCHEDULER_LOCATION)
+  process.env.DCP_SCHEDULER_LOCATION = '';
+process.env.DCP_REGISTRY_BASEKEY = `Software\\Distributive\\DCP-Client-Tests\\Peter`;
 
 if (require('os').platform() === 'win32')
 {

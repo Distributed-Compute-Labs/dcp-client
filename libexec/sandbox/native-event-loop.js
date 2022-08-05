@@ -51,27 +51,29 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, function nativeEvent
     function fireTimerCallbacks()
     {
       sortTimers();
-      let timer;
-      while ((timer = timers.shift()))
+      let timer = timers.shift();
+      let now = Date.now();
+      if (!timer)
+        throw new Error('Logic error: trying to run timer when no timer exists') /* should be impossible */
+      if (timer.when > now)  /* should be impossible, but at least we can handle this */
       {
-        let now =  Date.now();
-        if (timer.when > now)
-        {
-          timers.push(timer);
-          break;
-        }
-        timer.fn.apply(null, timer.args);
-
-        if (timer.recur)
-        {
-          timer.when = Date.now() + timer.recur;
-          timers.push(timer);
-        }
-        sortTimers();
+        timers.unshift(timer);
+        nextTimer(timers[0].when);
+        return;
       }
+      timer.fn.apply(null, timer.args);
+
+      if (timer.recur)
+      {
+        timer.when = Date.now() + timer.recur;
+        timers.push(timer);
+      }
+
+      sortTimers();
       if (timers.length)
         nextTimer(timers[0].when);
     }
+
     ontimer(fireTimerCallbacks);
 
     /** Execute callback after at least timeout ms. 
