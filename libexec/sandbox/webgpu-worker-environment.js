@@ -12,8 +12,10 @@ self.wrapScriptLoading({ scriptName: 'webgpu-evaluator' }, function webGpuWorker
 {
   if (typeof GPU !== 'undefined') {
     try {
-      if (typeof self.navigator === 'undefined') {
+      if (typeof self.navigator === 'undefined')
+      {
         self.navigator = {};
+        protectedStorage.createdNewNavigator = true;
       }
       self.navigator.gpu = GPU;
 

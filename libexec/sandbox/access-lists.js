@@ -761,38 +761,32 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     // before we allow Object's properties
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
-    // Save them in scope because they'll get hidden by the allowList
-    let _allowList = allowList;
-    let _blockList = blockList;
-    let _polyfills = polyfills;
 
     // Ternary expression to avoid a ReferenceError on navigator
-    let _navigator = typeof navigator !== 'undefined' ? navigator : undefined;
     let _GPU       = ((typeof navigator !== 'undefined') && (typeof navigator.gpu !== 'undefined')) ? navigator.gpu : 
       (typeof GPU !== 'undefined'? GPU : undefined);
-    let _blockListRequirements = blockListRequirements;
-    let _applyAccessLists = applyAccessLists;
-    let _applyPolyfills = applyPolyfills;
 
     for (let g = global; g.__proto__ && (g.__proto__ !== Object); g = g.__proto__) {
       applyAccessLists(g, allowList, blockList, blockListRequirements, polyfills);
     }
 
-    if (typeof _navigator === 'undefined') {
-      _navigator = navigator = {
+    if (typeof navigator === 'undefined')
+    {
+      navigator = {
         userAgent: 'not a browser',
-        gpu: _GPU, 
+        gpu: _GPU,
       };
-    } else {
+    }
+    else if (!protectedStorage.createdNewNavigator)
+    {
       // We also want to allowList certain parts of navigator, but not others.
-      
-      navAllowlist = new Set([
+      const navAllowlist = new Set([
         'userAgent',
         'gpu',
       ]);
       let navPolyfill = {
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
-        gpu: _GPU 
+        gpu: _GPU,
       };
       applyAccessLists(navigator.__proto__, navAllowlist, {}, {}, navPolyfill);
       applyPolyfills(navigator.__proto__, navPolyfill);
