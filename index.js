@@ -33,6 +33,7 @@ const kvin    = require('kvin');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
+const protectedDcpConfigKeys = [ 'system' ];
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
@@ -888,6 +889,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     let remoteConfig = {};
     let newConfig = {};
     addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
+    for (let key of protectedDcpConfigKeys)
+      delete remoteConfig[key];
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
 
     /* remote config has lower precedence than local modifications, but gets loaded
