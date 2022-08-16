@@ -12,10 +12,14 @@
 /* global WebGPUWindow GPU */
 // @ts-nocheck
 
-self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(protectedStorage, ring2PostMessage)
+self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
   /* Default if we don't have webGL */
   protectedStorage.getAndResetWebGLTimer = function defaultTimer()
+  {
+    return 0;
+  }
+  protectedStorage.getAndResetWebGPUTimer = function defaultTimer()
   {
     return 0;
   }
@@ -79,6 +83,50 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
           timeWebGLFactory(context, key);
       return context;
     };
+  }
+
+  if (navigator.gpu)
+  {
+    let time = 0;
+    let t0;
+    let mostRecentGPUQueueP = null;
+    async function awaitGPUAndGetTime()
+    {
+      /* if gpu work exists to be done, ensure
+         it all gets done before we get the final time measurement */
+      while (mostRecentGPUQueueP)
+      {
+        await mostRecentGPUQueueP;
+        await Promise.resolve();
+      }
+
+      const tmp = time;
+      time = 0;
+      return tmp;
+    }
+    protectedStorage.awaitGPUAndGetTime = awaitGPUAndGetTime;
+
+    const originalSubmit = GPUQueue.prototype.submit;
+    GPUQueue.prototype.submit = function(...args)
+    {
+      const submit = originalSubmit.bind(this);
+      submit(...args);
+
+      const queueP = this.onSubmittedWorkDone();
+      if (!mostRecentGPUQueueP)
+        t0 = Date.now();
+
+      mostRecentGPUQueueP = queueP;
+      queueP.then(() => {
+        if (queueP !== mostRecentGPUQueueP)
+          return /* another submit was run before submits to this point were finished, ignore this */
+        else
+        {
+          time += Date.now() - t0;
+          mostRecentGPUQueueP = null;
+        }
+      })
+    }
   }
 
 });
