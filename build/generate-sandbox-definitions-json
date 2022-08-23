@@ -21,6 +21,7 @@ console.log(`Generating sandbox definitions in ${target}`);
 var base = [
   'script-load-wrapper',
   'wrap-event-listeners',
+  'timer-classes',
   'event-loop-virtualization',
   'gpu-timers',
   'access-lists',
