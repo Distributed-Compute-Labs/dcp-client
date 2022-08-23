@@ -62,13 +62,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       {
         serviceEvents.servicing = false;
         serviceEvents.interval.stop();
-  
+
         if (!serviceEvents.sliceIsFinished && events.length)
-          {
-            serviceEvents.nextTimeout = events[0].when
-            serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
-          }
+        {
+          serviceEvents.nextTimeout = events[0].when
+          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
         }
+      }
     }
 
     /** Execute callback after at least timeout ms. 
@@ -222,34 +222,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.sliceIsFinished = false;
     }
 
-    addEventListener('message', async (event) => {
-      try {
-        if (event.request === 'clearTimers') {
-          clearAllTimers();
-          ring0PostMessage({
-            request: 'clearTimersDone',
-          });
-        }
-        else if (event.request === 'resetAndGetCPUTime')
-        {
-          const cpuTime = totalCPUTime;
-          totalCPUTime = 0;
-          ring0PostMessage({
-            request: 'totalCPUTime',
-            CPU: cpuTime
-          })
-        }
-      } catch (error) {
-        ring0PostMessage({
-          request: 'error',
-          error: {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          },
-        });
-      }
-    });
+    protectedStorage.clearAllTimers = clearAllTimers;
+
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate);
 
   self.setTimeout = setTimeout;
