@@ -61,7 +61,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
-        serviceEvents.interval.end();
+        serviceEvents.interval.stop();
   
         if (!serviceEvents.sliceIsFinished && events.length)
           {

@@ -23,11 +23,11 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     {
       if (!this.end)
         throw new Error("Invalid length: interval hasn't been stopped");
-      return this.start - this.end;
+      return this.end - this.start;
     }
   });
 
-  TimeInterval.prototype.end = function end()
+  TimeInterval.prototype.stop = function stop()
   {
     /** @todo: decide if trying to end an already-ended interval should throw */
     if (this.end)
@@ -35,7 +35,6 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     this.end = performance.now();
     return true;
   }
-  TimeInterval.prototype.isEnded = function isEnded() { return this.end === null; }
 
   protectedStorage.TimeInterval = TimeInterval;
 

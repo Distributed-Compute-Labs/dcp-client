@@ -187,7 +187,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try
     {
       const timers = protectedStorage.timers;
-      totalTime.end();
+      totalTime.stop();
       const total = totalTime.length;
       const webGL = timers.webGL.duration();
       const webGPU = timers.webGPU.duration();
@@ -199,21 +199,21 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       // resolving to activate our timing code. However, if the spec changes or
       // new such entities are introduced, our fall-back option is to assume 100%
       // CPU usage. Can be detected by the last interval for the cpu being ended already.
-      const cpuTimeEnded = timers.cpu.mostRecentInterval.end();
-      let cpu;
+      const cpuTimeEnded = timers.cpu.mostRecentInterval.stop();
+      let CPU;
       if (!cpuTimeEnded)
-        cpu = total;
+        CPU = total;
       else
-        cpu = timers.cpu.duration();
+        CPU = timers.cpu.duration();
       // webGL is synchronous gpu usage, subtract that from cpu time.
-      cpu -= webGL;
+      CPU -= webGL;
 
       timers.cpu.reset();
       timers.webGL.reset();
       timers.webGPU.reset();
       protectedStorage.clearAllTimers();
 
-      ring3PostMessage({ request: 'measurement', total, webGL, webGPU, cpu });
+      ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
     }
     catch (error)
     {

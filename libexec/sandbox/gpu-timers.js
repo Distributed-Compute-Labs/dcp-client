@@ -55,11 +55,11 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
         try
         {
           returnValue =  originalFn(...args);
-          interval.end();
+          interval.stop();
         }
         catch(e)
         {
-          interval.end();
+          interval.stop();
           throw e;
         }
         return returnValue;
