@@ -17,29 +17,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
   const webGLTimer = protectedStorage.timers.webGL;
   const webGPUTimer = protectedStorage.timers.webGPU;
 
-  protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
-  {
-    const time = webGLTimer.length;
-    webGLTimer.reset();
-    return time;
-  }
-
-  /**
-   * @returns {boolean} 
-   */
-  protectedStorage.hasWebglSupport = function webglSupport() {
-    try
-    {
-      const canvas = new OffscreenCanvas(1,1);
-      return Boolean(canvas.getContext('webgl') || canvas.getContext('webgl2'));
-    }
-    catch
-    {
-      return false;
-    }
-  };
-
-  if (protectedStorage.hasWebglSupport())
+  if (self.OffscreenCanvas && new OffscreenCanvas(1,1))
   {
 
     /* Factory to wrap a function from a context with a timer */
@@ -80,46 +58,33 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
 
   if (navigator.gpu)
   {
-    let time = 0;
-    let t0;
-    let mostRecentGPUQueueP = null;
-    async function awaitGPUAndGetTime()
-    {
-      /* if gpu work exists to be done, ensure
-         it all gets done before we get the final time measurement */
-      while (mostRecentGPUQueueP)
-      {
-        await mostRecentGPUQueueP;
-        await Promise.resolve();
-      }
-
-      const tmp = time;
-      time = 0;
-      return tmp;
-    }
-    protectedStorage.awaitGPUAndGetTime = awaitGPUAndGetTime;
-
     const originalSubmit = GPUQueue.prototype.submit;
-    GPUQueue.prototype.submit = function(...args)
+    GPUQueue.prototype.submit = function submit(...args)
     {
       const submit = originalSubmit.bind(this);
       submit(...args);
 
       const queueP = this.onSubmittedWorkDone();
-      if (!mostRecentGPUQueueP)
-        t0 = Date.now();
+      const interval = new protectedStorage.TimeInterval();
+      webGPUTimer.push(interval, queueP);
 
-      mostRecentGPUQueueP = queueP;
       queueP.then(() => {
-        if (queueP !== mostRecentGPUQueueP)
-          return /* another submit was run before submits to this point were finished, ignore this */
-        else
-        {
-          time += Date.now() - t0;
-          mostRecentGPUQueueP = null;
-        }
+        interval.stop();
       })
     }
+
+    const originalMap = GPUBuffer.prototype.mapAsync;
+    GPUBuffer.prototype.mapAsync = function mapAsync(...args)
+    {
+      const mapAsync = originalMap.bind(this);
+      const p = mapAsync(...args);
+
+      // Use setImmediate to resolve the map to ensure we are able to restart our timing.
+      return new Promise( (resolve, reject) => {
+        p.then(res => setImmediate(() => resolve(res), 0));
+      });
+    }
+
   }
 
 });

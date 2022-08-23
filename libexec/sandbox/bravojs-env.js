@@ -20,13 +20,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   bravojs.ww.allDeps = []
   bravojs.ww.provideCallbacks = {}
 
-  async function tryFlushMicroTaskQueue()
-  {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-  }
-  
   //Listens for postMessage from the sandbox
   addEventListener('message', async (event) => {
     let message = event
@@ -182,7 +175,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   };
 
   /* Report metrics to sandbox/supervisor */
-  function reportTimes ()
+  async function reportTimes ()
   {
     try
     {
@@ -190,23 +183,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       totalTime.stop();
       const total = totalTime.length;
       const webGL = timers.webGL.duration();
-      const webGPU = timers.webGPU.duration();
+      const webGPU = await timers.webGPU.duration();
 
-      // There exist some operations (such as WebAssembly) that can happen
-      // off-thread, and get re-introduced to the event loop without using
-      // setTimeout, which is how our CPU timing is able to keep accurate.
-      // In such instances we need to wrap these functions to call setTimeout before
-      // resolving to activate our timing code. However, if the spec changes or
-      // new such entities are introduced, our fall-back option is to assume 100%
-      // CPU usage. Can be detected by the last interval for the cpu being ended already.
-      const cpuTimeEnded = timers.cpu.mostRecentInterval.stop();
-      let CPU;
-      if (!cpuTimeEnded)
-        CPU = total;
-      else
-        CPU = timers.cpu.duration();
-      // webGL is synchronous gpu usage, subtract that from cpu time.
-      CPU -= webGL;
+      timers.cpu.mostRecentInterval.stop();
+      let CPU = timers.cpu.duration();
+      CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
 
       timers.cpu.reset();
       timers.webGL.reset();
@@ -240,10 +221,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportTimes();
+      reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
     }
-
-    ring3PostMessage({request: 'workError', error: err});
+    else
+      ring3PostMessage({request: 'workError', error: err});
   }
 
   /**
@@ -252,15 +233,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   function reportResult (result)
   {
-    try
-    {
-      reportTimes();
+    reportTimes.then(() => {
       ring3PostMessage({ request: 'complete', result });
-    }
-    catch(error)
-    {
+    }).catch((error) => {
       ring3PostMessage({ request: 'sandboxError', error });
-    }
+    });
   }
   
   /**
@@ -288,11 +265,14 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       rejection = error;
     }
 
-    /* try to flush any pending tasks on the microtask queue, then flush any pending console events, 
-     * especially in the case of a repeating message that hasn't been emitted yet
-     */
-    try { await tryFlushMicroTaskQueue(); } catch(e) {};
+    // flush any pending console events, especially in the case of a repeating message that hasn't been emitted yet 
     try { flushLastLog(); } catch(e) {};
+    try
+    {
+      protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
+      await new Promise(r => protectedStorage.realSetTimeout(r)); // flush microtask queue
+    }
+    catch(e) {}
 
     if (rejection)
       errorCallback(rejection);
@@ -313,6 +293,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // Measure performance directly before and after the job to get as accurate total time as
     totalTime = new protectedStorage.TimeInterval();
 
+    protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code

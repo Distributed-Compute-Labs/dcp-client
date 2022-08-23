@@ -36,6 +36,8 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     return true;
   }
 
+  TimeInterval.prototype.isEnded = function isEnded() { return this.end === null; }
+
   protectedStorage.TimeInterval = TimeInterval;
 
   
@@ -78,12 +80,31 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   function TimeWebGPU()
   {
     TimeThing.call(this);
+    this.latestWebGPUCall = null;
   }
   TimeWebGPU.prototype = new TimeThing();
 
-  // webGPU intervals may be overlapping due to how we measure them. 
-  TimeWebGPU.prototype.duration = function duration()
+  TimeWebGPU.prototype.push = function push(ele, p)
   {
+    this.intervals.push(ele);
+    this.latestWebGPUCall = p;
+  }
+
+  /**
+   * How long was spent in the gpu.
+   * 
+   * The returned promise will only resolve once all webGPU code has run to completion.
+   */
+  TimeWebGPU.prototype.duration = async function duration()
+  {
+    while (this.latestWebGPUCall)
+    {
+      const latestCall = this.latestWebGPUCall;
+      await this.latestWebGPUCall;
+      if (latestCall === this.latestWebGPUCall)
+        this.latestWebGPUCall = null;
+    }
+
     let totalTime = 0;
     let previousEnd = 0;
     for (let interval of this.intervals)

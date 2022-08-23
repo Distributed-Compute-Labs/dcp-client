@@ -22,6 +22,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const cpuTimer = protectedStorage.timers.cpu;
     const events = [];
     events.serial = 0;
+    let timersLocked = false;
+
+    protectedStorage.lockTimers =   function lockTimers()   { timersLocked = true;  }
+    protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
+
 
     function sortEvents() {
       events.sort(function (a, b) { return a.when - b.when; });
@@ -79,6 +84,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
+      // Work function has resolved, Don't let client init any new timeouts.
+      if (timersLocked)
+        return {};
+
       timeout = timeout || 0;
       let timer, args;
       if (typeof callback === 'string') {
