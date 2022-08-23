@@ -177,23 +177,29 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   /* Report metrics to sandbox/supervisor */
   async function reportTimes ()
   {
-    const timers = protectedStorage.timers;
-    const webGL = timers.webGL.duration();
-    const webGPU = await timers.webGPU.duration();
+    try
+    {
+      const timers = protectedStorage.timers;
+      totalTime.stop();
+      const total = totalTime.length;
+      const webGL = timers.webGL.duration();
+      const webGPU = await timers.webGPU.duration();
 
-    timers.cpu.mostRecentInterval.stop();
-    let CPU = timers.cpu.duration();
-    CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
+      timers.cpu.mostRecentInterval.stop();
+      let CPU = timers.cpu.duration();
+      CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
 
-    totalTime.stop();
-    const total = totalTime.length;
+      timers.cpu.reset();
+      timers.webGL.reset();
+      timers.webGPU.reset();
+      protectedStorage.clearAllTimers();
 
-    timers.cpu.reset();
-    timers.webGL.reset();
-    timers.webGPU.reset();
-    protectedStorage.clearAllTimers();
-
-    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
+      ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
+    }
+    catch (error)
+    {
+      ring3PostMessage({ request: 'sandboxError', error });
+    }
   }
 
   /* Report an error from the work function to the supervisor */
@@ -201,7 +207,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     let err = { message: 'initial state', name: 'initial state' };
 
-    for (const prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
+    for (let prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
     {
       try
       {
@@ -218,9 +224,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
     }
     else
-    {
       ring3PostMessage({request: 'workError', error: err});
-    }
   }
 
   /**
@@ -229,7 +233,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   function reportResult (result)
   {
-    reportTimes().then(() => {
+    reportTimes.then(() => {
       ring3PostMessage({ request: 'complete', result });
     }).catch((error) => {
       ring3PostMessage({ request: 'sandboxError', error });
@@ -289,14 +293,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // Measure performance directly before and after the job to get as accurate total time as
     totalTime = new protectedStorage.TimeInterval();
 
-    // Guarantee CPU timers are cleared before the main work function runs.
-    // This is necessary because the GPU object has been wrapped to make setTimeout calls to
-    // allow for measurement. However, when these timeouts are invoked during capability
-    // calculations, they are erroneously measured as CPU time. This can cause CPU time > total time
-    // and CPUDensity > 1
-    protectedStorage.timers.cpu.reset();
-    protectedStorage.timers.webGPU.reset(); // also reset other timers for saftey
-    protectedStorage.timers.webGL.reset();
     protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
      * 1. shorten stack
