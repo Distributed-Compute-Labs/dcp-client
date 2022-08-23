@@ -19,8 +19,7 @@
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
-    let totalCPUTime = 0;
-    let startTime;
+    const cpuTimer = protectedStorage.timers.cpu;
     const events = [];
     events.serial = 0;
 
@@ -35,7 +34,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.servicing = true;
       serviceEvents.sliceIsFinished = false;
 
-      startTime = performance.now();
+      serviceEvents.interval = new protectedStorage.TimeInterval();
+      cpuTimer.push(serviceEvents.interval);
+
       let now = Date.now();
 
       sortEvents();
@@ -60,30 +61,14 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
-        if (!serviceEvents.sliceIsFinished)
-        {
-          const endTime = performance.now();
-          totalCPUTime += endTime - startTime;
+        serviceEvents.interval.end();
   
-          // Set timeout to rerun this function if there are events remaining that just can't be used yet
-          if (events.length > 0)
+        if (!serviceEvents.sliceIsFinished && events.length)
           {
             serviceEvents.nextTimeout = events[0].when
             serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
           }
         }
-      }
-    }
-    protectedStorage.markCPUTimeAsDone = function markCPUTimeAsDone()
-    {
-      const endTime = performance.now();
-      totalCPUTime += endTime - startTime;
-      serviceEvents.sliceIsFinished = true;
-    }
-
-    protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
-    {
-      totalCPUTime -= time;
     }
 
     /** Execute callback after at least timeout ms. 

@@ -14,14 +14,14 @@
 
 self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
-  /* Default if we don't have webGL */
-  protectedStorage.getAndResetWebGLTimer = function defaultTimer()
+  const webGLTimer = protectedStorage.timers.webGL;
+  const webGPUTimer = protectedStorage.timers.webGPU;
+
+  protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
-    return 0;
-  }
-  protectedStorage.getAndResetWebGPUTimer = function defaultTimer()
-  {
-    return 0;
+    const time = webGLTimer.length;
+    webGLTimer.reset();
+    return time;
   }
 
   /**
@@ -41,14 +41,6 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
 
   if (protectedStorage.hasWebglSupport())
   {
-    let time = 0;
-    function getAndResetWebGLTimer()
-    {
-      const tmp = time;
-      time = 0;
-      return tmp;
-    }
-    protectedStorage.getAndResetWebGLTimer = getAndResetWebGLTimer;
 
     /* Factory to wrap a function from a context with a timer */
     function timeWebGLFactory(context, prop)
@@ -58,15 +50,16 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
       context[prop] = function wrappedWebGLFunction(...args)
       {
         var returnValue;
-        const start = performance.now();
+        const interval = new protectedStorage.TimeInterval();
+        webGLTimer.push(interval);
         try
         {
           returnValue =  originalFn(...args);
-          time += performance.now() - start;
+          interval.end();
         }
         catch(e)
         {
-          time += performance.now() - start;
+          interval.end();
           throw e;
         }
         return returnValue;

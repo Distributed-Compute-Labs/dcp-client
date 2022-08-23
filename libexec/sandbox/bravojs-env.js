@@ -13,7 +13,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 {
   // This file starts at ring 2, but transitions to ring 3 partway through it.
   const ring2PostMessage = self.postMessage; 
-  let ring3PostMessage
+  let ring3PostMessage;
+  let totalTime;
 
   bravojs.ww = {}
   bravojs.ww.allDeps = []
@@ -180,14 +181,39 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     });
   };
 
-  /* Report the GPU and total metrics for a slice that was rejected */
-  function reportRejectedGPUandTotal (t0) {
+  /* Report metrics to sandbox/supervisor */
+  function reportTimes ()
+  {
     try
     {
-      const total = performance.now() - t0;
-      const webGL = protectedStorage.getAndResetWebGLTimer();
-      protectedStorage.subtractWebGLTimeFromCPUTime(webGL);
-      ring3PostMessage({ request: 'measurement', total, webGL });
+      const timers = protectedStorage.timers;
+      totalTime.end();
+      const total = totalTime.length;
+      const webGL = timers.webGL.duration();
+      const webGPU = timers.webGPU.duration();
+
+      // There exist some operations (such as WebAssembly) that can happen
+      // off-thread, and get re-introduced to the event loop without using
+      // setTimeout, which is how our CPU timing is able to keep accurate.
+      // In such instances we need to wrap these functions to call setTimeout before
+      // resolving to activate our timing code. However, if the spec changes or
+      // new such entities are introduced, our fall-back option is to assume 100%
+      // CPU usage. Can be detected by the last interval for the cpu being ended already.
+      const cpuTimeEnded = timers.cpu.mostRecentInterval.end();
+      let cpu;
+      if (!cpuTimeEnded)
+        cpu = total;
+      else
+        cpu = timers.cpu.duration();
+      // webGL is synchronous gpu usage, subtract that from cpu time.
+      cpu -= webGL;
+
+      timers.cpu.reset();
+      timers.webGL.reset();
+      timers.webGPU.reset();
+      protectedStorage.clearAllTimers();
+
+      ring3PostMessage({ request: 'measurement', total, webGL, webGPU, cpu });
     }
     catch (error)
     {
@@ -196,11 +222,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   }
 
   /* Report an error from the work function to the supervisor */
-  function reportError (t0, error)
+  function reportError (error)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
-    for (prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
+    for (let prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
     {
       try
       {
@@ -214,7 +240,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportRejectedGPUandTotal(t0);
+      reportTimes();
     }
 
     ring3PostMessage({request: 'workError', error: err});
@@ -222,17 +248,13 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
   /**
    * Report a result from work function and metrics to the supervisor.
-   * @param     t0      timestamp when work began
    * @param     result  the value that the work function returned promise resolved to
    */
-  function reportResult (t0, result)
+  function reportResult (result)
   {
     try
     {
-      const total = performance.now() - t0 + 1; /* +1 to ensure we never have "0 second slices" */
-      const webGL = protectedStorage.getAndResetWebGLTimer();
-      protectedStorage.subtractWebGLTimeFromCPUTime(webGL); /* Because webGL is sync but doesn't use CPU */
-      ring3PostMessage({ request: 'measurement', total, webGL });
+      reportTimes();
       ring3PostMessage({ request: 'complete', result });
     }
     catch(error)
@@ -271,7 +293,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      */
     try { await tryFlushMicroTaskQueue(); } catch(e) {};
     try { flushLastLog(); } catch(e) {};
-    try { protectedStorage.markCPUTimeAsDone(); } catch(e) {};
 
     if (rejection)
       errorCallback(rejection);
@@ -290,12 +311,12 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function runWorkFunction(datum)
   {
     // Measure performance directly before and after the job to get as accurate total time as
-    const t0 = performance.now();
+    totalTime = new protectedStorage.TimeInterval();
 
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(t0, result), (rejection) => reportError(t0, rejection)));
+    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(result), (rejection) => reportError(rejection)));
   }
 }); /* end of fn */
