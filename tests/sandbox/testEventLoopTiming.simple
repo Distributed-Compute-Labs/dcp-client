@@ -16,7 +16,8 @@ const sandboxScripts = '../../libexec/sandbox/'
 
 const files = [
   require.resolve(sandboxScripts + 'script-load-wrapper.js'),
-  require.resolve(sandboxScripts + 'event-loop-virtualization.js')
+  require.resolve(sandboxScripts + 'timer-classes.js'),
+  require.resolve(sandboxScripts + 'event-loop-virtualization.js'),
 ]
 const expectedOutputs = {
   'script-load-wrapper': false,
@@ -33,19 +34,6 @@ function outputTests(message)
     expectedOutputs['script-load-wrapper'] = true;
   if (message.value.script === 'event-loop-virtualization')
     expectedOutputs['event-loop-virtualization'] = true;
-
-  if (message.value.request === 'totalCPUTime')
-  {
-    const timeTaken = message.value.CPU;
-    // Give 5% buffer for allowable times - can drift a little due to timeout etc
-    if (timeTaken*1.05 > loopDelay * 2 && timeTaken*.95 < loopDelay * 2)
-      expectedOutputs.cpuTime = true;
-    else
-      expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}, expected ${loopDelay * 2}±5%`;
-  }
-  // If all of my expected outputs have been met, set the exit code to 0 since all was ok.
-  if (Object.values(expectedOutputs).every((ele) =>  ele))
-    process.exitCode = 0;
 }
 
 
@@ -67,7 +55,20 @@ setTimeout(async () => {
 },0)
 
 
-realSetTimeout(() => emitEvent('message', { request: 'resetAndGetCPUTime' }), 2000);
+realSetTimeout(() => {
+  self.wrapScriptLoading({ scriptName: 'test' }, function test(protectedStorage) {
+    const timeTaken = protectedStorage.timers.cpu.duration();
+    // Give 5% buffer for allowable times - can drift a little due to timeout etc
+    if (timeTaken*1.05 > loopDelay * 2 && timeTaken*.95 < loopDelay * 2)
+      expectedOutputs.cpuTime = true;
+    else
+      expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}, expected ${loopDelay * 2}±5%`;
+
+    // If all of my expected outputs have been met, set the exit code to 0 since all was ok.
+    if (Object.values(expectedOutputs).every((ele) =>  ele))
+      process.exitCode = 0;
+  })
+}, 2000);
 
 
 
