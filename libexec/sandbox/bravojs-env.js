@@ -233,7 +233,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   function reportResult (result)
   {
-    reportTimes.then(() => {
+    reportTimes().then(() => {
       ring3PostMessage({ request: 'complete', result });
     }).catch((error) => {
       ring3PostMessage({ request: 'sandboxError', error });

@@ -2,6 +2,23 @@
  *  @file       timer-classes.js
  *              This file creates classes that will be required for timing.
  * 
+ * TimeInterval:  measure an interval of time. Time interval starts when the object
+ *                is instantiated, and ends when `TimeInterval.stop()` is called.
+ *                It's length property is the time duration.
+ * 
+ * TimeThing:     Generic wrapper for multiple TimeIntervals. Can add new intervals
+ *                with `push`, reset all intervals with `reset`, and find the total
+ *                time duration (including any overlapping time) with `duration`.
+ * 
+ * TimeCPU:       Inherits from TimeThing. Adds a reference to the most recently added
+ *                duration, so it can be ended even if there is no other available reference
+ *                to that interval.
+ * 
+ * TimeWebGPU:    Inherits from TimeThing. Changes how `duration` functions to:
+ *                    a) make it async to ensure all durations are finished before resolving (accomplished
+ *                       by keeping a reference to the promise that will finish the last interval)
+ *                    b) returns the non-overlapping duration.
+ * 
  * @author  Ryan Saweczko <ryansaweczko@kingsds.network>
  * @date    Aug 2022
  */

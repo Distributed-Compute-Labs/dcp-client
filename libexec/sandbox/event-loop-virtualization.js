@@ -32,6 +32,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       events.sort(function (a, b) { return a.when - b.when; });
     }
 
+    /*
+     * Assumption: serviceEvents must only be triggered if there is an event waiting to
+     * be run. If there are no pending events (or the last one is removed), the trigger 
+     * to call serviceEvents next should be removed.
+    */
     function serviceEvents()
     {
       serviceEvents.timeout = null;
@@ -42,24 +47,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.interval = new protectedStorage.TimeInterval();
       cpuTimer.push(serviceEvents.interval);
 
-      let now = Date.now();
-
       sortEvents();
-      if (events[0].when <= now)
+      const event = events.shift();
+      if (event.eventType === 'timer')
       {
-        const event = events.shift();
-        if (event.eventType === 'timer')
+        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+        if (event.recur)
         {
-          serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
-          if (event.recur)
-          {
-            event.when = Date.now() + event.recur;
-            events.push(event);
-            sortEvents();
-          }
+          event.when = Date.now() + event.recur;
+          events.push(event);
+          sortEvents();
         }
-        // Can add handles for events to the event loop as needed (ie messages)
       }
+      // Can add handles for events to the event loop as needed (ie messages)
 
       // Measure the time on the event loop after everything has executed
       serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);

@@ -58,13 +58,61 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
 
   if (navigator.gpu)
   {
+    // Want to use the wrapped versions of these after all gpu functions are wrapped.
     const originalSubmit = GPUQueue.prototype.submit;
+    const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
+
+    function webGPUWrapperFactory(webGPUClass)
+    {
+
+      // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
+      if (!self[webGPUClass].prototype)
+        return;
+
+      for (let prop of Object.keys(self[webGPUClass].prototype))
+      {
+        let originalFn;
+        try
+        {
+          originalFn = self[webGPUClass].prototype[prop];
+          if (originalFn instanceof Promise)
+          {
+            originalFn.catch(() => {/* accessing properties from class constructors can be dangerous in weird ways */})
+            continue;
+          }
+        }
+        catch(e)
+        {
+          // The property can't be invoked, so must be a property (like 'name'). Don't need to wrap it.
+          continue;
+        }
+
+        // If the function returns a promise, wrap it with setImmediate. Triggers restart of CPU measurement.
+        self[webGPUClass].prototype[prop] = function webGPU(...args)
+        {
+          const fn = originalFn.bind(this);
+          var returnValue =  fn(...args);
+          if (returnValue instanceof Promise)
+            return new Promise((resolve) => {
+              returnValue.then((res) => setImmediate(() => resolve(res)));
+            });
+          return returnValue;
+        }
+      }
+    }
+
+    for (let key of Object.getOwnPropertyNames(self))
+    {
+      if (key.startsWith('GPU'))
+        webGPUWrapperFactory(key);
+    }
+
     GPUQueue.prototype.submit = function submit(...args)
     {
-      const submit = originalSubmit.bind(this);
-      submit(...args);
+      const fn = originalSubmit.bind(this);
+      fn(...args);
 
-      const queueP = this.onSubmittedWorkDone();
+      const queueP = originalSubmitDone.bind(this)();
       const interval = new protectedStorage.TimeInterval();
       webGPUTimer.push(interval, queueP);
 
@@ -72,19 +120,6 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
         interval.stop();
       })
     }
-
-    const originalMap = GPUBuffer.prototype.mapAsync;
-    GPUBuffer.prototype.mapAsync = function mapAsync(...args)
-    {
-      const mapAsync = originalMap.bind(this);
-      const p = mapAsync(...args);
-
-      // Use setImmediate to resolve the map to ensure we are able to restart our timing.
-      return new Promise( (resolve, reject) => {
-        p.then(res => setImmediate(() => resolve(res), 0));
-      });
-    }
-
   }
 
 });
