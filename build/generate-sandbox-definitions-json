@@ -23,7 +23,7 @@ var base = [
   'wrap-event-listeners',
   'timer-classes',
   'event-loop-virtualization',
-  'gpu-timers',
+  'unique-timing',
   'access-lists',
   'bravojs-init',
   'bravojs/bravo.js',
