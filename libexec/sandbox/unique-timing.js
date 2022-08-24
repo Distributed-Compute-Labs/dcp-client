@@ -134,6 +134,24 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     }
   }
 
-  debugger;
+  // WebAssembly doesn't have a prototype, can't use the factory the same way. But WebAssembly's spec is finalized so we don't need to be as general as for webGPU
+  for (const prop of Object.keys(WebAssembly))
+  {
+    if (prop === 'validate') // the only non-promise function.
+      continue;
+
+    const fn = WebAssembly[prop];
+    WebAssembly[prop] = function timerWrapper(...args)
+    {
+      var returnValue =  fn.bind(this)(...args);
+      if (returnValue instanceof Promise)
+        return new Promise((resolve, reject) => {
+          returnValue.then(
+            (res) => setImmediate(() => resolve(res)),
+            (rej) => setImmediate(() => reject(rej)));
+        });
+      return returnValue;
+    }
+  }
 
 });
