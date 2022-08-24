@@ -80,6 +80,8 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
             originalFn.catch(() => {/* accessing properties from class constructors can be dangerous in weird ways */})
             continue;
           }
+          if (typeof originalFn !== 'function')
+            continue;
         }
         catch(e)
         {
@@ -93,8 +95,10 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
           const fn = originalFn.bind(this);
           var returnValue =  fn(...args);
           if (returnValue instanceof Promise)
-            return new Promise((resolve) => {
-              returnValue.then((res) => setImmediate(() => resolve(res)));
+            return new Promise((resolve, reject) => {
+              returnValue.then(
+                (res) => setImmediate(() => resolve(res)),
+                (rej) => setImmediate(() => reject(rej)));
             });
           return returnValue;
         }
