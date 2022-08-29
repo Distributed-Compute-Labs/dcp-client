@@ -159,6 +159,7 @@ function evalScriptInSandbox(filename, sandbox, olFlag) {
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
  *  file, and the sandbox is a special container with limited objects that we setup
  *  during config file processing.
+ *  'code' must come from a trusted source, so we don't execute unknown code.
  *
  *  @param      code     {string}        The code to eval
  *  @param      sandbox  {object}        A sandbox object, used for injecting 'global' symbols as needed
@@ -771,7 +772,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * to figure out where to download the scheduler.
  */
   let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
-  let remoteConfigCode;
+  let remoteConfig;
   let localConfig = {
     scheduler: {
       location: new URL('https://scheduler.distributed.computer/')
@@ -859,7 +860,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== false) {
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
-      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin`)
+      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin?ver=2.0.0`)
     });
   }
 
@@ -870,13 +871,12 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   {
     try {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
-      remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
-      remoteConfigCode = kvin.deserialize(remoteConfigCode);
+      remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
     } catch(e) {
       console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
       throw e;
     }
-    if (remoteConfigCode.length === 0)
+    if (remoteConfig.length === 0)
       throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
   }
       
@@ -885,10 +885,9 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   bundleSandbox.XMLHttpRequest = XMLHttpRequest;
   bundleSandbox.window = bundleSandbox
   bundleSandbox.globalThis = bundleSandbox
-  if (remoteConfigCode) {
-    let remoteConfig = {};
+  if (remoteConfig)
+  {
     let newConfig = {};
-    addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
     for (let key of protectedDcpConfigKeys)
       delete remoteConfig[key];
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
