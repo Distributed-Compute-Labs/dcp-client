@@ -33,7 +33,7 @@ const kvin    = require('kvin');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
-const protectedDcpConfigKeys = [ 'system' ];
+const protectedDcpConfigKeys = [ 'system', 'worker', 'standaloneWorker' ];
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
