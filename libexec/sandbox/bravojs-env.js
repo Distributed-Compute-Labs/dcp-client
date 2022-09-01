@@ -180,7 +180,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try
     {
       const timers = protectedStorage.timers;
-      totalTime.stop();
       const total = totalTime.length;
       const webGL = timers.webGL.duration();
       const webGPU = await timers.webGPU.duration();
@@ -188,6 +187,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       timers.cpu.mostRecentInterval.stop();
       let CPU = timers.cpu.duration();
       CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
+
+      totalTime.stop();
 
       timers.cpu.reset();
       timers.webGL.reset();
