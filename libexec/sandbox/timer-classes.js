@@ -4,7 +4,7 @@
  * 
  * TimeInterval:  measure an interval of time. Time interval starts when the object
  *                is instantiated, and ends when `TimeInterval.stop()` is called.
- *                It's length property is the time duration.
+ *                Its length property is the time duration.
  * 
  * TimeThing:     Generic wrapper for multiple TimeIntervals. Can add new intervals
  *                with `push`, reset all intervals with `reset`, and find the total
@@ -23,7 +23,6 @@
  * @date    Aug 2022
  */
 
-/* global self, bravojs, addEventListener, postMessage */
 // @ts-nocheck
 
 self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$fn(protectedStorage)
@@ -46,7 +45,6 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
 
   TimeInterval.prototype.stop = function stop()
   {
-    /** @todo: decide if trying to end an already-ended interval should throw */
     if (this.end)
       return false
     this.end = performance.now();
@@ -101,10 +99,10 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   }
   TimeWebGPU.prototype = new TimeThing();
 
-  TimeWebGPU.prototype.push = function push(ele, p)
+  TimeWebGPU.prototype.push = function push(obj)
   {
-    this.intervals.push(ele);
-    this.latestWebGPUCall = p;
+    this.intervals.push(obj.interval);
+    this.latestWebGPUCall = obj.queueP;
   }
 
   /**

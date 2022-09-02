@@ -208,7 +208,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     let err = { message: 'initial state', name: 'initial state' };
 
-    for (let prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
+    for (const prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
     {
       try
       {
@@ -225,7 +225,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
     }
     else
+    {
       ring3PostMessage({request: 'workError', error: err});
+    }
   }
 
   /**
