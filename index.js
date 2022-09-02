@@ -755,6 +755,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * of the API consumer always take priority.
  *
  *  1 - create the local config by 
+ *       - reading the config in dcp-client/etc/dcp-client.js
  *       - reading the config buried in the bundle and defined at module load
  *       - reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
  *       - reading the registry
@@ -792,6 +793,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
 
+  debugger;
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
@@ -799,6 +801,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
+  addConfigFile(config, __dirname, 'etc/dcp-config.js');
   await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
   addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
