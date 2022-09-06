@@ -793,7 +793,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
 
-  debugger;
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
