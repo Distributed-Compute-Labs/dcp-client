@@ -37,7 +37,7 @@
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
-    "kvin": "^1.2.7",
+    "kvin": "^1.2.10",
     "nanoid": "^3.2.0",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
