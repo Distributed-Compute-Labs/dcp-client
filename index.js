@@ -33,6 +33,7 @@ const kvin    = require('kvin');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
+const protectedDcpConfigKeys = [ 'system' ];
 
 exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
@@ -796,16 +797,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     programName = path.basename(programName, '.js');
   let config = localConfig;
 
-  /* This follows spec doc line-by-line */
-  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
-  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
-  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
-  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
-  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
-  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
-
   // Sort out polymorphic arguments: 'passed-in configuration'.
   if (initArgv[0]) {
     if (typeof initArgv[0] === 'string' || (typeof initArgv[0] === 'object' && initArgv[0] instanceof global.URL)) {
@@ -825,6 +816,16 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (initArgv[2])
     addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
+  /* This follows spec doc line-by-line */
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+
   addConfigEnviron(localConfig, 'DCP_CONFIG_');
   addConfigFile(localConfig, etc, 'dcp/override/dcp-config.js');
   addConfig(aggrConfig, localConfig);
@@ -888,6 +889,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     let remoteConfig = {};
     let newConfig = {};
     addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
+    for (let key of protectedDcpConfigKeys)
+      delete remoteConfig[key];
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
 
     /* remote config has lower precedence than local modifications, but gets loaded
