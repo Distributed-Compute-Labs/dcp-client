@@ -139,14 +139,12 @@ function runSandboxedCode(sandbox, code, options)
 /** Evaluate a file in a sandbox without polluting the global object.
  *  @param      filename        {string}    The name of the file to evaluate, relative to
  *  @param      sandbox         {object}    A sandbox object, used for injecting 'global' symbols as needed
- *  @param      olFlag          {boolean}   true if the file contains only an object literal XXX @todo deprecate this
  */
-function evalScriptInSandbox(filename, sandbox, olFlag) {
+function evalScriptInSandbox(filename, sandbox)
+{
   var code
   try {
     code = readSafePermsFile(path.resolve(distDir, filename));
-    if (olFlag)
-      code = `'use strict'; (${code});`;
   } catch(e) {
     debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
@@ -491,8 +489,6 @@ function addConfigFile(existing /*, file path components ... */) {
     
     if (withoutComments(code).match(/^\s*{/)) {
       /* config file is just a JS object literal */
-      console.log('XXX RUNNING:' + fullPath);
-      debugger;
       const neo = evalStringInSandbox(`'use strict'; return (${code});`, bundleSandbox, fullPath);
       addConfig(existing, neo);
     } else {
