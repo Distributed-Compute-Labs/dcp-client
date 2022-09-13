@@ -1,5 +1,4 @@
 #! /usr/bin/env node
-
 /**
  * @file        custom-config.simple
  *              Test which ensures that custom config files (options.configName)
@@ -14,11 +13,9 @@ const dcpClient = require('..');
 async function main()
 {
   const dcpConfig = require('dcp/dcp-config');
-  console.log(dcpConfig);
 
   if (dcpConfig.stack['./etc/dcp-config.js'] !== 'yes')
     throw new Error('./etc/dcp-config.js was either not loaded, or was overridden incorrectly');
-
 }
 
 dcpClient.init({/*dcpConfig*/}, {

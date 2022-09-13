@@ -1079,7 +1079,7 @@ function createAggregateConfigSync(initConfig, options)
   const serializedOutput = String(child.output[3]);
   const aggregateConfig = custom.deserialize(serializedOutput);
 
-  debug('dcp-client:init') && console.debug('fetched aggregate configuration', aggregateConfig);
+  debug('dcp-client:init')('fetched aggregate configuration', aggregateConfig);
   return aggregateConfig;
 }
   
