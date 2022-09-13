@@ -32,44 +32,14 @@ const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
 const kvin    = require('kvin');
+const debug   = require('debug');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
 const protectedDcpConfigKeys = [ 'system' ];
 
-exports.debug = false;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
 let hadOriginalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
-
-function debugging(what = 'dcp-client') {
-  const debugSyms = []
-        .concat((exports.debug || '').split(','))
-        .concat((process.env.DCP_CLIENT_DEBUG || '').split(','))
-        .filter((a) => !!a);
-  
-  if (typeof debugging.cache[what] === 'boolean') /* cache hit */
-    return debugging.cache[what];
-
-  if (-1 !== debugSyms.indexOf('*') ||
-      -1 !== debugSyms.indexOf('all') ||
-      -1 !== debugSyms.indexOf('all:all') ||
-      -1 !== debugSyms.indexOf(what) ||
-      -1 !== debugSyms.indexOf('dcp-client') ||
-      -1 !== debugSyms.indexOf('verbose')) {
-    debugging.cache[what] = true;
-  } else {
-    debugging.cache[what] = false;
-  }
-
-  return debugging.cache[what];
-}
-debugging.cache = {}
-
-const log = (namespace, ...args) => {
-//  if (debugging(`dcp-client:${namespace}`)) {
-    console.debug(`dcp-client:${namespace}`, ...args);
-//  }
-};
 
 const distDir = path.resolve(path.dirname(module.filename), 'dist');
 
@@ -144,11 +114,12 @@ function evalScriptInSandbox(filename, sandbox)
 {
   var code
   try {
+    debug('dcp-client:evalScriptInSandbox')('evaluating', filename);
     code = readSafePermsFile(path.resolve(distDir, filename));
   } catch(e) {
-    debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
       return {}
+    debug('dcp-client:evalScriptInSandbox')(e);
     throw e
   }
 
@@ -194,10 +165,11 @@ function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringI
        * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
        * the whole stack trace to stderr by default.
        */
-      displayErrors: debugging('evalStringInSandbox'),
+      displayErrors: false,
     });
   } catch (error) {
-    console.error(error);
+    console.error(error.message);
+    debug('dcp-client:evalStringInSandbox')(error);
     process.exit(1);
   }
 
@@ -256,7 +228,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
   injectedModules[id] = true;
-  debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
+  debug('dcp-client:modules')(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
 /**
@@ -289,7 +261,7 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 /* Inject all properties of the bundle object as modules in the
  * native NodeJS module system.
  */
-debugging('modules') && console.debug('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
+debug('dcp-client:modules')('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
 
@@ -471,7 +443,7 @@ function addConfigFile(existing /*, file path components ... */) {
   if (fullPath && checkConfigFileSafePerms(fullPath + '.json'))
   {
     fullPath = fullPath + './json';
-    debugging() && console.debug(` * Loading configuration from ${fullPath}`);
+    debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
     addConfig(existing, require(fullPath));
     return;
   }
@@ -482,7 +454,7 @@ function addConfigFile(existing /*, file path components ... */) {
     let code
     
     fullPath = fullPath + '.js';
-    debugging() && console.debug(` * Loading configuration from ${fullPath}`);
+    debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
     code = readSafePermsFile(fullPath, 'utf-8');
     if (!code)
       return;
@@ -508,7 +480,7 @@ function addConfigFile(existing /*, file path components ... */) {
       
       knownGlobals = Object.keys(configSandbox);
       const ret = evalStringInSandbox(`'use strict'; ${code};`, configSandbox, fullPath);
-      console.log(fullPath, ret);
+
       // handle programmatic assignment to top-level config
       // via sandbox globals
       for (let key of Object.keys(configSandbox)) {
@@ -528,7 +500,7 @@ function addConfigFile(existing /*, file path components ... */) {
     return;
   }
 
-  debugging() && console.debug(` . did not load configuration file ${fullPath}`);
+  debug('dcp-client:config')(` . did not load configuration file ${fullPath}`);
 }
 
 /** Merge a new configuration object on top of an existing one, via
@@ -541,7 +513,7 @@ async function addConfigRKey(existing, hive, keyTail) {
   if (os.platform() !== 'win32')
     return;
   neo = await require('./windows-registry').getObject(hive, keyTail);
-  debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
+  debug('dcp-client:config')(` * Loading configuration from ${hive} ${keyTail}`);
   if (neo)
     addConfig(existing, neo);
 }
@@ -657,7 +629,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
     bundle.initTailHook(aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
 
   /* 2 */
-  debugging('modules') && console.debug(`Begin phase 2 module injection '${finalBundleLabel}'`);
+  debug('dcp-client:modules')(`Begin phase 2 module injection '${finalBundleLabel}'`);
   delete nsMap['dcp-config'];
   injectNsMapModules(nsMap, bundle, finalBundleLabel, true);
   injectModule('dcp/client', exports);
@@ -682,7 +654,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   /* 3 */
   if (hadOriginalDcpConfig) {
     /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
-    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
+    debug('dcp-client:config')('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(require('dcp/dcp-config'), global.dcpConfig);
     bundleSandbox.dcpConfig = global.dcpConfig;
     injectModule('dcp/dcp-config', global.dcpConfig, true);
@@ -714,7 +686,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
       let ourVer = require('dcp/protocol').version.provides;
       let minVer = aggrConfig.scheduler.compatibility.minimum.dcp;
       let ok = require('semver').satisfies(ourVer, minVer);
-      debugging('version') && console.debug(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
+      debug('dcp-client:version')(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
       if (!ok)
         throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, minVer, 'EDCP_PROTOCOL_VERSION');
     }
@@ -832,7 +804,7 @@ exports.init = async function dcpClient$$init() {
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
-      debugging() && console.debug(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
+      debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = await require('dcp/utils').justFetch(finalBundleURL.href);
     } catch(e) {
       console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
@@ -859,7 +831,7 @@ exports.initSync = function dcpClient$$initSync() {
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
-      debugging() && console.debug(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
+      debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = exports.fetchSync(finalBundleURL);
     } catch(e) {
       console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
@@ -998,11 +970,11 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   }
 
   if (aggrConfig.scheduler.configLocation === false)
-    debugging() && console.debug(` * Not loading configuration from remote scheduler`);
+    debug('dcp-client:config')(` * Not loading configuration from remote scheduler`);
   else
   {
     try {
-      debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
+      debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
       remoteConfigCode = kvin.deserialize(remoteConfigCode);
     } catch(e) {
@@ -1080,8 +1052,9 @@ function createAggregateConfigSync(initConfig, options)
   custom.userCtors.dcpEth$$Address = Address;
 
   const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
-  if (debugging('build-dcp-config'))
-    spawnArgv.unshift('--inspect');
+  /* XXX @todo - in debug build,  spawnArgv.unshift('--inspect'); */
+  const env = process.env.DEBUG ? Object.assign({}, process.env) : process.env;
+  delete env.DEBUG;
   const child = spawnSync(
     process.execPath,
     spawnArgv,
@@ -1106,7 +1079,7 @@ function createAggregateConfigSync(initConfig, options)
   const serializedOutput = String(child.output[3]);
   const aggregateConfig = custom.deserialize(serializedOutput);
 
-  debugging('init-sync') && console.debug('fetched aggregate configuration', aggregateConfig);
+  debug('dcp-client:init') && console.debug('fetched aggregate configuration', aggregateConfig);
   return aggregateConfig;
 }
   
