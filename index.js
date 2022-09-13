@@ -139,21 +139,20 @@ function runSandboxedCode(sandbox, code, options)
 /** Evaluate a file in a sandbox without polluting the global object.
  *  @param      filename        {string}    The name of the file to evaluate, relative to
  *  @param      sandbox         {object}    A sandbox object, used for injecting 'global' symbols as needed
- *  @param      olFlag          {boolean}   true if the file contains only an object literal
+ *  @param      olFlag          {boolean}   true if the file contains only an object literal XXX @todo deprecate this
  */
 function evalScriptInSandbox(filename, sandbox, olFlag) {
   var code
   try {
-    code = fs.readFileSync(path.resolve(distDir, filename), 'utf-8')
+    code = readSafePermsFile(path.resolve(distDir, filename));
     if (olFlag)
-      code = '(' + code + ')'
+      code = `'use strict'; (${code});`;
   } catch(e) {
     debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
       return {}
     throw e
   }
-
 
   return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
 }
@@ -343,22 +342,77 @@ function addConfigs() {
     addConfig(existing, neo);
 }
 
-function checkConfigFileSafePerms(fullPath) {
-  let newPath
-  let args = fullPath.split(path.sep)
+/**
+ * Throw an exception if the given fullPath is not a "safe" file to load.
+ * "Safe" files are those that are unlikely to contain malicious code, as 
+ * they are owned by an administrator or the same person who loaded the
+ * code.
+ *
+ * Returns false is the file simply does not exist.
+ *
+ * @param {string} fullPath    the full path to the file to check
+ * @param {object} statBuf     [optional] existing stat buf for the file
+ */
+function checkConfigFileSafePerms(fullPath, statBuf)
+{
+  const fun = checkConfigFileSafePerms;
+  var   statBuf;
 
-  args[0] += path.sep
-  do
+  if (!fs.existsSync(fullPath))
+    return false;
+  if (!fun.selfStat)
+    fun.selfStat = fs.statSync(module.filename);
+  if (!fun.mainStat)
+    fun.mainStat = fs.statSync(require.main.filename);
+
+  statBuf = fs.statSync(fullPath);
+  
+  /* Disallow files with world-writeable path components. @todo reduce redundant checks */
+  if (os.platform() !== 'win32')
   {
-    let check
-    check=path.resolve.apply(null, args)
-    if (fs.statSync(check).mode & 0o002)
-      console.warn(`Config ${fullPath} insecure due to world-writeable ${check}`);
-    args.pop()
-  } while(args.length);
+    const args = fullPath.split(path.sep);
+    args[0] = path.sep;
+
+    do
+    {
+      let check = path.resolve.apply(null, args);
+      if (fs.statSync(check).mode & 0o002)
+        throw new Error(`Config ${fullPath} insecure due to world-writeable path component ${check}`);
+      args.pop();
+    } while(args.length);
+  }
+
+  /* Permit based on ownership */
+  if (statBuf.uid === fun.selfStat.uid)
+    return true; /* owned by same user as dcp-client */
+  if (statBuf.uid === fun.mainStat.uid)
+    return true; /* owned by same user as main program */
+  if (statBuf.uid === process.getuid())
+    return true; /* owned by user running the code */
+  if (statBuf.uid === 0)
+    return true; /* owned by root */
+
+  /* Permit based on group membership */
+  if (statBuf.gid === fun.mainStat.gid)
+    return true; /* conf and program in same group */
+  if ((fun.mainStat.mode & 0o020) && (statBuf.gid === process.getgid()))
+    return true; /* program is group-writeable and we are in group */
+  
+  throw new Error('did not load configuration file due to invalid permissions: ' + fullPath);
 }
-if (os.platform() === 'win32')
-  checkConfigFileSafePerms = function(){};
+
+/**
+ * Synchronously load the contents of a file, provided it is safe to do so.
+ * @see checkConfigFileSafePerms
+ *
+ * @returns false when fullPath does not exist
+ */
+function readSafePermsFile(fullPath)
+{
+  if (checkConfigFileSafePerms(fullPath))
+    return fs.readFileSync(fullPath, 'utf-8');
+  return false;
+}
 
 /** Create a memo of where DcpURL instances are in the object graph */
 function makeURLMemo(obj, where) {
@@ -416,24 +470,30 @@ function addConfigFile(existing /*, file path components ... */) {
     fullPath = path.join(fullPath, arguments[i]);
   }
 
-  if (fullPath && fs.existsSync(fullPath + '.json'))
+  if (fullPath && checkConfigFileSafePerms(fullPath + '.json'))
   {
-    debugging() && console.debug(` * Loading configuration from ${fullPath + '.json'}`);
-    checkConfigFileSafePerms(fullPath + '.json');
-    addConfig(existing, require(fullPath + '.json'));
+    fullPath = fullPath + './json';
+    debugging() && console.debug(` * Loading configuration from ${fullPath}`);
+    addConfig(existing, require(fullPath));
+    return;
   }
 
-  if (fullPath && fs.existsSync(fullPath + '.js'))
+  if (fullPath && checkConfigFileSafePerms(fullPath + '.js'))
   {
     let neo;
     let code
     
-    debugging() && console.debug(` * Loading configuration from ${fullPath + '.js'}`);
-    checkConfigFileSafePerms(fullPath + '.js');
-    code = fs.readFileSync(fullPath + '.js', 'utf-8');
+    fullPath = fullPath + '.js';
+    debugging() && console.debug(` * Loading configuration from ${fullPath}`);
+    code = readSafePermsFile(fullPath, 'utf-8');
+    if (!code)
+      return;
     
     if (withoutComments(code).match(/^\s*{/)) {
-      neo = evalScriptInSandbox(fullPath, bundleSandbox, true);
+      /* config file is just a JS object literal */
+      console.log('XXX RUNNING:' + fullPath);
+      debugger;
+      const neo = evalStringInSandbox(`'use strict'; return (${code});`, bundleSandbox, fullPath);
       addConfig(existing, neo);
     } else {
       /* overlay the context's global namespace with the dcpConfig namespace so 
@@ -451,8 +511,8 @@ function addConfigFile(existing /*, file path components ... */) {
       urlMemo = makeURLMemo(existing);
       
       knownGlobals = Object.keys(configSandbox);
-      const ret = evalStringInSandbox(code, configSandbox, fullPath);
-
+      const ret = evalStringInSandbox(`'use strict'; ${code};`, configSandbox, fullPath);
+      console.log(fullPath, ret);
       // handle programmatic assignment to top-level config
       // via sandbox globals
       for (let key of Object.keys(configSandbox)) {
@@ -469,7 +529,10 @@ function addConfigFile(existing /*, file path components ... */) {
       if (ret !== null && typeof ret === "object") Object.assign(neo, ret);
     }
     addConfig(existing, neo);
+    return;
   }
+
+  debugging() && console.debug(` . did not load configuration file ${fullPath}`);
 }
 
 /** Merge a new configuration object on top of an existing one, via
@@ -711,7 +774,6 @@ function handleInitArgs(initArgv)
   {
     /* form 1 */
     addConfig(initConfig.scheduler, { location: new URL(initArgv[0]) });
-    console.log('XXX', initConfig.scheduler);
     if (initArgv[1])
       initConfig.bundle.autoUpdate = true;
     if (initArgv[2])
@@ -721,7 +783,7 @@ function handleInitArgs(initArgv)
   {
     /* form 2 */
     initArgv[0] && addConfig(initConfig, initArgv[0]);
-    initArgv[1] && addConfig(options,     initArgv[1]);
+    initArgv[1] && addConfig(options,    initArgv[1]);
   }
 
   if (options.scheduler)
