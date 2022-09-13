@@ -10,8 +10,8 @@
 
 const path = require('path');
 
-process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');
-process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../tests-etc');
+process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../test-pseudo-root/home/username');
+process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../test-pseudo-root/etc');
 if (!process.env.DCP_CONFIG_LOCATION)
    process.env.DCP_CONFIG_LOCATION = '';
 if (process.env.DCP_SCHEDULER_LOCATION)

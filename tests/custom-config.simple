@@ -1,0 +1,27 @@
+#! /usr/bin/env node
+
+/**
+ * @file        custom-config.simple
+ *              Test which ensures that custom config files (options.configName)
+ *              are loaded properly and with the correct precedence. This test
+ *              uses a config file which is just a JS object literal.
+ * @date        Sep 2022
+ */
+'use strict';
+require('./setup-testenv');
+const dcpClient = require('..');
+
+async function main()
+{
+  const dcpConfig = require('dcp/dcp-config');
+  console.log(dcpConfig);
+
+  if (dcpConfig.stack['./etc/dcp-config.js'] !== 'yes')
+    throw new Error('./etc/dcp-config.js was either not loaded, or was overridden incorrectly');
+
+}
+
+dcpClient.init({/*dcpConfig*/}, {
+  configName:  './etc/dcp-config',
+  configScope: 'config-simple-test',
+}).then(main).catch(console.error);
