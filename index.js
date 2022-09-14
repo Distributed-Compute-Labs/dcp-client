@@ -735,23 +735,24 @@ function handleInitArgs(initArgv)
   var initConfig = { scheduler: {}, bundle: {} };
   var options = {
     programName: process.mainModule ? path.basename(process.mainModule.filename, '.js') : 'node-repl',
-    parseArgv: !Boolean(process.env.DCP_CLIENT_NO_PARSE_ARGV),
+    parseArgv:   !Boolean(process.env.DCP_CLIENT_NO_PARSE_ARGV),
   };
 
-  if (typeof initArgv[0] === 'string' || (typeof initArgv[0] === 'object' && initArgv[0] instanceof global.URL))
+  if (!initArgv[0] || typeof initArgv[0] === 'string' || initArgv[0] instanceof URL)
   {
-    /* form 1 */
-    addConfig(initConfig.scheduler, { location: new URL(initArgv[0]) });
-    if (initArgv[1])
-      initConfig.bundle.autoUpdate = true;
+    /* form 1: scheduler location || falsey, optional autoUpdate flag, optional bundle location */
+    if (initArgv[0])
+      addConfig(initConfig.scheduler, { location: new URL(initArgv[0]) });
+    if (initArgv.length > 1)
+      initConfig.bundle.autoUpdate = Boolean(initArgv[1]);
     if (initArgv[2])
       addConfig(initConfig.bundle, { location: new URL(initArgv[2])});
   }
   else
   {
-    /* form 2 */
-    initArgv[0] && addConfig(initConfig, initArgv[0]);
-    initArgv[1] && addConfig(options,    initArgv[1]);
+    /* form 2: dcpConfig fragment, optional options */
+    addConfig(initConfig, initArgv[0]);
+    addConfig(options,    initArgv[1]);
   }
 
   if (options.scheduler)
