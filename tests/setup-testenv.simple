@@ -19,8 +19,9 @@ async function main()
   /* Make sure we are running without a full scheduler conf */
   assert(typeof dcpConfig.scheduler.services === 'undefined');
 
-  /* Make sure our homedir isn't the real homdir */
-  assert(require('dcp/dcp-dot-dir').getHomeDir().endsWith('tests-homedir'));
+  debugger;
+  /* Make sure our homedir isn't the real homedir */
+  assert(require('dcp/dcp-dot-dir').getHomeDir().endsWith('test-pseudo-root/home/username'));
 
   /* Make sure the bundle pulled in at least 20 modules */
   assert(Object.keys(require('module')._cache).filter((x) => x.startsWith('dcp')).length);
@@ -30,7 +31,7 @@ async function main()
 
 require('./setup-testenv');
 require('..').init().then(main).catch(err => {
-  console.error(err.stack.split('\n')[0]);
+  console.error(err);
   console.log('dcpConfig =', dcpConfig);
   process.exit(2);
 });
