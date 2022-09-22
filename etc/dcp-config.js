@@ -3,15 +3,12 @@
  *              Bare-bones config for worker loaded. For use with localexec,
  *              or so the tree exists for 
  *
- * @author      Wes Garland
- * @date        Feb 2021
+ * @author      Ryan Saweczko <ryan@kingsds.network>
+ * @date        Sep 2022
  */
 
 return {
   worker: {
-
-    trustComputeGroupOrigins: true, // trust the scheduler to give network access to origins on a per-compute-group basis
-
     /* Allow lists permitting supervisor network access beyond DCP messages to services */
     allowOrigins: {
       any: [],
