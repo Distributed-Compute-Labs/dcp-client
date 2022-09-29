@@ -55,6 +55,7 @@ module.declare([], function $$nsMap(require, exports, module) {
     'utils',
     'publish',
     'compute-groups',
+    'signal-handler',
   ]) exports['dcp/' + moduleIdentifier] = moduleIdentifier;
 
   /** 
