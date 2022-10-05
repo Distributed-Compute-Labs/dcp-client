@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.2.16",
+  "version": "4.2.17",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -33,7 +33,6 @@
     "btoa": "^1.2.1",
     "chalk": "^2.4.2",
     "html-to-text": "^5.1.1",
-    "http-agent": "^0.1.2",
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
