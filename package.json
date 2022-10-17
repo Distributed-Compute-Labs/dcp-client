@@ -53,7 +53,7 @@
     "@kingsds/eslint-config": "1.0.1",
     "eslint": "7.30.0",
     "express": "^4.17.1",
-    "peter": "^2.3.3"
+    "peter": "^2.3.5"
   },
   "peerDependencies": {
     "dcp-worker": "^3.0.0"
