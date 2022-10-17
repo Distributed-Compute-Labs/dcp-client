@@ -23,3 +23,13 @@ if (require('os').platform() === 'win32')
   require('child_process').spawnSync('reg.exe', [ 'delete', 'HKLM\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
   require('child_process').spawnSync('reg.exe', [ 'delete', 'HKCU\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
 }
+
+/* Some tests don't load dcp-client */
+var dcpDcp;
+try
+{
+  dotDcp = require('dcp/dcp-dot-dir');
+}
+catch(e) {};
+if (dcpDcp)
+  dotDcp.setHomeDir(process.env.DCP_HOMEDIR);
