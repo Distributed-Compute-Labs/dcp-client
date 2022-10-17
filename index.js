@@ -333,7 +333,7 @@ function checkConfigFileSafePerms(fullPath, statBuf)
   if (!fun.selfStat)
     fun.selfStat = fs.statSync(module.filename);
   if (!fun.mainStat)
-    fun.mainStat = fs.statSync(require.main.filename);
+    fun.mainStat = require.main ? fs.statSync(require.main.filename) : {};
 
   statBuf = fs.statSync(fullPath);
   
