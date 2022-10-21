@@ -528,6 +528,8 @@ exports._initHead = function dcpClient$$initHead() {
 
   if (typeof XMLHttpRequest === 'undefined')
     global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
+  
+  require('dcp/signal-handler').init();
 }
 
 /** 
