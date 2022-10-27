@@ -529,6 +529,8 @@ exports._initHead = function dcpClient$$initHead() {
 
   if (typeof XMLHttpRequest === 'undefined')
     global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
+  
+  require('dcp/signal-handler').init();
 }
 
 /** 
@@ -829,6 +831,16 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (initArgv[2])
     addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
+  /* This follows spec doc line-by-line */
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+
   addConfigEnviron(localConfig, 'DCP_CONFIG_');
   addConfigFile(localConfig, etc, 'dcp/override/dcp-config.js');
   addConfig(aggrConfig, localConfig);
