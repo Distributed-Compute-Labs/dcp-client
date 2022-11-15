@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.2.20",
+  "version": "4.2.21",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -36,7 +36,7 @@
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
-    "kvin": "^1.2.12",
+    "kvin": "^1.2.13",
     "nanoid": "^3.2.0",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
@@ -45,7 +45,7 @@
     "semver": "^7.3.5",
     "webpack": "^5.67.0",
     "webpack-cli": "^4.7.2",
-    "xmlhttprequest-ssl": "^2.1.0",
+    "xmlhttprequest-ssl": "git+https://github.com/Distributed-Compute-Labs/node-XMLHttpRequest.git#bugfix/populate-responseText-once",
     "yargs": "16.2.0"
   },
   "devDependencies": {
