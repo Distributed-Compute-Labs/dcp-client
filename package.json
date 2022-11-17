@@ -45,7 +45,7 @@
     "semver": "^7.3.5",
     "webpack": "^5.75.0",
     "webpack-cli": "^4.7.2",
-    "xmlhttprequest-ssl": "git+https://github.com/Distributed-Compute-Labs/node-XMLHttpRequest.git#bugfix/populate-responseText-once",
+    "xmlhttprequest-ssl": "git+ssh://git@github.com/Distributed-Compute-Labs/node-XMLHttpRequest.git",
     "yargs": "16.2.0"
   },
   "devDependencies": {
