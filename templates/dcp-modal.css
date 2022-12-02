@@ -25,8 +25,7 @@
 .dcp-modal .dcp-modal-container {
   background-color: #fff;
   padding: 30px;
-  max-width: 450px;
-  min-width: 16em;
+  width: 500px;
   max-height: 100vh;
   border-radius: 4px;
   overflow-y: auto;
@@ -35,14 +34,11 @@
 
 .dcp-modal .dcp-modal-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
 }
 
 .dcp-modal .dcp-modal-title {
-  margin-top: 0;
-  margin-bottom: 0;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.25rem;
   line-height: 1.25;
   color: black;
@@ -62,24 +58,24 @@
 .dcp-modal .dcp-modal-close {
   background: transparent;
   border: 0;
+  position: absolute;
+  top: 15px;
+  right: 9px;
 }
 
-.dcp-modal .dcp-modal-header .dcp-modal-close:before { content: "\2715"; }
+.dcp-modal .dcp-modal-close:before { content: url(../assets/close-icon.svg); }
 
 .dcp-modal .dcp-modal-content {
   margin: 1rem 0;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
+  text-align: center;
 }
 
-.dcp-modal .dcp-modal-logo-link {
-  display: block;
-  position: relative;
-  width: 40px;
-  height: 40px;
-  background: url(../assets/dcp-logo.png);
-  background-size: 40px;
-  float: right;
+#dcp-modal-logo {
+  content: url(../assets/dcp-logo.png);
+  width: 70px;
+  height: 70px;
 }
 
 .dcp-modal .dcp-modal-content > p {
@@ -92,37 +88,22 @@
   color: red;
 }
 
-.dcp-modal .dcp-modal-btn {
-  font-size: .875rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: .5rem;
-  padding-bottom: .5rem;
-  background-color: #e6e6e6;
-  color: rgba(0,0,0,.8);
-  border-radius: .25rem;
-  border-style: none;
-  border-width: 0;
+#dcp-modal-oauth-login-button {
+  box-sizing: border-box;
+  position: relative;
+  height: 3em;
+  min-width: 8em;
+  padding: 0 2em;
+  font-weight: bold;
+  background: #1aa473;
+  color: white;
+  border: 1px solid #1aa473;
   cursor: pointer;
-  -webkit-appearance: button;
-  text-transform: none;
-  overflow: visible;
-  line-height: 1.15;
-  margin: 0;
-  will-change: transform;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  transition: -webkit-transform .25s ease-out;
-  transition: transform .25s ease-out;
-  transition: transform .25s ease-out,-webkit-transform .25s ease-out;
+  margin-top: 10px;
 }
 
-.dcp-modal-btn:focus, .dcp-modal-btn:hover {
-  -webkit-transform: scale(1.05);
-  transform: scale(1.05);
+#dcp-modal-oauth-login-button:hover {
+  background: #6fc495;
 }
 
 .dcp-modal .dcp-modal-btn-primary {
