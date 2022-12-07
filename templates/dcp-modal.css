@@ -46,11 +46,10 @@
 }
 
 .dcp-modal .dcp-modal-remember {
-  margin-top: 0;
+  margin-top: 10px;
   margin-bottom: 0;
-  font-weight: 500;
-  font-size: 0.65rem;
-  line-height: 3.9;
+  font-size: 1rem;
+  line-height: 2.5;
   color: rgba(0,0,0,.8);
   box-sizing: border-box;
 }
@@ -63,10 +62,13 @@
   right: 9px;
 }
 
+.dcp-modal .dcp-modal-close:hover {
+  cursor: pointer;
+}
+
 .dcp-modal .dcp-modal-close:before { content: url(../assets/close-icon.svg); }
 
 .dcp-modal .dcp-modal-content {
-  margin: 1rem 0;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
   text-align: center;
@@ -88,7 +90,10 @@
   color: red;
 }
 
-#dcp-modal-oauth-login-button {
+#dcp-modal-oauth-login-button,
+#dcp-modal-keystore-file-submit,
+#dcp-modal-password-submit,
+#dcp-modal-keystore-file-input::file-selector-button {
   box-sizing: border-box;
   position: relative;
   height: 3em;
@@ -99,7 +104,23 @@
   color: white;
   border: 1px solid #1aa473;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 20px;
+}
+
+#dcp-modal-password-submit {
+  max-width: 8em;
+}
+
+#dcp-modal-keystore-file-input::file-selector-button {
+  background: white;
+  border: 1px solid #1aa473;
+  color: #1aa473;
+}
+
+#dcp-modal-keystore-file-input::file-selector-button:hover {
+  background: #6fc495;
+  color: white;
+  transition: 200ms;
 }
 
 #dcp-modal-oauth-login-button:hover {
@@ -237,3 +258,27 @@
   white-space: pre-wrap;
 }
 
+.dcp-modal-remember input[type='checkbox'] {
+  transform: scale(1.4);
+  margin-right: 10px;
+}
+
+#dcp-modal-keystore-file-input {
+  margin-top: 10px;
+}
+
+#dcp-modal-password input {
+  padding: 10px;
+}
+
+#dcp-modal-password-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+} 
+
+#dcp-modal-password-content h2,
+#dcp-modal-password-content p {
+  margin: 0;
+  margin-bottom: 10px;
+}
