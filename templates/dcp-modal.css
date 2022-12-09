@@ -1,12 +1,21 @@
 /**************************\
   Basic Modal Styles
 \**************************/
+@font-face {
+  font-family: "Proxima Nova";
+  src: local("Proxima Nova"), url(../assets/proxima-nova.otf);
+}
+
+.dcp-modal {
+  font-family: "Proxima Nova";
+}
+
 .dcp-modal > DIV,
 .dcp-modal > DIV *,
 .dcp-modal DIV,
 .dcp-modal
 {
-  font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+  font-family: "Proxima Nova";
   font-size: 16px;
 }
 
@@ -25,7 +34,8 @@
 .dcp-modal .dcp-modal-container {
   background-color: #fff;
   padding: 30px;
-  width: 500px;
+  width: 400px;
+  height: 360px;
   max-height: 100vh;
   border-radius: 4px;
   overflow-y: auto;
@@ -39,10 +49,11 @@
 
 .dcp-modal .dcp-modal-title {
   font-weight: 500;
-  font-size: 1.25rem;
+  font-size: 20px;
   line-height: 1.25;
   color: black;
   box-sizing: border-box;
+  margin: 0;
 }
 
 .dcp-modal .dcp-modal-remember {
@@ -75,9 +86,8 @@
 }
 
 #dcp-modal-logo {
-  content: url(../assets/dcp-logo.png);
-  width: 70px;
   height: 70px;
+  margin-bottom: 16px;
 }
 
 .dcp-modal .dcp-modal-content > p {
@@ -91,9 +101,9 @@
 }
 
 #dcp-modal-oauth-login-button,
-#dcp-modal-keystore-file-submit,
 #dcp-modal-password-submit,
-#dcp-modal-keystore-file-input::file-selector-button {
+#dcp-modal-keystore-file-upload-button,
+#dcp-modal-alert-submit-button {
   box-sizing: border-box;
   position: relative;
   height: 3em;
@@ -105,6 +115,12 @@
   border: 1px solid #1aa473;
   cursor: pointer;
   margin-top: 20px;
+  font-size: 15px;
+}
+
+#dcp-modal-keystore-file-input,
+#dcp-modal-keystore-file-submit {
+  display: none;
 }
 
 #dcp-modal-password-submit {
@@ -151,6 +167,97 @@
   visibility: hidden;
 }
 
+.inlineinput {
+  text-align: left;
+  position: relative;
+  bottom: 10px;
+}
+
+.inlineinput input,
+.inlineinput select {
+  filter: none;
+  height: 35px;
+  padding: 0.4em 1em 0.2em;
+  border: 1px solid #8A8A8A;
+  border-radius: 0;
+  box-sizing: border-box;
+  font-size: 1em;
+}
+
+@media screen and (min-device-width: 800px) {
+  .inlineinput input,
+  .inlineinput select {
+    width: 100%;
+  }
+}
+
+.inlineinput input:focus, .inlineinput select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(0, 164, 115, 0.25);
+  outline: none;
+}
+
+.inlineinput input[type=number] {
+  color: #1aa473;
+  font-weight: bold;
+}
+
+.inlineinput select option {
+  color: black;
+}
+
+.inlineinput input::placeholder, .inlineinput select:invalid {
+  color: #e5e5e5;
+}
+
+.inlineinput label {
+  position: relative;
+  display: inline-block;
+  background-color: white;
+  margin: 0 1.25em 0 0.4em;
+  padding: 0 0.75em 0 0.75em;
+  font-size: 0.9em;
+  line-height: 1em;
+  top: 0.6em;
+  left: 0.2em;
+  color: #8a8a8a;
+  z-index: 2;
+  text-align: initial;
+}
+
+select.invalid,
+input.invalid {
+  border-color: red;
+}
+
+.dcp-modal-remember input[type='checkbox'] {
+  transform: scale(1.4);
+  margin-right: 10px;
+}
+
+#dcp-modal-keystore-file-input {
+  margin-top: 10px;
+}
+
+#dcp-modal-password input {
+  padding: 10px;
+}
+
+#dcp-modal-password-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+} 
+
+#dcp-modal-password-content h2 {
+  margin: 0;
+  margin-bottom: 13px;
+}
+
+#dcp-modal-password-content p {
+  margin: 0;
+  line-height: 22px;
+  height: 44px;
+}
 
 /**************************\
   Demo Animation Style
@@ -256,29 +363,4 @@
 #dcp-modal-alert.exception.dcp-show-stack .dcp-stack-trace {
   display: initial;
   white-space: pre-wrap;
-}
-
-.dcp-modal-remember input[type='checkbox'] {
-  transform: scale(1.4);
-  margin-right: 10px;
-}
-
-#dcp-modal-keystore-file-input {
-  margin-top: 10px;
-}
-
-#dcp-modal-password input {
-  padding: 10px;
-}
-
-#dcp-modal-password-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-} 
-
-#dcp-modal-password-content h2,
-#dcp-modal-password-content p {
-  margin: 0;
-  margin-bottom: 10px;
 }
