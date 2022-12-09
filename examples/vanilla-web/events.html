@@ -14,10 +14,10 @@
   -->
 <head version='1c1e62d32e1b6da4ced32b7d0e7ff9180abc21fb'><meta charset="utf-8">
 <link rel="stylesheet" type="text/css" href="./events.css">
-<script src="http://scheduler.dev.kirill.office.kingsds.network/dcp-client/dcp-client.js"></script>
+<script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
 <script>
   async function start() {
-    const { compute } = dcp;
+    const { compute, wallet } = dcp;
     let job, results, startTime;
 
     let el = document.getElementById('eventList');
@@ -78,12 +78,13 @@
     
     el.innerHTML += '<li>Executing job<ul id="readyStateList"></ul></li>';
     rsl = document.getElementById('readyStateList');
-    await job.exec(compute.marketValue);
+    await job.exec(compute.marketValue).catch(() => {debugger;});
+    // await wallet.get({});
+    debugger;
   }
 </script>
 </head>
-<body>
-  <button onclick="start()">ss</button>
+<body onload="start()">
   <h2>This is a vanilla web dcp-client example which uses events.</h2>
   <div style="width: 100%;">
     <div id="pretty"><div>ooooh, pretty!</div></div>

@@ -172,7 +172,7 @@
   visibility: hidden;
 }
 
-.inlineinput {
+.dcp-modal .inlineinput {
   text-align: left;
   position: relative;
   bottom: 10px;
