@@ -1,0 +1,54 @@
+#! /usr/bin/env node
+/** 
+ * @file       blob-polyfill.simple
+ * 
+ * Test that the Blob Polyfill is working correctly and therefore can create an instance of the Blob class.
+ * 
+ * @author     Ryan Saweczko <ryansaweczko@distributive.network>
+ * @author     Brandon Christie <brandon@distributive.network>
+ * 
+ * @date       December 2022
+ */
+
+
+process.exitCode = 1;
+
+const sandboxScripts = '../../libexec/sandbox/';
+
+const files = [
+  require.resolve(sandboxScripts + 'script-load-wrapper.js'),
+  require.resolve(sandboxScripts + 'access-lists.js'),
+];
+
+const expectedOutputs = {
+  'script-load-wrapper': false,
+  'access-lists' : false,
+};
+
+function outputTests(message)
+{
+  if (message.value.script === 'script-load-wrapper')
+    expectedOutputs['script-load-wrapper'] = true;
+  if (message.value.script === 'access-lists')
+    expectedOutputs['access-lists'] = true;
+  // If all of my expected outputs have been met, set the exit code to 0 since all was ok.
+  if (Object.values(expectedOutputs).every((ele) =>  ele))
+    process.exitCode = 0;
+}
+
+require('./globalPolyfillHelper').init(files, outputTests);
+
+let blob = new Blob([JSON.stringify({ type: 'Testing' })], { type: 'application/json' });
+
+convertBlobTxt(blob);
+
+async function convertBlobTxt(blobValue)
+{
+  console.log(await blobValue.text());
+}
+
+// Give more information in the event the test fails.
+process.on('exit',function test(code) {
+  if (code !== 0)
+    console.error(`Test Failed. End values for expected outputs was ${JSON.stringify(expectedOutputs)}`);
+});
