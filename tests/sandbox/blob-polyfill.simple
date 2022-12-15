@@ -38,14 +38,19 @@ function outputTests(message)
 
 require('./globalPolyfillHelper').init(files, outputTests);
 
+async function blobTests(blob)
+{
+  console.log('Blob.arrayBuffer() - ', await blob.arrayBuffer());
+  console.log('Blob.slice() - ', blob.slice());
+  console.log('Blob.stream() - ', blob.stream());
+  console.log('Blob.text() - ', await blob.text());
+  console.log('Blob.size', blob.size);
+  console.log('Blob.type', blob.type);
+}
+
 let blob = new Blob([JSON.stringify({ type: 'Testing' })], { type: 'application/json' });
 
-convertBlobTxt(blob);
-
-async function convertBlobTxt(blobValue)
-{
-  console.log(await blobValue.text());
-}
+blobTests(blob);
 
 // Give more information in the event the test fails.
 process.on('exit',function test(code) {
