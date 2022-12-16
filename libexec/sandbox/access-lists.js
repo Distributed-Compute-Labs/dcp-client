@@ -305,8 +305,13 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         return data.buffer;
       }
     
+      /**
+       * stream() requires a polyfill for "ReadableStream".
+       */
       stream() {
-        const it = toIterator(this.#parts, true);
+        throw new Error('Blob.prototype.stream() has not yet been implemented in DCP Workers');
+
+        /*const it = toIterator(this.#parts, true);
     
         return new globalThis.ReadableStream({
           // @ts-ignore
@@ -318,7 +323,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
           async cancel () {
             await it.return();
           }
-        })
+        })*/
       }
     
       /**
