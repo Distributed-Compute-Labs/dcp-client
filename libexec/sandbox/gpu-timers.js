@@ -20,7 +20,22 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, function gpuTimers$fn(prote
     return 0;
   }
 
-  if (self.OffscreenCanvas && new OffscreenCanvas(1,1))
+  /**
+   * @returns {boolean} 
+   */
+  protectedStorage.hasWebglSupport = function webglSupport() {
+    try
+    {
+      const canvas = new OffscreenCanvas(1,1);
+      return Boolean(canvas.getContext('webgl') || canvas.getContext('webgl2'));
+    }
+    catch
+    {
+      return false;
+    }
+  };
+
+  if (protectedStorage.hasWebglSupport())
   {
     let time = 0;
     function getAndResetWebGLTimer()
