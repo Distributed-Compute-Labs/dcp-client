@@ -17,7 +17,7 @@
 <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
 <script>
   async function start() {
-    const { compute, wallet } = dcp;
+    const { compute } = dcp;
     let job, results, startTime;
 
     let el = document.getElementById('eventList');
@@ -78,9 +78,7 @@
     
     el.innerHTML += '<li>Executing job<ul id="readyStateList"></ul></li>';
     rsl = document.getElementById('readyStateList');
-    await job.exec(compute.marketValue).catch(() => {debugger;});
-    // await wallet.get({});
-    debugger;
+    await job.exec(compute.marketValue);
   }
 </script>
 </head>
