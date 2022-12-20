@@ -83,6 +83,7 @@
   line-height: 1.5;
   color: rgba(0,0,0,.8);
   text-align: center;
+  overflow: hidden;
 }
 
 #dcp-modal-logo {
@@ -333,14 +334,6 @@ input.invalid {
 
 .dcp-modal .dcp-platform-win  button[name="negative"] {
   order: 1;
-}
-
-/** Rules which affect the behaviour of alert dialogs
- *  based on whether or not their messages are instanceof Error
- */
-#dcp-modal-alert.exception #dcp-modal-alert-message {
-  white-space: normal;
-  margin-right: 2em;    
 }
 
 #dcp-modal-alert .dcp-bug-icon,
