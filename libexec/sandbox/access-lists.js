@@ -306,25 +306,11 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       }
     
       /**
-       * stream() requires a polyfill for "ReadableStream".
+       * stream() requires a polyfill for "ReadableStream" so leave it NYI for
+       * now, in case of feature testing
        */
-      stream() {
-        throw new Error('Blob.prototype.stream() has not yet been implemented in DCP Workers');
-
-        /*const it = toIterator(this.#parts, true);
-    
-        return new globalThis.ReadableStream({
-          // @ts-ignore
-          type: 'bytes',
-          async pull (ctrl) {
-            const chunk = await it.next();
-            chunk.done ? ctrl.close() : ctrl.enqueue(chunk.value);
-          },
-          async cancel () {
-            await it.return();
-          }
-        })*/
-      }
+      // stream() {
+      // }
     
       /**
        * The Blob interface's slice() method creates and returns a
