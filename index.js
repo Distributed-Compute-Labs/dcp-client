@@ -941,6 +941,14 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
 
   /* See spec doc dcp-config-file-regkey-priorities 
    * Note: this code is Sep 2022, overriding older spec, spec update to come. /wg
+   * 
+   * The basic idea is that key collisions are overridden on the basis of "most specificity to current
+   * executable wins" - so local disk is stronger than remote network config, homedir is stronger than
+   * /etc, BUT we also have an override in /etc, and specific-program-name config files in /etc are more
+   * powerful than those in the user's homedir. The reason for this is so that sysadmins can create
+   * strongish machine-wide configuration/security-theatre policies. These are not real security, as
+   * any intelligent user can always change the source code to do whatever they please, but it does
+   * make sense for campus configurations where sysadmins believe the machines are locked down, etc.
    */
         addConfigFile(localConfig, etc,    'dcp/dcp-config');
   await addConfigRKey(localConfig, 'HKLM', 'dcp/dcp-config');
