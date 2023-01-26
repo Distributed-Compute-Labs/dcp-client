@@ -568,6 +568,8 @@ exports._initHead = function dcpClient$$initHead() {
 
   if (typeof XMLHttpRequest === 'undefined')
     global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
+  
+  require('dcp/signal-handler').init();
 }
 
 /** 
@@ -936,6 +938,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   /* 1 - determine local config, merge into aggrConfig */
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
+
   /* See spec doc dcp-config-file-regkey-priorities 
    * Note: this code is Sep 2022, overriding older spec, spec update to come. /wg
    */
