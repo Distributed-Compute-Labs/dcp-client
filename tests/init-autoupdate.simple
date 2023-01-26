@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 /**
  * @file        init-autoupdate.simple
  *              Test the ability to load the scheduler's bundle.

@@ -11,30 +11,20 @@ const fs = require('fs');
 
 const dcpClient = require('..');
 const { Address } = require('dcp/wallet');
-const serializer = require('dcp/serialize');
-
-// To be able to serialize dcpConfig identities
-serializer.userCtors.dcpEth$$Address = Address;
-const { serializeAsync, deserialize } = serializer;
+const kvin = require('kvin');
 
 let outputFd = +(process.env.BUILD_DCP_CONFIG_OUTPUT_FD || "3");
 
 async function main() {
-  var input, initArgv, programName;
-  
+  const custom = new kvin.KVIN();
+  custom.userCtors.dcpEth$$Address = Address;
+
   dcpClient._initHead();
 
-  if (!process.stdin.isTTY)
-    input = fs.readFileSync(process.stdin.fd, 'utf-8');
-  if (input && input.length > 1) {
-    ({ initArgv, programName } = deserialize(input));
-  } else {
-    initArgv = [];
-    programName = false;
-  }
-        
-  let outputObjects = await dcpClient.createAggregateConfig(initArgv, programName);
-  const output = await serializeAsync(outputObjects);
+  const input = fs.readFileSync(process.stdin.fd, 'utf-8');
+  const { initConfig, options } = custom.deserialize(input);
+  const outputObjects = await dcpClient.createAggregateConfig(initConfig, options);
+  const output = await custom.serializeAsync(outputObjects);
   
   try {
     fs.writeSync(outputFd, output, 'utf-8');

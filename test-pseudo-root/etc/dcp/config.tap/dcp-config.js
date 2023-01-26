@@ -4,8 +4,6 @@ scheduler.canSetProgrammatically = true;
 
 return {
   "etcProgramName": "in-etc-config-tap",
-  "homeDir": "in-etc-config-tap",
-  "homeDirProgramName": "in-etc-config-tap",
   "etcOverriden": "in-etc-config-tap",
   "etcProgramNameOverridden": "in-etc-config-tap",
   "homeDirOverridden": "in-etc-config-tap",
