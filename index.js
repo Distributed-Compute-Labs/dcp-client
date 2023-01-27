@@ -37,6 +37,7 @@ const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
 const protectedDcpConfigKeys = [ 'system' ];
+var   reportErrors = true;
 
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
 let hadOriginalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
@@ -168,9 +169,13 @@ function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringI
       displayErrors: false,
     });
   } catch (error) {
-    console.error(error.message);
-    debug('dcp-client:evalStringInSandbox')(error);
-    process.exit(1);
+    if (reportErrors)
+    {
+      console.error(error.message);
+      debug('dcp-client:evalStringInSandbox')(error);
+      process.exit(1);
+    }
+    throw error;
   }
 
   return result;
@@ -326,7 +331,6 @@ function addConfigs() {
 function checkConfigFileSafePerms(fullPath, statBuf)
 {
   const fun = checkConfigFileSafePerms;
-  var   statBuf;
 
   if (!fs.existsSync(fullPath))
     return false;
@@ -410,11 +414,11 @@ function makeURLMemo(obj, where) {
 /** Change any properties in the urlMemo which are strings into URLs */
 function applyURLMemo(urlMemo, top) {
   const { DcpURL } = require('dcp/dcp-url');
-  for (let path of urlMemo) {
+  for (let objDotPath of urlMemo) {
     let obj = top;
     let pathEls, pathEl;
 
-    for (pathEls = path.split('.'), pathEl = pathEls.shift();
+    for (pathEls = objDotPath.split('.'), pathEl = pathEls.shift();
          pathEls.length;
          pathEl = pathEls.shift()) {
       obj = obj[pathEl];      
@@ -792,6 +796,7 @@ function handleInitArgs(initArgv)
  *                                                      - scheduler (URL or string)
  *                                                      - parseArgv; false => not parse cli for scheduler/wallet
  *                                                      - bundleLocation (URL or string)
+ *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
  *
  * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
  */
@@ -801,18 +806,23 @@ exports.init = async function dcpClient$$init() {
   var finalBundleCode = false;
   var finalBundleURL;
 
+  reportErrors = options.reportErrors;
   exports._initHead();
   aggrConfig = await exports.createAggregateConfig(initConfig, options);
-
+  
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
       debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = await require('dcp/utils').justFetch(finalBundleURL.href);
-    } catch(e) {
-      console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      console.debug(require('dcp/utils').justFetchPrettyError(e));
-      throw e;
+    } catch(error) {
+      if (reportErrors !== false)
+      {
+        console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
+        console.debug(require('dcp/utils').justFetchPrettyError(error));
+        process.exit(1);
+      }
+      throw error;
     }
   }
 
@@ -836,9 +846,14 @@ exports.initSync = function dcpClient$$initSync() {
     try {
       debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = exports.fetchSync(finalBundleURL);
-    } catch(e) {
-      console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      throw e;
+    } catch(error) {
+      if (reportErrors !== false)
+      {
+        console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
+        /* detailed error output comes from fetchSync via stdin/stderr passthrough */
+        process.exit(1);
+      }
+      throw error;
     }
   }
 
@@ -985,13 +1000,22 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     debug('dcp-client:config')(` * Not loading configuration from remote scheduler`);
   else
   {
-    try {
+    try
+    {
       debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
       remoteConfigCode = kvin.deserialize(remoteConfigCode);
-    } catch(e) {
-      console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
-      throw e;
+    }
+    catch(error)
+    {
+      if (reportErrors !== false)
+      {
+        debugger;
+        console.error('Error: dcp-client::init could not fetch scheduler configuration at ' + aggrConfig.scheduler.configLocation);
+        console.debug(require('dcp/utils').justFetchPrettyError(error));
+        process.exit(1);
+      }
+      throw error;
     }
     if (remoteConfigCode.length === 0)
       throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
@@ -1111,6 +1135,8 @@ exports.fetchSync = function fetchSync(url) {
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
+  if (reportErrors === false)
+    argv.push('--silent');
   if (typeof url !== 'string')
     url = url.href;
   argv.push(url);
@@ -1120,12 +1146,12 @@ exports.fetchSync = function fetchSync(url) {
     stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ],
 
     /**
-     * Setting the largest amount of data in bytes allowed on stdout or stderr
-     * to 5 MB so that dcp-client-bundle.js (~4.6 MB built in debug mode with
-     * source mapped line numbers) can be downloaded without the child exiting
-     * with a status of null (i.e. ENOBUFS).
+     * Setting the largest amount of data in bytes allowed on stdout or stderr to 10 MB
+     * so that dcp-client-bundle.js (~5.2 MB built in debug mode with source-mapped line
+     * in late jan 2023) can be downloaded without the child exiting with a status of 
+     * null (i.e. ENOBUFS).
      */
-    maxBuffer: 5 * 1024 * 1024,
+    maxBuffer: 10 * 1024 * 1024,
   });
 
   if (child.status !== 0)
