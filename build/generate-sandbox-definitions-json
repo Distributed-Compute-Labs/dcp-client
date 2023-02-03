@@ -39,10 +39,6 @@ o.node = ['sa-ww-simulation'].concat(base);
 o.native = ['sa-ww-simulation'].concat(base);
 o.native.splice(2, 0, 'native-event-loop');
 
-/** A WebGPU-Native Sandbox is a native sandbox with the webgpu code added */
-o.webGpuNative = [].concat(o.native)
-o.webGpuNative.splice(5, 0, 'webgpu-worker-environment');
-
 for (let type in o) {
   o[type].unshift('kvin/kvin.js');
   if (type !== 'node')
