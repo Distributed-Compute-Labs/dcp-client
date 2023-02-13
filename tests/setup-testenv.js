@@ -10,8 +10,8 @@
 
 const path = require('path');
 
-process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../tests-homedir');
-process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../tests-etc');
+process.env.DCP_HOMEDIR = path.resolve(path.dirname(module.filename), '../test-pseudo-root/home/username');
+process.env.DCP_ETCDIR  = path.resolve(path.dirname(module.filename), '../test-pseudo-root/etc');
 if (!process.env.DCP_CONFIG_LOCATION)
    process.env.DCP_CONFIG_LOCATION = '';
 if (process.env.DCP_SCHEDULER_LOCATION)
@@ -23,3 +23,13 @@ if (require('os').platform() === 'win32')
   require('child_process').spawnSync('reg.exe', [ 'delete', 'HKLM\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
   require('child_process').spawnSync('reg.exe', [ 'delete', 'HKCU\\' + process.env_DCP_REGISTRY_BASEKEY, '-f' ]);
 }
+
+/* Some tests don't load dcp-client */
+var dcpDcp;
+try
+{
+  dotDcp = require('dcp/dcp-dot-dir');
+}
+catch(e) {};
+if (dcpDcp)
+  dotDcp.setHomeDir(process.env.DCP_HOMEDIR);

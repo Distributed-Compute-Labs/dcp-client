@@ -10,5 +10,8 @@
   "etcOverriden": "in-override",
   "etcProgramNameOverridden": "in-override",
   "homeDirOverridden": "in-override",
-  "homeDirProgramNameOverriden": "in-override"
+  "homeDirProgramNameOverriden": "in-override",
+  stack: {
+    '/etc/dcp/override-dcp-config.js': 'yes',
+  }
 }

@@ -19,6 +19,7 @@ async function main()
       return;
       
     case 'release':
+      assertLib.always.assertEq3(true,true); /* make sure internals ready to skip fast path */
       assertLib.always.assertEq3(assertLib.assert, assertLib.always.assert);
       break;
 
@@ -26,6 +27,8 @@ async function main()
       assertLib.assertEq3(true, false);
       break;
   }
+
+  console.log('test completed, dcpConfig.build=', dcpConfig.build);
 }
 
 require('./setup-testenv');
