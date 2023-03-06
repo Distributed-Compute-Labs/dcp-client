@@ -116,7 +116,7 @@ function evalScriptInSandbox(filename, sandbox)
   var code
   try {
     debug('dcp-client:evalScriptInSandbox')('evaluating', filename);
-    code = readSafePermsFile(path.resolve(distDir, filename));
+    code = fs.readFileSync(path.resolve(distDir, filename), 'utf8');
   } catch(e) {
     if (e.code === 'ENOENT')
       return {}
