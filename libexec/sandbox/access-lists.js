@@ -183,78 +183,313 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
             : String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255, bitmap & 255);
       }
       return result;
+    },
+    // Polyfill for Blob
+    Blob: class Blob {
+      /** @type {Array.<(Blob|Uint8Array)>} */
+      #parts = [];
+      #type = '';
+      #size = 0;
+      #endings = 'transparent';
+    
+      /**
+       * The Blob() constructor returns a new Blob object. The content
+       * of the blob consists of the concatenation of the values given
+       * in the parameter array.
+       *
+       * @param {*} blobParts
+       * @param {{ type?: string, endings?: string }} [options]
+       */
+      constructor (blobParts = [], options = {}) {
+        if (typeof blobParts !== 'object' || blobParts === null) {
+          throw new TypeError('Failed to construct \'Blob\': The provided value cannot be converted to a sequence.');
+        }
+    
+        if (typeof blobParts[Symbol.iterator] !== 'function') {
+          throw new TypeError('Failed to construct \'Blob\': The object must have a callable @@iterator property.');
+        }
+    
+        if (typeof options !== 'object' && typeof options !== 'function') {
+          throw new TypeError('Failed to construct \'Blob\': parameter 2 cannot convert to dictionary.');
+        }
+    
+        if (options === null) options = {};
+    
+        const encoder = new TextEncoder();
+
+        for (const element of blobParts) {
+          let part;
+
+          if (ArrayBuffer.isView(element)) {
+            part = new Uint8Array(element.buffer.slice(element.byteOffset, element.byteOffset + element.byteLength));
+          } else if (element instanceof ArrayBuffer) {
+            part = new Uint8Array(element.slice(0));
+          } else if (element instanceof Blob) {
+            part = element;
+          } else {
+            part = encoder.encode(`${element}`);
+          }
+    
+          const size = ArrayBuffer.isView(part) ? part.byteLength : part.size;
+          // Avoid pushing empty parts into the array to better GC them
+          if (size) {
+            this.#size += size;
+            this.#parts.push(part);
+          }
+        }
+    
+        this.#endings = `${options.endings === undefined ? 'transparent' : options.endings}`;
+        const type = options.type === undefined ? '' : String(options.type);
+        this.#type = /^[\x20-\x7E]*$/.test(type) ? type : '';
+      }
+    
+      /**
+       * The Blob interface's size property returns the
+       * size of the Blob in bytes.
+       */
+      get size() {
+        return this.#size;
+      }
+    
+      /**
+       * The type property of a Blob object returns the MIME type of the file.
+       */
+      get type() {
+        return this.#type;
+      }
+    
+      /**
+       * The text() method in the Blob interface returns a Promise
+       * that resolves with a string containing the contents of
+       * the blob, interpreted as UTF-8.
+       *
+       * @return {Promise<string>}
+       */
+      async text() {
+        debugger;
+        // More optimized than using this.arrayBuffer()
+        // that requires twice as much ram
+        const decoder = new TextDecoder();
+        let str = '';
+
+        for await (const part of toIterator(this.#parts, false)) {
+          str += decoder.decode(part, { stream: true });
+        }
+
+        // Remaining
+        str += decoder.decode();
+        return str;
+      }
+    
+      /**
+       * The arrayBuffer() method in the Blob interface returns a
+       * Promise that resolves with the contents of the blob as
+       * binary data contained in an ArrayBuffer.
+       *
+       * @return {Promise<ArrayBuffer>}
+       */
+      async arrayBuffer() {
+        // Easier way... Just a unnecessary overhead
+        // const view = new Uint8Array(this.size);
+        // await this.stream().getReader({mode: 'byob'}).read(view);
+        // return view.buffer;
+    
+        const data = new Uint8Array(this.size);
+        let offset = 0;
+
+        for await (const chunk of toIterator(this.#parts, false)) {
+          data.set(chunk, offset);
+          offset += chunk.length;
+        }
+    
+        return data.buffer;
+      }
+    
+      /**
+       * stream() requires a polyfill for "ReadableStream" so leave it NYI for
+       * now, in case of feature testing
+       */
+      // stream() {
+      // }
+    
+      /**
+       * The Blob interface's slice() method creates and returns a
+       * new Blob object which contains data from a subset of the
+       * blob on which it's called.
+       *
+       * @param {number} [start]
+       * @param {number} [end]
+       * @param {string} [type]
+       */
+      slice(start = 0, end = this.size, type = '') {
+        const { size } = this;
+    
+        let relativeStart = start < 0 ? Math.max(size + start, 0) : Math.min(start, size);
+        let relativeEnd = end < 0 ? Math.max(size + end, 0) : Math.min(end, size);
+    
+        const span = Math.max(relativeEnd - relativeStart, 0);
+        const parts = this.#parts;
+        const blobParts = [];
+        let added = 0;
+    
+        for (const part of parts) {
+          // don't add the overflow to new blobParts
+          if (added >= span) {
+            break;
+          }
+    
+          const size = ArrayBuffer.isView(part) ? part.byteLength : part.size;
+          if (relativeStart && size <= relativeStart) {
+            // Skip the beginning and change the relative
+            // start & end position as we skip the unwanted parts
+            relativeStart -= size;
+            relativeEnd -= size;
+          } else {
+            let chunk;
+
+            if (ArrayBuffer.isView(part)) {
+              chunk = part.subarray(relativeStart, Math.min(size, relativeEnd));
+              added += chunk.byteLength;
+            } else {
+              chunk = part.slice(relativeStart, Math.min(size, relativeEnd));
+              added += chunk.size;
+            }
+
+            relativeEnd -= size;
+            blobParts.push(chunk);
+            relativeStart = 0; // All next sequential parts should start at 0
+          }
+        }
+    
+        const blob = new Blob([], { type: String(type).toLowerCase() });
+        blob.#size = span;
+        blob.#parts = blobParts;
+    
+        return blob;
+      }
+    
+      get[Symbol.toStringTag]() {
+        return 'Blob';
+      }
+    
+      static[Symbol.hasInstance](object) {
+        return (
+          object &&
+          typeof object === 'object' &&
+          typeof object.constructor === 'function' &&
+          (
+            typeof object.stream === 'function' ||
+            typeof object.arrayBuffer === 'function'
+          ) &&
+          /^(Blob|File)$/.test(object[Symbol.toStringTag])
+        );
+      }
     }
   };
 
-  // Polyfill for TextEncoder/Decoder
-  if (typeof TextEncoder === "undefined") {
-    self.TextEncoder = function TextEncoder() { };
-    TextEncoder.prototype.encode = function encode(str) {
-      "use strict";
-      var Len = str.length, resPos = -1;
-      // The Uint8Array's length must be at least 3x the length of the string because an invalid UTF-16
-      //  takes up the equivelent space of 3 UTF-8 characters to encode it properly. However, Array's
-      //  have an auto expanding length and 1.5x should be just the right balance for most uses.
-      var resArr = typeof Uint8Array === "undefined" ? new Array(Len * 1.5) : new Uint8Array(Len * 3);
-      for (var point = 0, nextcode = 0, i = 0; i !== Len;) {
-        point = str.charCodeAt(i), i += 1;
-        if (point >= 0xD800 && point <= 0xDBFF) {
-          if (i === Len) {
-            resArr[resPos += 1] = 0xef/*0b11101111*/; resArr[resPos += 1] = 0xbf/*0b10111111*/;
-            resArr[resPos += 1] = 0xbd/*0b10111101*/; break;
+  /** @param {(Blob | Uint8Array)[]} parts */
+  async function * toIterator (parts, clone = true) {
+    for (const part of parts) {
+      if ('stream' in part) {
+        yield * (/** @type {AsyncIterableIterator<Uint8Array>} */ (part.stream()))
+      } else if (ArrayBuffer.isView(part)) {
+        if (clone) {
+          let position = part.byteOffset
+          const end = part.byteOffset + part.byteLength
+          while (position !== end) {
+            const size = Math.min(end - position, POOL_SIZE)
+            const chunk = part.buffer.slice(position, position + size)
+            position += chunk.byteLength
+            yield new Uint8Array(chunk)
           }
-          nextcode = str.charCodeAt(i);
-          if (nextcode >= 0xDC00 && nextcode <= 0xDFFF) {
-            point = (point - 0xD800) * 0x400 + nextcode - 0xDC00 + 0x10000;
-            i += 1;
-            if (point > 0xffff) {
-              resArr[resPos += 1] = (0x1e/*0b11110*/ << 3) | (point >>> 18);
-              resArr[resPos += 1] = (0x2/*0b10*/ << 6) | ((point >>> 12) & 0x3f/*0b00111111*/);
-              resArr[resPos += 1] = (0x2/*0b10*/ << 6) | ((point >>> 6) & 0x3f/*0b00111111*/);
-              resArr[resPos += 1] = (0x2/*0b10*/ << 6) | (point & 0x3f/*0b00111111*/);
-              continue;
-            }
-          } else {
-            resArr[resPos += 1] = 0xef/*0b11101111*/; resArr[resPos += 1] = 0xbf/*0b10111111*/;
-            resArr[resPos += 1] = 0xbd/*0b10111101*/; continue;
-          }
-        }
-        if (point <= 0x007f) {
-          resArr[resPos += 1] = (0x0/*0b0*/ << 7) | point;
-        } else if (point <= 0x07ff) {
-          resArr[resPos += 1] = (0x6/*0b110*/ << 5) | (point >>> 6);
-          resArr[resPos += 1] = (0x2/*0b10*/ << 6) | (point & 0x3f/*0b00111111*/);
         } else {
-          resArr[resPos += 1] = (0xe/*0b1110*/ << 4) | (point >>> 12);
-          resArr[resPos += 1] = (0x2/*0b10*/ << 6) | ((point >>> 6) & 0x3f/*0b00111111*/);
-          resArr[resPos += 1] = (0x2/*0b10*/ << 6) | (point & 0x3f/*0b00111111*/);
+          yield part
+        }
+      /* c8 ignore next 10 */
+      } else {
+        // For blobs that have arrayBuffer but no stream method (nodes buffer.Blob)
+        let position = 0, b = (/** @type {Blob} */ (part))
+        while (position !== b.size) {
+          const chunk = b.slice(position, Math.min(b.size, position + POOL_SIZE))
+          const buffer = await chunk.arrayBuffer()
+          position += buffer.byteLength
+          yield new Uint8Array(buffer)
         }
       }
-      if (typeof Uint8Array !== "undefined") return resArr.subarray(0, resPos + 1);
-      // else // IE 6-9
-      resArr.length = resPos + 1; // trim off extra weight
-      return resArr;
-    };
-    TextEncoder.prototype.toString = function () { return "[object TextEncoder]"; };
-    try { // Object.defineProperty only works on DOM prototypes in IE8
-      Object.defineProperty(TextEncoder.prototype, "encoding", {
-        get: function () {
-          if (TextEncoder.prototype.isPrototypeOf(this)) return "utf-8";
-          else throw TypeError("Illegal invocation");
-        }
-      });
-    } catch (e) { /*IE6-8 fallback*/ TextEncoder.prototype.encoding = "utf-8"; }
-    if (typeof Symbol !== "undefined") TextEncoder.prototype[Symbol.toStringTag] = "TextEncoder";
+    }
   }
+
+  // Polyfill for TextEncoder/Decoder
+  var fromCharCode = String.fromCharCode;
+	var Object_prototype_toString = ({}).toString;
+	var sharedArrayBufferString = Object_prototype_toString.call(self["SharedArrayBuffer"]);
+	var undefinedObjectString = '[object Undefined]';
+	var NativeUint8Array = self.Uint8Array;
+	var patchedU8Array = NativeUint8Array || Array;
+	var nativeArrayBuffer = NativeUint8Array ? ArrayBuffer : patchedU8Array;
+	var arrayBuffer_isView = nativeArrayBuffer.isView || function(x) {return x && "length" in x};
+	var arrayBufferString = Object_prototype_toString.call(nativeArrayBuffer.prototype);
+	var tmpBufferU16 = new (NativeUint8Array ? Uint16Array : patchedU8Array)(32);
+
+  if (typeof TextEncoder === "undefined") {
+    self.TextEncoder = function TextEncoder(){};
+    var TextEncoderPrototype = TextEncoder["prototype"];
+    TextEncoderPrototype["encode"] = function(inputString){
+      // 0xc0 => 0b11000000; 0xff => 0b11111111; 0xc0-0xff => 0b11xxxxxx
+      // 0x80 => 0b10000000; 0xbf => 0b10111111; 0x80-0xbf => 0b10xxxxxx
+      var encodedString = inputString === void 0 ? "" : ("" + inputString), len=encodedString.length|0;
+      var result=new patchedU8Array((len << 1) + 8|0), tmpResult;
+      var i=0, pos=0, point=0, nextcode=0;
+      var upgradededArraySize=!NativeUint8Array; // normal arrays are auto-expanding
+      for (i=0; i<len; i=i+1|0, pos=pos+1|0) {
+        point = encodedString.charCodeAt(i)|0;
+        if (point <= 0x007f) {
+          result[pos] = point;
+        } else if (point <= 0x07ff) {
+          result[pos] = (0x6<<5)|(point>>6);
+          result[pos=pos+1|0] = (0x2<<6)|(point&0x3f);
+        } else {
+          widenCheck: {
+            if (0xD800 <= point) {
+              if (point <= 0xDBFF) {
+                nextcode = encodedString.charCodeAt(i=i+1|0)|0; // defaults to 0 when NaN, causing null replacement character
+  
+                if (0xDC00 <= nextcode && nextcode <= 0xDFFF) {
+                  //point = ((point - 0xD800)<<10) + nextcode - 0xDC00 + 0x10000|0;
+                  point = (point<<10) + nextcode - 0x35fdc00|0;
+                  if (point > 0xffff) {
+                    result[pos] = (0x1e/*0b11110*/<<3) | (point>>18);
+                    result[pos=pos+1|0] = (0x2/*0b10*/<<6) | ((point>>12)&0x3f/*0b00111111*/);
+                    result[pos=pos+1|0] = (0x2/*0b10*/<<6) | ((point>>6)&0x3f/*0b00111111*/);
+                    result[pos=pos+1|0] = (0x2/*0b10*/<<6) | (point&0x3f/*0b00111111*/);
+                    continue;
+                  }
+                  break widenCheck;
+                }
+                point = 65533/*0b1111111111111101*/;//return '\xEF\xBF\xBD';//fromCharCode(0xef, 0xbf, 0xbd);
+              } else if (point <= 0xDFFF) {
+                point = 65533/*0b1111111111111101*/;//return '\xEF\xBF\xBD';//fromCharCode(0xef, 0xbf, 0xbd);
+              }
+            }
+            if (!upgradededArraySize && (i << 1) < pos && (i << 1) < (pos - 7|0)) {
+              upgradededArraySize = true;
+              tmpResult = new patchedU8Array(len * 3);
+              tmpResult.set( result );
+              result = tmpResult;
+            }
+          }
+          result[pos] = (0xe/*0b1110*/<<4) | (point>>12);
+          result[pos=pos+1|0] =(0x2/*0b10*/<<6) | ((point>>6)&0x3f/*0b00111111*/);
+          result[pos=pos+1|0] =(0x2/*0b10*/<<6) | (point&0x3f/*0b00111111*/);
+        }
+      }
+      return NativeUint8Array ? result.subarray(0, pos) : result.slice(0, pos);
+    };
+  }
+  
   if (typeof TextDecoder === "undefined") {
-    self.TextDecoder = function TextDecoder() { };
-    TextDecoder.prototype.decode = function (inputArrayOrBuffer) {
-      var NativeUint8Array = self.Uint8Array;
-      var patchedU8Array = NativeUint8Array || Array;
-      var nativeArrayBuffer = NativeUint8Array ? ArrayBuffer : patchedU8Array;
-      var tmpBufferU16 = new (NativeUint8Array ? Uint16Array : patchedU8Array)(32);
-      var arrayBuffer_isView = nativeArrayBuffer.isView || function (x) { return x && "length" in x; };
-      // Check type of input
+    self.TextDecoder = function TextDecoder(){};
+    TextDecoder["prototype"]["decode"] = function(inputArrayOrBuffer){
       var inputAs8 = inputArrayOrBuffer, asObjectString;
       if (!arrayBuffer_isView(inputAs8)) {
         asObjectString = Object_prototype_toString.call(inputAs8);
@@ -272,28 +507,28 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
           switch (cp0 >> 4) {
             case 15:
               cp1 = inputAs8[index = index + 1 | 0] & 0xff;
-              if ((cp1 >> 6) !== 0b10 || 0b11110111 < cp0) {
+              if ((cp1 >> 6) !== 2 || 247 < cp0) {
                 index = index - 1 | 0;
                 break;
               }
-              codePoint = ((cp0 & 0b111) << 6) | (cp1 & 0b00111111);
+              codePoint = ((cp0 & 7) << 6) | (cp1 & 63);
               minBits = 5; // 20 ensures it never passes -> all invalid replacements
               cp0 = 0x100; //  keep track of th bit size
             case 14:
               cp1 = inputAs8[index = index + 1 | 0] & 0xff;
               codePoint <<= 6;
-              codePoint |= ((cp0 & 0b1111) << 6) | (cp1 & 0b00111111);
-              minBits = (cp1 >> 6) === 0b10 ? minBits + 4 | 0 : 24; // 24 ensures it never passes -> all invalid replacements
+              codePoint |= ((cp0 & 15) << 6) | (cp1 & 63);
+              minBits = (cp1 >> 6) === 2 ? minBits + 4 | 0 : 24; // 24 ensures it never passes -> all invalid replacements
               cp0 = (cp0 + 0x100) & 0x300; // keep track of th bit size
             case 13:
             case 12:
               cp1 = inputAs8[index = index + 1 | 0] & 0xff;
               codePoint <<= 6;
-              codePoint |= ((cp0 & 0b11111) << 6) | cp1 & 0b00111111;
+              codePoint |= ((cp0 & 31) << 6) | cp1 & 63;
               minBits = minBits + 7 | 0;
 
               // Now, process the code point
-              if (index < len && (cp1 >> 6) === 0b10 && (codePoint >> minBits) && codePoint < 0x110000) {
+              if (index < len && (cp1 >> 6) === 2 && (codePoint >> minBits) && codePoint < 0x110000) {
                 cp0 = codePoint;
                 codePoint = codePoint - 0x10000 | 0;
                 if (0 <= codePoint/*0xffff < codePoint*/) { // BMP code point
@@ -319,12 +554,25 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
                 index = index - cp0 - 1 | 0; // reset index  back to what it was before
                 cp0 = 0xfffd;
               }
-
-
               // Finally, reset the variables for the next go-around
               minBits = 0;
               codePoint = 0;
               nextEnd = index <= lenMinus32 ? 32 : len - index | 0;
+            /*case 11:
+            case 10:
+            case 9:
+            case 8:
+              codePoint ? codePoint = 0 : cp0 = 0xfffd; // fill with invalid replacement character
+            case 7:
+            case 6:
+            case 5:
+            case 4:
+            case 3:
+            case 2:
+            case 1:
+            case 0:
+              tmpBufferU16[pos] = cp0;
+              continue;*/
             default:
               tmpBufferU16[pos] = cp0; // fill with invalid replacement character
               continue;
@@ -335,7 +583,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
           }
           tmpBufferU16[pos] = 0xfffd; // fill with invalid replacement character
         }
-        tmpStr += String.fromCharCode(
+        tmpStr += fromCharCode(
           tmpBufferU16[0], tmpBufferU16[1], tmpBufferU16[2], tmpBufferU16[3], tmpBufferU16[4], tmpBufferU16[5], tmpBufferU16[6], tmpBufferU16[7],
           tmpBufferU16[8], tmpBufferU16[9], tmpBufferU16[10], tmpBufferU16[11], tmpBufferU16[12], tmpBufferU16[13], tmpBufferU16[14], tmpBufferU16[15],
           tmpBufferU16[16], tmpBufferU16[17], tmpBufferU16[18], tmpBufferU16[19], tmpBufferU16[20], tmpBufferU16[21], tmpBufferU16[22], tmpBufferU16[23],
@@ -343,14 +591,14 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         );
         if (pos < 32) tmpStr = tmpStr.slice(0, pos - 32 | 0);//-(32-pos));
         if (index < len) {
-          //String.fromCharCode.apply(0, tmpBufferU16 : NativeUint8Array ?  tmpBufferU16.subarray(0,pos) : tmpBufferU16.slice(0,pos));
+          //fromCharCode.apply(0, tmpBufferU16 : NativeUint8Array ?  tmpBufferU16.subarray(0,pos) : tmpBufferU16.slice(0,pos));
           tmpBufferU16[0] = tmp;
           pos = (~tmp) >>> 31;//tmp !== -1 ? 1 : 0;
           tmp = -1;
 
           if (tmpStr.length < resultingString.length) continue;
         } else if (tmp !== -1) {
-          tmpStr += String.fromCharCode(tmp);
+          tmpStr += fromCharCode(tmp);
         }
 
         resultingString += tmpStr;
@@ -358,7 +606,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       }
 
       return resultingString;
-    };
+    }
   }
 
 

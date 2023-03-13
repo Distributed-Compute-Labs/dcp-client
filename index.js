@@ -25,49 +25,21 @@
  * @author      Wes Garland, wes@kingsds.network
  * @date        July 2019
  */
+'use strict';
+
 const os      = require('os');
 const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
 const kvin    = require('kvin');
+const debug   = require('debug');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
 const protectedDcpConfigKeys = [ 'system', 'worker', 'standaloneWorker' ];
-
-exports.debug = false;
+var   reportErrors = true;
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
 let hadOriginalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
-
-function debugging(what = 'dcp-client') {
-  const debugSyms = []
-        .concat((exports.debug || '').split(','))
-        .concat((process.env.DCP_CLIENT_DEBUG || '').split(','))
-        .filter((a) => !!a);
-  
-  if (typeof debugging.cache[what] === 'boolean') /* cache hit */
-    return debugging.cache[what];
-
-  if (-1 !== debugSyms.indexOf('*') ||
-      -1 !== debugSyms.indexOf('all') ||
-      -1 !== debugSyms.indexOf('all:all') ||
-      -1 !== debugSyms.indexOf(what) ||
-      -1 !== debugSyms.indexOf('dcp-client') ||
-      -1 !== debugSyms.indexOf('verbose')) {
-    debugging.cache[what] = true;
-  } else {
-    debugging.cache[what] = false;
-  }
-
-  return debugging.cache[what];
-}
-debugging.cache = {}
-
-const log = (namespace, ...args) => {
-  if (debugging(`dcp-client:${namespace}`)) {
-    console.debug(`dcp-client:${namespace}`, ...args);
-  }
-};
 
 const distDir = path.resolve(path.dirname(module.filename), 'dist');
 
@@ -137,21 +109,19 @@ function runSandboxedCode(sandbox, code, options)
 /** Evaluate a file in a sandbox without polluting the global object.
  *  @param      filename        {string}    The name of the file to evaluate, relative to
  *  @param      sandbox         {object}    A sandbox object, used for injecting 'global' symbols as needed
- *  @param      olFlag          {boolean}   true if the file contains only an object literal
  */
-function evalScriptInSandbox(filename, sandbox, olFlag) {
+function evalScriptInSandbox(filename, sandbox)
+{
   var code
   try {
-    code = fs.readFileSync(path.resolve(distDir, filename), 'utf-8')
-    if (olFlag)
-      code = '(' + code + ')'
+    debug('dcp-client:evalScriptInSandbox')('evaluating', filename);
+    code = fs.readFileSync(path.resolve(distDir, filename), 'utf8');
   } catch(e) {
-    debugging() && console.error('evalScriptInSandbox Error:', e.message);
     if (e.code === 'ENOENT')
       return {}
+    debug('dcp-client:evalScriptInSandbox')(e);
     throw e
   }
-
 
   return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
 }
@@ -196,11 +166,16 @@ function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringI
        * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
        * the whole stack trace to stderr by default.
        */
-      displayErrors: debugging('evalStringInSandbox'),
+      displayErrors: false,
     });
   } catch (error) {
-    console.error(error);
-    process.exit(1);
+    if (reportErrors)
+    {
+      console.error(error.message);
+      debug('dcp-client:evalStringInSandbox')(error);
+      process.exit(1);
+    }
+    throw error;
   }
 
   return result;
@@ -258,7 +233,7 @@ function injectModule(id, moduleExports, clobber) {
   moduleSystem._cache[id].filename = id
   moduleSystem._cache[id].loaded = true
   injectedModules[id] = true;
-  debugging('modules') && console.debug(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
+  debug('dcp-client:modules')(` - injected module ${id}: ${typeof moduleExports === 'object' ? Object.keys(moduleExports) : '(' + typeof moduleExports + ')'}`);
 }
 
 /**
@@ -291,7 +266,7 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 /* Inject all properties of the bundle object as modules in the
  * native NodeJS module system.
  */
-debugging('modules') && console.debug('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
+debug('dcp-client:modules')('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
 
@@ -342,22 +317,76 @@ function addConfigs() {
     addConfig(existing, neo);
 }
 
-function checkConfigFileSafePerms(fullPath) {
-  let newPath
-  let args = fullPath.split(path.sep)
+/**
+ * Throw an exception if the given fullPath is not a "safe" file to load.
+ * "Safe" files are those that are unlikely to contain malicious code, as 
+ * they are owned by an administrator or the same person who loaded the
+ * code.
+ *
+ * Returns false is the file simply does not exist.
+ *
+ * @param {string} fullPath    the full path to the file to check
+ * @param {object} statBuf     [optional] existing stat buf for the file
+ */
+function checkConfigFileSafePerms(fullPath, statBuf)
+{
+  const fun = checkConfigFileSafePerms;
 
-  args[0] += path.sep
-  do
+  if (!fs.existsSync(fullPath))
+    return false;
+  if (!fun.selfStat)
+    fun.selfStat = fs.statSync(module.filename);
+  if (!fun.mainStat)
+    fun.mainStat = require.main ? fs.statSync(require.main.filename) : {};
+
+  statBuf = fs.statSync(fullPath);
+  
+  /* Disallow files with world-writeable path components. @todo reduce redundant checks */
+  if (os.platform() !== 'win32')
   {
-    let check
-    check=path.resolve.apply(null, args)
-    if (fs.statSync(check).mode & 0o002)
-      console.warn(`Config ${fullPath} insecure due to world-writeable ${check}`);
-    args.pop()
-  } while(args.length);
+    const args = fullPath.split(path.sep);
+    args[0] = path.sep;
+
+    do
+    {
+      let check = path.resolve.apply(null, args);
+      if (fs.statSync(check).mode & 0o002)
+        throw new Error(`Config ${fullPath} insecure due to world-writeable path component ${check}`);
+      args.pop();
+    } while(args.length);
+  }
+
+  /* Permit based on ownership */
+  if (statBuf.uid === fun.selfStat.uid)
+    return true; /* owned by same user as dcp-client */
+  if (statBuf.uid === fun.mainStat.uid)
+    return true; /* owned by same user as main program */
+  if (statBuf.uid === process.getuid())
+    return true; /* owned by user running the code */
+  if (statBuf.uid === 0)
+    return true; /* owned by root */
+
+  /* Permit based on group membership */
+  if (statBuf.gid === fun.mainStat.gid)
+    return true; /* conf and program in same group */
+  if ((fun.mainStat.mode & 0o020) && (statBuf.gid === process.getgid()))
+    return true; /* program is group-writeable and we are in group */
+  
+  throw new Error('did not load configuration file due to invalid permissions: ' + fullPath);
 }
-if (os.platform() === 'win32')
-  checkConfigFileSafePerms = function(){};
+
+/**
+ * Synchronously load the contents of a file, provided it is safe to do so.
+ * @see checkConfigFileSafePerms
+ *
+ * @returns false when fullPath does not exist
+ */
+function readSafePermsFile(fullPath)
+{
+  if (checkConfigFileSafePerms(fullPath))
+    return fs.readFileSync(fullPath, 'utf-8');
+  return false;
+}
 
 /** Create a memo of where DcpURL instances are in the object graph */
 function makeURLMemo(obj, where) {
@@ -385,11 +414,11 @@ function makeURLMemo(obj, where) {
 /** Change any properties in the urlMemo which are strings into URLs */
 function applyURLMemo(urlMemo, top) {
   const { DcpURL } = require('dcp/dcp-url');
-  for (let path of urlMemo) {
+  for (let objDotPath of urlMemo) {
     let obj = top;
     let pathEls, pathEl;
 
-    for (pathEls = path.split('.'), pathEl = pathEls.shift();
+    for (pathEls = objDotPath.split('.'), pathEl = pathEls.shift();
          pathEls.length;
          pathEl = pathEls.shift()) {
       obj = obj[pathEl];      
@@ -409,23 +438,34 @@ function applyURLMemo(urlMemo, top) {
 function addConfigFile(existing /*, file path components ... */) {
   let fullPath = '';
 
-  debugging() && console.debug(` * Loading configuration from ${Array.from(arguments).slice(1).join(path.sep)}`);
-
   for (let i=1; i < arguments.length; i++) {
     if (!arguments[i])
       return;
     fullPath = path.join(fullPath, arguments[i]);
   }
 
-  if (fullPath && fs.existsSync(fullPath)) {
+  if (fullPath && checkConfigFileSafePerms(fullPath + '.json'))
+  {
+    fullPath = fullPath + './json';
+    debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
+    addConfig(existing, require(fullPath));
+    return;
+  }
+
+  if (fullPath && checkConfigFileSafePerms(fullPath + '.js'))
+  {
     let neo;
     let code
     
-    checkConfigFileSafePerms(fullPath);
-    code = fs.readFileSync(fullPath, 'utf-8');
+    fullPath = fullPath + '.js';
+    debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
+    code = readSafePermsFile(fullPath, 'utf-8');
+    if (!code)
+      return;
     
     if (withoutComments(code).match(/^\s*{/)) {
-      neo = evalScriptInSandbox(fullPath, bundleSandbox, true);
+      /* config file is just a JS object literal */
+      const neo = evalStringInSandbox(`'use strict'; return (${code});`, bundleSandbox, fullPath);
       addConfig(existing, neo);
     } else {
       /* overlay the context's global namespace with the dcpConfig namespace so 
@@ -443,7 +483,7 @@ function addConfigFile(existing /*, file path components ... */) {
       urlMemo = makeURLMemo(existing);
       
       knownGlobals = Object.keys(configSandbox);
-      const ret = evalStringInSandbox(code, configSandbox, fullPath);
+      const ret = evalStringInSandbox(`'use strict'; ${code};`, configSandbox, fullPath);
 
       // handle programmatic assignment to top-level config
       // via sandbox globals
@@ -461,7 +501,10 @@ function addConfigFile(existing /*, file path components ... */) {
       if (ret !== null && typeof ret === "object") Object.assign(neo, ret);
     }
     addConfig(existing, neo);
+    return;
   }
+
+  debug('dcp-client:config')(` . did not load configuration file ${fullPath}`);
 }
 
 /** Merge a new configuration object on top of an existing one, via
@@ -474,7 +517,7 @@ async function addConfigRKey(existing, hive, keyTail) {
   if (os.platform() !== 'win32')
     return;
   neo = await require('./windows-registry').getObject(hive, keyTail);
-  debugging() && console.debug(` * Loading configuration from ${hive} ${keyTail}`);
+  debug('dcp-client:config')(` * Loading configuration from ${hive} ${keyTail}`);
   if (neo)
     addConfig(existing, neo);
 }
@@ -483,7 +526,7 @@ async function addConfigRKey(existing, hive, keyTail) {
  *  addConfig().  The environment is read, turned into an object, and
  *  becomes the neo config.
  */
-function addConfigEnviron(existing, prefix) {
+function addConfigEnv(existing, prefix) {
   var re = new RegExp('^' + prefix);
   var neo = {};
   
@@ -541,12 +584,13 @@ exports._initHead = function dcpClient$$initHead() {
  * 2 - inject modules from the final bundle on top of the bootstrap modules
  * 3 - patch up internal (to the final bundle) references to dcpConfig to reference our generated config
  * 4 - verify versioning information for key core components against running scheduler
- * 5 - load and cache identity & bank keystores if they are provided and config.parseArgv allows
+ * 5 - load and cache identity & bank keystores if they are provided and options.parseArgv allows (default)
  * 6 - create the return object
  * 
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
  */
-function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
+function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
+{
   var nsMap;            /* the final namespace map to go from bundle->dcp-client environment */
   var bundle;           /* the final bundle, usually a copy of the bootstrap bundle */
   var finalBundleLabel; /* symbolic label used for logs describing the source of the final bundle */
@@ -591,7 +635,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
     bundle.initTailHook(aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
 
   /* 2 */
-  debugging('modules') && console.debug(`Begin phase 2 module injection '${finalBundleLabel}'`);
+  debug('dcp-client:modules')(`Begin phase 2 module injection '${finalBundleLabel}'`);
   delete nsMap['dcp-config'];
   injectNsMapModules(nsMap, bundle, finalBundleLabel, true);
   injectModule('dcp/client', exports);
@@ -616,7 +660,7 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
   /* 3 */
   if (hadOriginalDcpConfig) {
     /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
-    debugging() && console.debug('Dropping bundle dcp-config in favour of global dcpConfig')
+    debug('dcp-client:config')('Dropping bundle dcp-config in favour of global dcpConfig')
     Object.assign(require('dcp/dcp-config'), global.dcpConfig);
     bundleSandbox.dcpConfig = global.dcpConfig;
     injectModule('dcp/dcp-config', global.dcpConfig, true);
@@ -648,14 +692,14 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
       let ourVer = require('dcp/protocol').version.provides;
       let minVer = aggrConfig.scheduler.compatibility.minimum.dcp;
       let ok = require('semver').satisfies(ourVer, minVer);
-      debugging('version') && console.debug(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
+      debug('dcp-client:version')(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
       if (!ok)
         throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, minVer, 'EDCP_PROTOCOL_VERSION');
     }
   }
   
   /* 5 */
-  if (aggrConfig.parseArgv !== false) {
+  if (options.parseArgv !== false) {
     const dcpCli = require('dcp/cli');
     /* don't enable help output when automating */
     const argv = dcpCli.base().help(false).argv;
@@ -684,6 +728,53 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
 }
 
 /**
+ * Takes the arguments passed to init() or initSync(), works out the overload, and returns an
+ * object with two properies:
+ * - localConfig: a dcpConfig fragment
+ * - options: an options object
+ * 
+ * This routine also populates certain key default values, such as the scheduler and program name that
+ * need to always be defined, and updates the localConfig fragment to reflect appropriate options.
+ */
+function handleInitArgs(initArgv)
+{
+  var initConfig = { scheduler: {}, bundle: {} };
+  var options = {
+    programName: process.mainModule ? path.basename(process.mainModule.filename, '.js') : 'node-repl',
+    parseArgv:   !Boolean(process.env.DCP_CLIENT_NO_PARSE_ARGV),
+  };
+
+  if (!initArgv[0] || typeof initArgv[0] === 'string' || initArgv[0] instanceof URL)
+  {
+    /* form 1: scheduler location || falsey, optional autoUpdate flag, optional bundle location */
+    if (initArgv[0])
+      addConfig(initConfig.scheduler, { location: new URL(initArgv[0]) });
+    if (initArgv.length > 1)
+      initConfig.bundle.autoUpdate = Boolean(initArgv[1]);
+    if (initArgv[2])
+      addConfig(initConfig.bundle, { location: new URL(initArgv[2])});
+  }
+  else
+  {
+    /* form 2: dcpConfig fragment, optional options */
+    addConfig(initConfig, initArgv[0]);
+    addConfig(options,    initArgv[1]);
+  }
+
+  if (options.scheduler)
+    initConfig.scheduler.location = new URL(options.scheduler);    
+  if (options.autoUpdate)
+    initConfig.bundle.autoUpdate = true;
+  if (options.bundleLocation)
+    initConfig.bundle.location = new URL(options.bundleLocation);
+
+  return {
+    initConfig,  /* configuration derived from call to dcp-client::init() or initSync() */
+    options      /* generic options - eg parseArgv */
+  };
+}
+
+/**
  * Initialize the dcp-client bundle for use by the compute API, etc.
  *
  * @param       {string|URL object}     [url="https://scheduler.distributed.computer"]
@@ -701,57 +792,126 @@ function initTail(aggrConfig, finalBundleCode, finalBundleURL) {
  *
  * @param       {object}                dcpConfig       a dcpConfig object which can have
  *                                                      scheduler.location, bundle.location, bundle.autoUpdate
+ * @param       {object}                options         an options object, higher precedence config of
+ *                                                      - scheduler (URL or string)
+ *                                                      - parseArgv; false => not parse cli for scheduler/wallet
+ *                                                      - bundleLocation (URL or string)
+ *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
+ *
  * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
  */
 exports.init = async function dcpClient$$init() {
+  var { initConfig, options } = handleInitArgs(arguments);
   var aggrConfig;
   var finalBundleCode = false;
   var finalBundleURL;
 
+  reportErrors = options.reportErrors;
   exports._initHead();
-  aggrConfig = await exports.createAggregateConfig(Array.from(arguments));
-
+  aggrConfig = await exports.createAggregateConfig(initConfig, options);
+  
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
-      debugging() && console.debug(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
+      debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = await require('dcp/utils').justFetch(finalBundleURL.href);
-    } catch(e) {
-      console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      console.debug(require('dcp/utils').justFetchPrettyError(e));
-      throw e;
+    } catch(error) {
+      if (reportErrors !== false)
+      {
+        console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
+        console.debug(require('dcp/utils').justFetchPrettyError(error));
+        process.exit(1);
+      }
+      throw error;
     }
   }
 
-  return initTail(aggrConfig, finalBundleCode, finalBundleURL);
+  return initTail(aggrConfig, options, finalBundleCode, finalBundleURL);
 }
 
 /**
  * Sync version of dcp-client.init().
  */
 exports.initSync = function dcpClient$$initSync() {
+  var { initConfig, options } = handleInitArgs(arguments);
   var aggrConfig;
   var finalBundleCode = false;
   var finalBundleURL;
-
+  
   exports._initHead();
-  aggrConfig = fetchAggregateConfig(Array.from(arguments));
+  aggrConfig = createAggregateConfigSync(initConfig, options);
 
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
-      debugging() && console.debug(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
+      debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
       finalBundleCode = exports.fetchSync(finalBundleURL);
-    } catch(e) {
-      console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
-      throw e;
+    } catch(error) {
+      if (reportErrors !== false)
+      {
+        console.error('Error downloading autoUpdate bundle from ' + finalBundleURL);
+        /* detailed error output comes from fetchSync via stdin/stderr passthrough */
+        process.exit(1);
+      }
+      throw error;
     }
   }
 
-  return initTail(aggrConfig, finalBundleCode, finalBundleURL);
+  return initTail(aggrConfig, options, finalBundleCode, finalBundleURL);
 }
 
-exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(initArgv, programName) {
+/**
+ * Generate a local config object from the environment
+ */
+function mkEnvConfig()
+{
+  const envConfig = { scheduler: {}, bundle: {} };
+  const env = process.env;
+  
+  if (env.DCP_SCHEDULER_LOCATION)     addConfig(envConfig.scheduler, { location: new URL(env.DCP_SCHEDULER_LOCATION) });
+  if (env.DCP_CONFIG_LOCATION)        addConfig(envConfig.scheduler, { configLocation: new URL(env.DCP_CONFIG_LOCATION) });
+  if (env.DCP_CONFIG_LOCATION === '') addConfig(envConfig.scheduler, { configLocation: false }); /* explicitly request no remote config */
+  if (env.DCP_BUNDLE_AUTOUPDATE)      addConfig(envConfig.bundle,    { autoUpdate: !!env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i) } );
+  if (env.DCP_BUNDLE_LOCATION)        addConfig(envConfig.bundle,    { location: new URL(env.DCP_BUNDLE_LOCATION) });
+
+  return envConfig;
+}
+
+/**
+ * Generate a local config object from the program's command line
+ */
+function mkCliConfig(cliOpts)
+{
+  const cliConfig = { scheduler: {} };
+
+  if (cliOpts.dcpScheduler) cliConfig.scheduler.location = new URL(cliOpts.dcpScheduler);
+
+  return cliConfig;
+}
+
+/**
+ * Create the aggregate dcpConfig for the running program. This config is based on things like
+ * - command-line options
+ * - environment variables
+ * - files in various locations
+ * - various registry keys
+ * - baked-in defaults
+ * - parameters passed to init() or initSync()
+ *
+ * @param {object} initConfig   dcpConfig fragment passed to init() or initSync()
+ * @param {object} options      options object passed to init() or initSync() or derived some other way.
+ *                              Options include:
+ *      - programName    {string}:      the name of the program (usually derived from argv[1])
+ *      - parseArgv      {boolean}:     false to ignore cli opt parsing
+ *      - scheduler      {string|URL}:  location of the DCP scheduler
+ *      - autoUpdate     {boolean}:     true to download a fresh dcp-client bundle from the scheduler
+ *      - bundleLocation {string|URL}:  location from where we will download a new bundle
+ *      - configScope    {string}:      arbitrary name to use in forming various config fragment filenames
+ *      - configName     {string}:      arbitrary name to use to resolve a config fragment filename 
+ *                                      relative to the program module
+ */
+exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(initConfig, options)
+{
 /* The steps that are followed are in a very careful order; there are default configuration options 
  * which can be overridden by either the API consumer or the scheduler; it is important that the wishes 
  * of the API consumer always take priority.
@@ -759,13 +919,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  *  1 - create the local config by 
  *       - reading the config in dcp-client/etc/dcp-config.js
  *       - reading the config buried in the bundle and defined at module load
- *       - reading ~/.dcp/dcp-client/dcp-config.js or using hard-coded defaults
+ *       - reading files in ~/.dcp, /etc/dcp, etc or using hard-coded defaults
  *       - reading the registry
  *       - receiving input from the cli module
  *       - arguments to init()
+ *       - use the config + environment + arguments to figure out where the scheduler is
  *       - etc  (see dcp-docs file dcp-config-file-regkey-priorities)
- *  3 - merge the passed-in configuration on top of the default configuration
- *  4 - use the config + environment + arguments to figure out where the scheduler is
+ *  2 - merge the passed-in configuration on top of the default configuration
  *  5 - pull the scheduler's config, and layer it on top of the current configuration
  *  6 - reapply the passed-in configuration into the current configuration
  *
@@ -774,24 +934,25 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * conflating local configuration and defaults, either hard-coded or remote.  The localConfig is used
  * to figure out where to download the scheduler.
  */
-  let defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
+  const cliOpts = require('dcp/cli').base().help(false).parse();
+  var   remoteConfigCode;
+  const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
+  const home = process.env.DCP_HOMEDIR || os.homedir();
+  const programName = options.programName;
+  const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
+  const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
+
+  const aggrConfig = {};
+  const defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
   let remoteConfig;
-  let localConfig = {
+  const localConfig = {
     scheduler: {
       location: new URL('https://scheduler.distributed.computer/')
     },
     bundle: {}
   };
 
-  const aggrConfig = {
-    // Parse process.argv by default using dcp/cli.
-    parseArgv: true,
-  };
-
-  const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
-  const home = process.env.DCP_HOMEDIR || os.homedir();
-
-  /* 1 - create local config */
+  /* 1 - determine local config, merge into aggrConfig */
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
 
@@ -851,26 +1012,41 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
    *
    * Only override the scheduler from argv if cli specifies a scheduler.
    * e.g. the user specifies a --dcp-scheduler option.
+  /* See spec doc dcp-config-file-regkey-priorities 
+   * Note: this code is Sep 2022, overriding older spec, spec update to come. /wg
+   * 
+   * The basic idea is that key collisions are overridden on the basis of "most specificity to current
+   * executable wins" - so local disk is stronger than remote network config, homedir is stronger than
+   * /etc, BUT we also have an override in /etc, and specific-program-name config files in /etc are more
+   * powerful than those in the user's homedir. The reason for this is so that sysadmins can create
+   * strongish machine-wide configuration/security-theatre policies. These are not real security, as
+   * any intelligent user can always change the source code to do whatever they please, but it does
+   * make sense for campus configurations where sysadmins believe the machines are locked down, etc.
    */
-  // Don't enable help output for init
-  const { dcpScheduler } = require('dcp/cli').base().help(false).parse();
-  if (typeof dcpScheduler !== 'undefined') {
-    localConfig.scheduler.location = dcpScheduler;
-    aggrConfig.scheduler.location = dcpScheduler;
-  }
+        addConfigFile(localConfig, etc,    'dcp/dcp-config');
+  await addConfigRKey(localConfig, 'HKLM', 'dcp/dcp-config');
+        addConfigFile(localConfig, options.configName && path.resolve(progDir, options.configName));
+        addConfigFile(localConfig, home,  '.dcp/dcp-config');
+  await addConfigRKey(localConfig, 'HKCU', 'dcp/dcp-config');
+        addConfigFile(localConfig, home,  `.dcp/${programName}/dcp-config`);
+  await addConfigRKey(localConfig, 'HKCU', `dcp/${programName}/dcp-config`);
+        addConfigFile(localConfig, home,  '.dcp/scope', configScope);
+  await addConfigRKey(localConfig, 'HKCU', 'dcp/scope', configScope);
+        addConfig    (localConfig, initConfig); 
+        addConfigEnv (localConfig, 'DCP_CONFIG_');
+        addConfig    (localConfig, mkEnvConfig());
+        addConfig    (localConfig, mkCliConfig(cliOpts));
+        addConfigFile(localConfig, etc,    `dcp/${programName}/dcp-config`);
+  await addConfigRKey(localConfig, 'HKLM', `dcp/${programName}/dcp-config`);
+        addConfigFile(localConfig, etc,    'dcp/override-dcp-config');
+  await addConfigRKey(localConfig, 'HKLM', 'dcp/override-dcp-config');
+        addConfigFile(localConfig, etc,    'dcp/scope', configScope);
+  await addConfigRKey(localConfig, 'HKLM', 'dcp/scope', configScope);
+  await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config'); /* legacy - used by screen saver, /wg sep'22 */
 
-  if (process.env.DCP_SCHEDULER_LOCATION)
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { location: new URL(process.env.DCP_SCHEDULER_LOCATION) });
-  if (process.env.DCP_CONFIG_LOCATION) 
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: new URL(process.env.DCP_CONFIG_LOCATION) });
-  else if (process.env.DCP_CONFIG_LOCATION === '')
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { configLocation: false }); /* explicitly request no remote config */
-  if (process.env.DCP_BUNDLE_AUTOUPDATE)
-    aggrConfig.bundle.autoUpdate = localConfig.bundle.autoUpdate = !!process.env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i);
-  if (process.env.DCP_BUNDLE_LOCATION) 
-    addConfigs(aggrConfig.bundle, localConfig.bundle, { location: new URL(process.env.DCP_BUNDLE_LOCATION) });
+  addConfig(aggrConfig, localConfig);
 
-  /* 3 */
+  /* 5 */
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== false) {
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
@@ -878,17 +1054,25 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     });
   }
 
-  /* 5 */
   if (aggrConfig.scheduler.configLocation === false)
-    debugging() && console.debug(` * Not loading configuration from remote scheduler`);
+    debug('dcp-client:config')(` * Not loading configuration from remote scheduler`);
   else
   {
-    try {
+    try
+    {
       debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
-    } catch(e) {
-      console.error('Error: dcp-client::init could not fetch scheduler configuration at', '' + aggrConfig.scheduler.configLocation);
-      throw e;
+    }
+    catch(error)
+    {
+      if (reportErrors !== false)
+      {
+        debugger;
+        console.error('Error: dcp-client::init could not fetch scheduler configuration at ' + aggrConfig.scheduler.configLocation);
+        console.debug(require('dcp/utils').justFetchPrettyError(error));
+        process.exit(1);
+      }
+      throw error;
     }
     if (remoteConfig.length === 0)
       throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
@@ -940,7 +1124,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
 exports.initcb = require('./init-common').initcb
 
 /** 
- * Fetch the aggregate config - which by definition does async work - by 
+ * Create the aggregate config - which by definition does async work - by 
  * spawning another process (and other reactor) and then blocking until 
  * it is available.  Used to implement initSync().
  *
@@ -949,32 +1133,25 @@ exports.initcb = require('./init-common').initcb
  * so we should be able to have the exact same derived configuration for
  * clients using either init() or initSync().
  *
- * @param  initArgv   the arguments to initSync()
+ * @param {object} initConfig   parameter for createAggregateConfig()
+ * @param {object} options      parameter for createAggregateConfig()
  */
-function fetchAggregateConfig(initArgv) {
+function createAggregateConfigSync(initConfig, options)
+{
   const { patchup: patchUp } = require('dcp/dcp-url');
   const { Address } = require('dcp/wallet');
-  const serializer = require('dcp/serialize');
+  const custom = new kvin.KVIN();
+  custom.userCtors.dcpEth$$Address = Address;
 
-  // To be able to deserialize dcpConfig identities
-
-  serializer.userCtors.dcpEth$$Address = Address;
-  const { serialize, deserialize } = serializer;
-  const { argv } = process;
-  const [, programName] = argv;
-  const env = { FORCE_COLOR: 1, ...process.env };
-
-  /**
-   * Spreading an empty array doesn't add anything to the parent array, hence
-   * why we're making nodeArgs an array.
-   */
-  const nodeArgs = debugging('build-dcp-config') ? ['--inspect'] : []
-  const spawnArgs = [...nodeArgs, require.resolve('./bin/build-dcp-config'), ...argv.slice(2)];
+  const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
+  /* XXX @todo - in debug build,  spawnArgv.unshift('--inspect'); */
+  const env = process.env.DEBUG ? Object.assign({}, process.env) : process.env;
+  delete env.DEBUG;
   const child = spawnSync(
     process.execPath,
-    spawnArgs,
+    spawnArgv,
     {
-      env,
+      env: process.env,
       shell: false,
       windowsHide: true,
       /**
@@ -982,7 +1159,7 @@ function fetchAggregateConfig(initArgv) {
        * from build-dcp-config. (e.g. child.output[3])
        */
       stdio: ['pipe', 'inherit', 'inherit', 'pipe'],
-      input: serialize({ programName, initArgv }),
+          input: custom.serialize({ initConfig, options }),
     },
   );
 
@@ -992,8 +1169,9 @@ function fetchAggregateConfig(initArgv) {
   }
 
   const serializedOutput = String(child.output[3]);
-  log('fetchAggregateConfig', 'serializedOutput:', serializedOutput);
-  const aggregateConfig = deserialize(serializedOutput);
+  const aggregateConfig = custom.deserialize(serializedOutput);
+
+  debug('dcp-client:init')('fetched aggregate configuration', aggregateConfig);
   return aggregateConfig;
 }
   
@@ -1013,6 +1191,8 @@ exports.fetchSync = function fetchSync(url) {
   var output = '';
   var env = { FORCE_COLOR: 1 };
   
+  if (reportErrors === false)
+    argv.push('--silent');
   if (typeof url !== 'string')
     url = url.href;
   argv.push(url);
@@ -1022,12 +1202,12 @@ exports.fetchSync = function fetchSync(url) {
     stdio: [ 'ignore', 'inherit', 'inherit', 'pipe' ],
 
     /**
-     * Setting the largest amount of data in bytes allowed on stdout or stderr
-     * to 5 MB so that dcp-client-bundle.js (~4.6 MB built in debug mode with
-     * source mapped line numbers) can be downloaded without the child exiting
-     * with a status of null (i.e. ENOBUFS).
+     * Setting the largest amount of data in bytes allowed on stdout or stderr to 10 MB
+     * so that dcp-client-bundle.js (~5.2 MB built in debug mode with source-mapped line
+     * in late jan 2023) can be downloaded without the child exiting with a status of 
+     * null (i.e. ENOBUFS).
      */
-    maxBuffer: 5 * 1024 * 1024,
+    maxBuffer: 10 * 1024 * 1024,
   });
 
   if (child.status !== 0)

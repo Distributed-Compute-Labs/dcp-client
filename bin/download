@@ -7,7 +7,7 @@
  * @date        May 2020
  */
 
-const dcpClient = require('..');
+const dcpClient = require('..'); /* eslint-disable no-unused-vars */
 const fs = require('fs');
 
 function usage() {
@@ -16,6 +16,7 @@ function usage() {
  Where:
     --fd=N:     send all output to file descriptor N
     --quiet:    suppress progress messages
+    --silent:   suppress progress and error messages
 `);
 }
 
@@ -29,6 +30,9 @@ async function main(argv) {
     let [,key,,value] = argv[i].match(/(^[^=]*)(=?)(.*)/); /* separate by first = */
     
     switch(key) {
+      case '--silent':
+        console.error = function(){};
+        /* fallthrough */
       case '--quiet':
         argv.splice(i--,1);
         console.log = console.debug = function(){};

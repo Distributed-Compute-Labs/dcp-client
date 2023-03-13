@@ -19,14 +19,20 @@ async function main()
       return;
       
     case 'release':
-      assertLib.assertEq3(true, false); /* fast path shouldn't fire */
+      assertLib.assertEq3(true, true);  /* warm up assertLib to ensure no false-fire */
+      assertLib.assertEq3(true, false); /* fast path shouldn't (non-false) fire */
       break;
 
     case 'debug':
       console.log('this test does nothing in a debug build');
       break;
   }
+
+  console.log('test passed, dcpConfig.build =', dcpConfig.build);
 }
 
 require('./setup-testenv');
-require('..').init().then(main).catch(err => process.exitCode = 2);
+require('..').init().then(main).catch(err => {
+  process.exitCode = 2;
+  console.error(err);
+});

@@ -1,22 +1,18 @@
 <!-- DCP OAuth Login Modal -->
-<div class="dcp-modal dcp-slide" id="dcp-modal-oauth-login" aria-hidden="true">
-  <div class="dcp-modal-overlay" tabindex="-1" data-micromodal-close>
+<div class="dcp-modal dcp-slide" id="dcp-modal-oauth-login" aria-hidden="true" >
+  <div class="dcp-modal-overlay" tabindex="-1" data-backdrop="static" data-keyboard="false">
     <div class="dcp-modal-container" role="dialog" aria-modal="true" aria-labelledby="dcp-modal-keystore-file-title">
-      <form id="dcp-modal-oauth-login-form" method="dialog"></form>
-      <header class="dcp-modal-header">
-        <h2 class="dcp-modal-title" id="dcp-modal-oauth-login-title">Login Required</h2>
-        <button class="dcp-modal-close" aria-label="Close modal" data-micromodal-close></button>
-      </header>
+      <form id="dcp-modal-oauth-login-form" method="dialog"></form>  
+      <div class="dcp-modal-header">
+        <a class="dcp-modal-logo-link" href="https://distributed.computer">
+          <img id="dcp-modal-logo" src="https://secure.distributed.computer/assets/dcp-logo-5db53cc2b8186a6c250379b20bcb5ed4926c433903a3441234f09ea40b3cea65.png"/>
+        </a>
+      </div>
       <main class="dcp-modal-content" id="dcp-modal-oauth-login-content">
-        <button id="dcp-modal-oauth-login-button" class="dcp-modal-btn dcp-modal-btn-primary">Log In</button>
-        <div class="dcp-modal-remember">
-          <input type="checkbox" form="dcp-modal-oauth-login-form" id="dcp-modal-oauth-login-checkbox">
-          <label for="dcp-modal-oauth-login-checkbox" class="dcp-modal-remember">Remember my keystore</label>
-        </div> 
+        <h2 class="dcp-modal-title" id="dcp-modal-oauth-login-title">Login Required</h2>
+        <p>You must enter your DCP <br>credentials to deploy this job.</p>
+        <button id="dcp-modal-oauth-login-button">Log In</button>
       </main>
-      <footer class="dcp-modal-footer">
-        <a class="dcp-modal-logo-link" href="https://distributed.computer"></a>
-      </footer>
     </div>
   </div>
 </div>

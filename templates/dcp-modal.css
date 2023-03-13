@@ -1,12 +1,21 @@
 /**************************\
   Basic Modal Styles
 \**************************/
+@font-face {
+  font-family: "Proxima Nova";
+  src: local("Proxima Nova"), url(../assets/proxima-nova.otf);
+}
+
+.dcp-modal {
+  font-family: "Proxima Nova";
+}
+
 .dcp-modal > DIV,
 .dcp-modal > DIV *,
 .dcp-modal DIV,
 .dcp-modal
 {
-  font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+  font-family: "Proxima Nova";
   font-size: 16px;
 }
 
@@ -24,9 +33,9 @@
 
 .dcp-modal .dcp-modal-container {
   background-color: #fff;
-  padding: 30px;
-  max-width: 450px;
-  min-width: 16em;
+  padding: 30px 50px;
+  width: 400px;
+  height: 360px;
   max-height: 100vh;
   border-radius: 4px;
   overflow-y: auto;
@@ -35,26 +44,23 @@
 
 .dcp-modal .dcp-modal-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
 }
 
 .dcp-modal .dcp-modal-title {
-  margin-top: 0;
-  margin-bottom: 0;
-  font-weight: 600;
-  font-size: 1.25rem;
+  font-weight: 500;
+  font-size: 20px;
   line-height: 1.25;
   color: black;
   box-sizing: border-box;
+  margin: 0;
 }
 
 .dcp-modal .dcp-modal-remember {
-  margin-top: 0;
+  margin-top: 10px;
   margin-bottom: 0;
-  font-weight: 500;
-  font-size: 0.65rem;
-  line-height: 3.9;
+  font-size: 1rem;
+  line-height: 2.5;
   color: rgba(0,0,0,.8);
   box-sizing: border-box;
 }
@@ -62,24 +68,27 @@
 .dcp-modal .dcp-modal-close {
   background: transparent;
   border: 0;
+  position: absolute;
+  top: 15px;
+  right: 9px;
 }
 
-.dcp-modal .dcp-modal-header .dcp-modal-close:before { content: "\2715"; }
+.dcp-modal .dcp-modal-close:hover {
+  cursor: pointer;
+}
+
+.dcp-modal .dcp-modal-close:before { content: url(../assets/close-icon.svg); }
 
 .dcp-modal .dcp-modal-content {
-  margin: 1rem 0;
   line-height: 1.5;
   color: rgba(0,0,0,.8);
+  text-align: center;
+  overflow: hidden;
 }
 
-.dcp-modal .dcp-modal-logo-link {
-  display: block;
-  position: relative;
-  width: 40px;
-  height: 40px;
-  background: url(../assets/dcp-logo.png);
-  background-size: 40px;
-  float: right;
+#dcp-modal-logo {
+  height: 70px;
+  margin-bottom: 16px;
 }
 
 .dcp-modal .dcp-modal-content > p {
@@ -92,37 +101,52 @@
   color: red;
 }
 
-.dcp-modal .dcp-modal-btn {
-  font-size: .875rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: .5rem;
-  padding-bottom: .5rem;
-  background-color: #e6e6e6;
-  color: rgba(0,0,0,.8);
-  border-radius: .25rem;
-  border-style: none;
-  border-width: 0;
+#dcp-modal-oauth-login-button,
+#dcp-modal-password-submit,
+#dcp-modal-keystore-file-upload-button,
+#dcp-modal-alert-submit-button {
+  box-sizing: border-box;
+  position: relative;
+  height: 3em;
+  min-width: 8em;
+  padding: 0 2em;
+  font-weight: bold;
+  background: #1aa473;
+  color: white;
+  border: 1px solid #1aa473;
   cursor: pointer;
-  -webkit-appearance: button;
-  text-transform: none;
-  overflow: visible;
-  line-height: 1.15;
-  margin: 0;
-  will-change: transform;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  transition: -webkit-transform .25s ease-out;
-  transition: transform .25s ease-out;
-  transition: transform .25s ease-out,-webkit-transform .25s ease-out;
+  margin-top: 70px;
+  font-size: 15px;
 }
 
-.dcp-modal-btn:focus, .dcp-modal-btn:hover {
-  -webkit-transform: scale(1.05);
-  transform: scale(1.05);
+#dcp-modal-password-submit,
+#dcp-modal-alert-submit-button {
+  margin-top: 20px;
+}
+
+#dcp-modal-keystore-file-input,
+#dcp-modal-keystore-file-submit {
+  display: none;
+}
+
+#dcp-modal-password-submit {
+  max-width: 8em;
+}
+
+#dcp-modal-keystore-file-input::file-selector-button {
+  background: white;
+  border: 1px solid #1aa473;
+  color: #1aa473;
+}
+
+#dcp-modal-keystore-file-input::file-selector-button:hover {
+  background: #6fc495;
+  color: white;
+  transition: 200ms;
+}
+
+#dcp-modal-oauth-login-button:hover {
+  background: #6fc495;
 }
 
 .dcp-modal .dcp-modal-btn-primary {
@@ -149,6 +173,98 @@
   visibility: hidden;
 }
 
+.dcp-modal .inlineinput {
+  text-align: left;
+  position: relative;
+  bottom: 10px;
+}
+
+.inlineinput input,
+.inlineinput select {
+  filter: none;
+  height: 35px;
+  padding: 0.4em 1em 0.2em;
+  border: 1px solid #8A8A8A;
+  border-radius: 0;
+  box-sizing: border-box;
+  font-size: 1em;
+}
+
+@media screen and (min-device-width: 800px) {
+  .inlineinput input,
+  .inlineinput select {
+    width: 100%;
+  }
+}
+
+.inlineinput input:focus, .inlineinput select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(0, 164, 115, 0.25);
+  outline: none;
+}
+
+.inlineinput input[type=number] {
+  color: #1aa473;
+  font-weight: bold;
+}
+
+.inlineinput select option {
+  color: black;
+}
+
+.inlineinput input::placeholder, .inlineinput select:invalid {
+  color: #e5e5e5;
+}
+
+.inlineinput label {
+  position: relative;
+  display: inline-block;
+  background-color: white;
+  margin: 0 1.25em 0 0.4em;
+  padding: 0 0.75em 0 0.75em;
+  font-size: 0.9em;
+  line-height: 1em;
+  top: 0.6em;
+  left: 0.2em;
+  color: #8a8a8a;
+  z-index: 2;
+  text-align: initial;
+}
+
+select.invalid,
+input.invalid {
+  border-color: red;
+}
+
+.dcp-modal-remember input[type='checkbox'] {
+  transform: scale(1.4);
+  margin-right: 10px;
+}
+
+#dcp-modal-keystore-file-input {
+  margin-top: 10px;
+}
+
+#dcp-modal-password input {
+  padding: 10px;
+}
+
+#dcp-modal-password-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+} 
+
+#dcp-modal-password-content h2 {
+  margin: 0;
+  margin-bottom: 13px;
+}
+
+#dcp-modal-password-content p {
+  margin: 0;
+  line-height: 22px;
+  height: 44px;
+}
 
 /**************************\
   Demo Animation Style
@@ -221,14 +337,6 @@
   order: 1;
 }
 
-/** Rules which affect the behaviour of alert dialogs
- *  based on whether or not their messages are instanceof Error
- */
-#dcp-modal-alert.exception #dcp-modal-alert-message {
-  white-space: normal;
-  margin-right: 2em;    
-}
-
 #dcp-modal-alert .dcp-bug-icon,
 #dcp-modal-alert .dcp-stack-trace {
   display: none;
@@ -255,4 +363,3 @@
   display: initial;
   white-space: pre-wrap;
 }
-
