@@ -809,7 +809,7 @@ exports.init = async function dcpClient$$init() {
   reportErrors = options.reportErrors;
   exports._initHead();
   aggrConfig = await exports.createAggregateConfig(initConfig, options);
-  
+
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
@@ -938,7 +938,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   var   remoteConfigCode;
   const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   const home = process.env.DCP_HOMEDIR || os.homedir();
-  const programName = options.programName;
+  let programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
 
@@ -963,47 +963,28 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   let config = localConfig;
 
   /* This follows spec doc line-by-line */
-  addConfigFile(config, __dirname, 'etc/dcp-config.js');
+  addConfigFile(config, __dirname, 'etc/dcp-config');
   await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
-  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
   programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
   await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
-
-  // Sort out polymorphic arguments: 'passed-in configuration'.
-  if (initArgv[0]) {
-    if (typeof initArgv[0] === 'string' || (typeof initArgv[0] === 'object' && initArgv[0] instanceof global.URL)) {
-      addConfig(localConfig.scheduler, { location: new URL(initArgv[0]) });
-
-      /**
-       * Checking using isArray to avoid adding cli argv (e.g. process.execPath,
-       * script name, etc.) into config.
-       */
-    } else if (typeof initArgv[0] === 'object' && !Array.isArray(initArgv[0])) {
-      addConfig(localConfig, initArgv[0]);
-    }
-  }
-
-  if (initArgv[1])
-    localConfig.bundle.autoUpdate = !!initArgv[1];
-  if (initArgv[2])
-    addConfig(localConfig.bundle, { location: new URL(initArgv[2])});
   
   /* This follows spec doc line-by-line */
   await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config.js');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config.js`);
-  addConfigFile(config, home, '.dcp/dcp-client/dcp-config.js');
-  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config`);
   await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
   programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
 
-  addConfigEnviron(localConfig, 'DCP_CONFIG_');
-  addConfigFile(localConfig, etc, 'dcp/override/dcp-config.js');
+  addConfigEnv(localConfig, 'DCP_CONFIG_');
+  addConfigFile(localConfig, etc, 'dcp/override/dcp-config');
   addConfig(aggrConfig, localConfig);
 
   /**
@@ -1060,14 +1041,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   {
     try
     {
-      debugging() && console.debug(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
+      debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
       remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
     }
     catch(error)
     {
       if (reportErrors !== false)
       {
-        debugger;
         console.error('Error: dcp-client::init could not fetch scheduler configuration at ' + aggrConfig.scheduler.configLocation);
         console.debug(require('dcp/utils').justFetchPrettyError(error));
         process.exit(1);
