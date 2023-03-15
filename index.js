@@ -37,7 +37,7 @@ const debug   = require('debug');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
-const protectedDcpConfigKeys = [ 'system' ];
+const protectedDcpConfigKeys = [ 'system', 'worker', 'standaloneWorker' ];
 var   reportErrors = true;
 
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
@@ -679,11 +679,9 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
     let internalDcpConfig = require('dcp/dcp-config');
 
     /* Layer in new default config nodes from the (possibly autoupdate) bundle which are not protected nodes */
-    const KVIN = require('dcp/internal/kvin');
-    KVIN.userCtors.dcpUrl$$DcpURL=(require('dcp/dcp-url').DcpURL);
     const dcpDefaultConfig = Object.assign({}, KVIN.unmarhsal(require('dcp/internal/dcp-default-config')));
-    for (let protectedNode of [ 'worker', 'standaloneWorker', 'system' ])
-      delete dcpDefaultConfig[protectedNode];
+    for (let protectedKey of protectedDcpConfigKeys)
+      delete dcpDefaultConfig[protectedKey];
 
     Object.assign(internalDcpConfig, dcpDefaultConfig, aggrConfig);
     bundleSandbox.dcpConfig = internalDcpConfig;
@@ -964,8 +962,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   const aggrConfig = {};
 
   /* 1 - determine local config, merge into aggrConfig. The dcp-default-config buried within the bundle
-   *     can supply configuration defaults for priviledged nodes (eg dcpConfig.worker) here, since it is
-   *     being loaded from a priviledged location (local disk) -- however, these cannot be modified by
+   *     can supply configuration defaults for protected nodes (eg dcpConfig.worker) here, since it is
+   *     being loaded from a privileged location (local disk) -- however, these cannot be modified by
    *     an autoupdate bundle.
    */
   const KVIN = require('dcp/internal/kvin');
