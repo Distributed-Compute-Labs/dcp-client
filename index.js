@@ -31,6 +31,7 @@ const os      = require('os');
 const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
+const assert  = require('assert');
 const kvin    = require('kvin');
 const debug   = require('debug');
 const moduleSystem = require('module');
@@ -257,6 +258,16 @@ function injectNsMapModules(nsMap, bundle, bundleLabel, clobber) {
         throw new Error(`Bundle '${bundleLabel}' is missing exports for module ${moduleId}`);
     } else {
       injectModule(moduleId, moduleExports, clobber)
+    }
+  }
+
+  const nsMapValues = Object.values(nsMap);
+  for (let moduleId in bundle)
+  {
+    if (nsMapValues.indexOf(moduleId) === -1)
+    {
+      const moduleExports = bundle[moduleId];
+      injectModule('dcp/internal/' + moduleId, moduleExports, clobber);
     }
   }
 }
@@ -665,9 +676,17 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
     bundleSandbox.dcpConfig = global.dcpConfig;
     injectModule('dcp/dcp-config', global.dcpConfig, true);
   } else {
-    let defaultConfig = require('dcp/dcp-config');
-    Object.assign(defaultConfig, aggrConfig);
-    bundleSandbox.dcpConfig = defaultConfig;
+    let internalDcpConfig = require('dcp/dcp-config');
+
+    /* Layer in new default config nodes from the (possibly autoupdate) bundle which are not protected nodes */
+    const KVIN = require('dcp/internal/kvin');
+    KVIN.userCtors.dcpUrl$$DcpURL=(require('dcp/dcp-url').DcpURL);
+    const dcpDefaultConfig = Object.assign({}, KVIN.unmarhsal(require('dcp/internal/dcp-default-config')));
+    for (let protectedNode of [ 'worker', 'standaloneWorker', 'system' ])
+      delete dcpDefaultConfig[protectedNode];
+
+    Object.assign(internalDcpConfig, dcpDefaultConfig, aggrConfig);
+    bundleSandbox.dcpConfig = internalDcpConfig;
   }
 
   bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
@@ -724,6 +743,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
   dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+  debugger;
   return ret;
 }
 
@@ -940,17 +960,24 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   const programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
-
+  const defaultConfig = require('dcp/dcp-config'); /* global dcpConfig - probably empty */
   const aggrConfig = {};
-  const defaultConfig = require('dcp/dcp-config'); /* dcpConfig from bundle */
-  const localConfig = {
+
+  /* 1 - determine local config, merge into aggrConfig. The dcp-default-config buried within the bundle
+   *     can supply configuration defaults for priviledged nodes (eg dcpConfig.worker) here, since it is
+   *     being loaded from a priviledged location (local disk) -- however, these cannot be modified by
+   *     an autoupdate bundle.
+   */
+  const KVIN = require('dcp/internal/kvin');
+  KVIN.userCtors.dcpUrl$$DcpURL=(require('dcp/dcp-url').DcpURL);
+  const localConfig = Object.assign(KVIN.unmarshal(require('dcp/internal/dcp-default-config'), {
     scheduler: {
       location: new URL('https://scheduler.distributed.computer/')
     },
     bundle: {}
-  };
+  }));
 
-  /* 1 - determine local config, merge into aggrConfig */
+  assert(dcpConfig === require('dcp/dcp-config'), "bundle's internal dcpConfig object is not the same as this program's");
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
 
