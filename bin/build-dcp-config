@@ -11,7 +11,7 @@ const fs = require('fs');
 
 const dcpClient = require('..');
 const { Address } = require('dcp/wallet');
-const kvin = require('kvin');
+const kvin = require('dcp/internal/kvin');
 
 let outputFd = +(process.env.BUILD_DCP_CONFIG_OUTPUT_FD || "3");
 

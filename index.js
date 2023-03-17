@@ -13,9 +13,6 @@
  *              3. initcb   - invokes a callback when initialization is complete
  *
  *              During initialization, we 
- *              1. wire up require('dcp/dcp-xhr') to provide global.XMLHttpRequest from the local bundle, 
- *                 allowing us to immediately start using an Agent which understands HTTP proxies and 
- *                 and keepalive,
  *              2. build the layered dcp-config for the program invoking init 
  *                 (see: https://people.kingsds.network/wesgarland/dcp-client-priorities.html /wg aug 2020)
  *              3. download a new bundle if auto-update is on
@@ -27,18 +24,20 @@
  */
 'use strict';
 
+var   reportErrors = true;
+var   KVIN;             /* KVIN context from internal kvin */
+var   XMLHttpRequest;   /* from internal dcp-xhr */
+
 const os      = require('os');
 const fs      = require('fs')
 const path    = require('path');
 const process = require('process');
 const assert  = require('assert');
-const kvin    = require('kvin');
 const debug   = require('debug');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
 const protectedDcpConfigKeys = [ 'system', 'worker', 'standaloneWorker' ];
-var   reportErrors = true;
 
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
 let hadOriginalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
@@ -280,6 +279,10 @@ injectModule('dcp/env-native', { platform: 'nodejs' })
 debug('dcp-client:modules')('Begin phase 1 module injection')  /* Just enough to be able to load a second bundle */
 injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
+
+KVIN = new (require('dcp/internal/kvin')).KVIN();
+KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
+KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
 
 /** Merge a new configuration object on top of an existing one. The new object
  *  is overlaid on the existing object, so that properties specified in the 
@@ -582,7 +585,7 @@ exports._initHead = function dcpClient$$initHead() {
   initInvoked = true; /* Allow us to eval require("dcp/compute"); from config */
 
   if (typeof XMLHttpRequest === 'undefined')
-    global.XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
+    XMLHttpRequest = require('dcp/dcp-xhr').XMLHttpRequest;
   
   require('dcp/signal-handler').init();
 }
@@ -672,18 +675,19 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   if (hadOriginalDcpConfig) {
     /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
     debug('dcp-client:config')('Dropping bundle dcp-config in favour of global dcpConfig')
-    Object.assign(require('dcp/dcp-config'), global.dcpConfig);
+    addConfig(require('dcp/dcp-config'), global.dcpConfig);
     bundleSandbox.dcpConfig = global.dcpConfig;
     injectModule('dcp/dcp-config', global.dcpConfig, true);
   } else {
     let internalDcpConfig = require('dcp/dcp-config');
 
     /* Layer in new default config nodes from the (possibly autoupdate) bundle which are not protected nodes */
-    const dcpDefaultConfig = Object.assign({}, KVIN.unmarhsal(require('dcp/internal/dcp-default-config')));
+    const dcpDefaultConfig = Object.assign({}, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));
     for (let protectedKey of protectedDcpConfigKeys)
       delete dcpDefaultConfig[protectedKey];
 
-    Object.assign(internalDcpConfig, dcpDefaultConfig, aggrConfig);
+    addConfig(internalDcpConfig, dcpDefaultConfig);
+    addConfig(internalDcpConfig, aggrConfig);
     bundleSandbox.dcpConfig = internalDcpConfig;
   }
 
@@ -966,8 +970,6 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
    *     being loaded from a privileged location (local disk) -- however, these cannot be modified by
    *     an autoupdate bundle.
    */
-  const KVIN = require('dcp/internal/kvin');
-  KVIN.userCtors.dcpUrl$$DcpURL=(require('dcp/dcp-url').DcpURL);
   const localConfig = Object.assign(KVIN.unmarshal(require('dcp/internal/dcp-default-config'), {
     scheduler: {
       location: new URL('https://scheduler.distributed.computer/')
@@ -1029,7 +1031,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     {
       debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
       remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
-      remoteConfigCode = kvin.deserialize(remoteConfigCode);
+      remoteConfigCode = KVIN.parse(remoteConfigCode);
     }
     catch(error)
     {
@@ -1066,7 +1068,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     addConfig(newConfig,  defaultConfig);
     addConfig(newConfig,  remoteConfig);
     addConfig(newConfig,  localConfig);   /* re-adding here causes strings to become URLs if they URLs in remote */
-    Object.assign(aggrConfig, newConfig); 
+    addConfig(aggrConfig, newConfig); 
     bundleSandbox.dcpConfig = aggrConfig; /* assigning globalThis.dcpConfig in remoteConfigCode context creates 
                                              a new dcpConfig in the bundle - put it back */ 
   }
@@ -1109,8 +1111,6 @@ function createAggregateConfigSync(initConfig, options)
 {
   const { patchup: patchUp } = require('dcp/dcp-url');
   const { Address } = require('dcp/wallet');
-  const custom = new kvin.KVIN();
-  custom.userCtors.dcpEth$$Address = Address;
 
   const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
   /* XXX @todo - in debug build,  spawnArgv.unshift('--inspect'); */
@@ -1128,7 +1128,7 @@ function createAggregateConfigSync(initConfig, options)
        * from build-dcp-config. (e.g. child.output[3])
        */
       stdio: ['pipe', 'inherit', 'inherit', 'pipe'],
-          input: custom.serialize({ initConfig, options }),
+      input: KVIN.stringify({ initConfig, options }),
     },
   );
 
@@ -1138,7 +1138,7 @@ function createAggregateConfigSync(initConfig, options)
   }
 
   const serializedOutput = String(child.output[3]);
-  const aggregateConfig = custom.deserialize(serializedOutput);
+  const aggregateConfig = KVIN.parse(serializedOutput);
 
   debug('dcp-client:init')('fetched aggregate configuration', aggregateConfig);
   return aggregateConfig;
