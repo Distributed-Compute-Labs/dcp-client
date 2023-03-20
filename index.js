@@ -282,8 +282,8 @@ injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
 
 KVIN = new (require('dcp/internal/kvin')).KVIN();
-KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
-KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
+KVIN.userCtors.dcpUrl$$DcpURL  = ctxPatchupMemoFactory(require('dcp/dcp-url').DcpURL);
+KVIN.userCtors.dcpEth$$Address = ctxPatchupMemoFactory(require('dcp/wallet').Address);
 
 /** Merge a new configuration object on top of an existing one. The new object
  *  is overlaid on the existing object, so that properties specified in the 
@@ -612,7 +612,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   var ret;              /* the return value of the current function - usually the `dcp` object but
                            possibly edited by the postInitTailHook function. */
   var schedConfLocFun = require('dcp/protocol-v4').getSchedulerConfigLocation;
-  
+
   /* 1 */
   if (finalBundleCode) {
     finalBundleLabel = String(finalBundleURL);
@@ -662,6 +662,10 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
    */
   if (schedConfLocFun)
     require('dcp/protocol-v4').getSchedulerConfigLocation = schedConfLocFun;
+
+  /** XXXwg at this point, stuff loaded from initial bundle has wrong instanceof ctors. The code below doesn't quite fix that. */
+  KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
+  KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
 
   /**
    * Patch up URLs present in the config AFTER final module injection, else
@@ -746,7 +750,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
   dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
-  debugger;
+
   return ret;
 }
 
@@ -1070,7 +1074,8 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     try
     {
       debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
-      remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
+      const serializedConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
+      remoteConfig = KVIN.parse(serializedConfig);
     }
     catch(error)
     {
