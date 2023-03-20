@@ -130,6 +130,7 @@ function evalScriptInSandbox(filename, sandbox)
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
  *  file, and the sandbox is a special container with limited objects that we setup
  *  during config file processing.
+ *  'code' must come from a trusted source, so we don't execute unknown code.
  *
  *  @param      code     {string}        The code to eval
  *  @param      sandbox  {object}        A sandbox object, used for injecting 'global' symbols as needed
@@ -831,7 +832,7 @@ exports.init = async function dcpClient$$init() {
   reportErrors = options.reportErrors;
   exports._initHead();
   aggrConfig = await exports.createAggregateConfig(initConfig, options);
-  
+
   finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
@@ -939,6 +940,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  * of the API consumer always take priority.
  *
  *  1 - create the local config by 
+ *       - reading the config in dcp-client/etc/dcp-config.js
  *       - reading the config buried in the bundle and defined at module load
  *       - reading files in ~/.dcp, /etc/dcp, etc or using hard-coded defaults
  *       - reading the registry
@@ -959,7 +961,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   var   remoteConfigCode;
   const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   const home = process.env.DCP_HOMEDIR || os.homedir();
-  const programName = options.programName;
+  let programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
   const defaultConfig = require('dcp/dcp-config'); /* global dcpConfig - probably empty */
@@ -976,11 +978,49 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     },
     bundle: {}
   }));
-
+  let remoteConfig;
+  
   assert(dcpConfig === require('dcp/dcp-config'), "bundle's internal dcpConfig object is not the same as this program's");
   addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
 
+  if (!programName)
+    programName = process.mainModule && process.mainModule.filename || false;
+  if (programName)
+    programName = path.basename(programName, '.js');
+  let config = localConfig;
+
+  /* This follows spec doc line-by-line */
+  addConfigFile(config, __dirname, 'etc/dcp-config');
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+  
+  /* This follows spec doc line-by-line */
+  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
+  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
+  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
+  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
+  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config`);
+  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
+  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
+
+  addConfigEnv(localConfig, 'DCP_CONFIG_');
+  addConfigFile(localConfig, etc, 'dcp/override/dcp-config');
+  addConfig(aggrConfig, localConfig);
+
+  /**
+   * 4. Use the config + environment + arguments to figure out where the
+   *    scheduler is.
+   *
+   * Only override the scheduler from argv if cli specifies a scheduler.
+   * e.g. the user specifies a --dcp-scheduler option.
   /* See spec doc dcp-config-file-regkey-priorities 
    * Note: this code is Sep 2022, overriding older spec, spec update to come. /wg
    * 
@@ -1019,7 +1059,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   if (!aggrConfig.scheduler.configLocation &&
       aggrConfig.scheduler.configLocation !== false) {
     addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
-      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin`)
+      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin?ver=2.0.0`)
     });
   }
 
@@ -1029,22 +1069,20 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   {
     try
     {
-      debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`); 
-      remoteConfigCode = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
-      remoteConfigCode = KVIN.parse(remoteConfigCode);
+      debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
+      remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
     }
     catch(error)
     {
       if (reportErrors !== false)
       {
-        debugger;
         console.error('Error: dcp-client::init could not fetch scheduler configuration at ' + aggrConfig.scheduler.configLocation);
         console.debug(require('dcp/utils').justFetchPrettyError(error));
         process.exit(1);
       }
       throw error;
     }
-    if (remoteConfigCode.length === 0)
+    if (remoteConfig.length === 0)
       throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
   }
       
@@ -1053,10 +1091,9 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   bundleSandbox.XMLHttpRequest = XMLHttpRequest;
   bundleSandbox.window = bundleSandbox
   bundleSandbox.globalThis = bundleSandbox
-  if (remoteConfigCode) {
-    let remoteConfig = {};
+  if (remoteConfig)
+  {
     let newConfig = {};
-    addConfig(remoteConfig, evalStringInSandbox(remoteConfigCode, bundleSandbox, aggrConfig.scheduler.configLocation.href));
     for (let key of protectedDcpConfigKeys)
       delete remoteConfig[key];
     addConfig(remoteConfig, bundleSandbox.dcpConfig);
