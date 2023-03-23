@@ -1,7 +1,6 @@
 /**
- * @file        config.tap
- *              In conjunction with test-etc/override/dcp-config.js, ensure correct
- *              precendence of dcpConfig sources.
+ * @file        config.js
+ *              This is the actual test called for config-sync.tap and config-async.tap
  *
  * @author      KC Erb
  * @date        Jul 2020
@@ -9,10 +8,6 @@
 'use strict';
 const { test } = require('zora');
 const os = require('os');
-const dcpClient = require('..');
-require('./setup-testenv');
-
-dcpClient.initSync();
 const dcpConfig = require('dcp/dcp-config');
 
 test('config order', function (t) {
