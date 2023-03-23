@@ -28,6 +28,7 @@
     "vtest": "npx peter -v tests"
   },
   "dependencies": {
+    "@kingsds/socket.io-client": "^4.5.4",
     "@kingsds/xmlhttprequest-ssl": "^2.1.0",
     "atob": "2.1.2",
     "bravojs": "^1.0.16",
