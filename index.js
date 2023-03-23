@@ -793,32 +793,39 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
  * 
  * This routine also populates certain key default values, such as the scheduler and program name that
  * need to always be defined, and updates the localConfig fragment to reflect appropriate options.
+ *
+ * Form 1 - {string} scheduler location
+ * Form 2 - {URL}    scheduler location
+ * Form 3 - {object} options
+ * Form 4 - {object} dcpConfig fragment, {object} options (DEPRECATED)
+ *
+ * Rather than use form 4, pass a dcpConfig option to form 3
  */
 function handleInitArgs(initArgv)
 {
   var initConfig = { scheduler: {}, bundle: {} };
-  var options = {
+  var options;
+  const defaultOptions = {
     programName: process.mainModule ? path.basename(process.mainModule.filename, '.js') : 'node-repl',
     parseArgv:   !Boolean(process.env.DCP_CLIENT_NO_PARSE_ARGV),
   };
 
-  if (!initArgv[0] || typeof initArgv[0] === 'string' || initArgv[0] instanceof URL)
+  switch (initArgv.length)
   {
-    /* form 1: scheduler location || falsey, optional autoUpdate flag, optional bundle location */
-    if (initArgv[0])
-      addConfig(initConfig.scheduler, { location: new URL(initArgv[0]) });
-    if (initArgv.length > 1)
-      initConfig.bundle.autoUpdate = Boolean(initArgv[1]);
-    if (initArgv[2])
-      addConfig(initConfig.bundle, { location: new URL(initArgv[2])});
-  }
-  else
-  {
-    /* form 2: dcpConfig fragment, optional options */
-    addConfig(initConfig, initArgv[0]);
-    addConfig(options,    initArgv[1]);
+    case 0:
+      options = defaultOptions;
+      break;
+    case 1:
+      options = Object.assign(defaultOptions, initArgv[0]);
+      break;
+    default:
+      throw new Error('Too many arguments dcp-client::init()!');
+    case 2:
+      options = Object.assign(defaultOptions, { dcpConfig: initArgv[0] }, initArgv[1]);
+      break;
   }
 
+  options.dcpConfig = Object.assign(initConfig, options.dcpConfig);
   if (options.scheduler)
     initConfig.scheduler.location = new URL(options.scheduler);    
   if (options.autoUpdate)
@@ -1073,7 +1080,7 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   debug('dcp-client:config')(` . auto-update is ${localConfig.bundle.autoUpdate ? 'on' : 'off'}; bundle is at ${localConfig.bundle.location}`);
 
   if (aggrConfig.scheduler.configLocation === false)
-    debug('dcp-client:config')(` * Not loading configuration from remote scheduler`);
+    debug('dcp-client:config')(` ! Not loading configuration from remote scheduler`);
   else
   {
     try
@@ -1126,11 +1133,13 @@ exports.initcb = require('./init-common').initcb
 function createConfigFragmentsSync(initConfig, options)
 {
   const { Address } = require('dcp/wallet');
-
-  const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
-  /* XXX @todo - in debug build,  spawnArgv.unshift('--inspect'); */
+  const spawnArgv = [require.resolve('./bin/build-dcp-config')].concat(process.argv.slice(2));
+  const input = KVIN.stringify({ initConfig, options });
   const env = process.env.DEBUG ? Object.assign({}, process.env) : process.env;
   delete env.DEBUG;
+
+  debug('dcp-client:config-spawn')(' * spawn: ' + spawnArgv.map(x => / /.test(x) ? `"${x}"` : x).join(' '));
+  debug('dcp-client:config-spawn')(' . input: ' + input);
   const child = spawnSync(
     process.execPath,
     spawnArgv,
@@ -1143,7 +1152,7 @@ function createConfigFragmentsSync(initConfig, options)
        * from build-dcp-config. (e.g. child.output[3])
        */
       stdio: ['pipe', 'inherit', 'inherit', 'pipe'],
-      input: KVIN.stringify({ initConfig, options }),
+      input
     },
   );
   
