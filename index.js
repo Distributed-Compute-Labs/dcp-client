@@ -24,9 +24,9 @@
  */
 'use strict';
 
-var   reportErrors = true;
-var   KVIN;             /* KVIN context from internal kvin */
-var   XMLHttpRequest;   /* from internal dcp-xhr */
+var   reportErrors = true; /* can be overridden by options.reportErrors during init() */
+var   KVIN;                /* KVIN context from internal kvin */
+var   XMLHttpRequest;      /* from internal dcp-xhr */
 
 const os      = require('os');
 const fs      = require('fs')
@@ -37,12 +37,25 @@ const debug   = require('debug');
 const moduleSystem = require('module');
 const { spawnSync } = require('child_process');
 const vm = require('vm');
-const protectedDcpConfigKeys = [ 'system', 'worker', 'standaloneWorker' ];
+const protectedDcpConfigKeys = [ 'system', 'bundle', 'worker', 'standaloneWorker' ];
 
 let initInvoked = false; /* flag to help us detect use of Compute API before init */
-let hadOriginalDcpConfig = globalThis.hasOwnProperty('dcpConfig'); /* flag to determine if the user set their own dcpConfig global variable before init */
+let originalDcpConfig = globalThis.dcpConfig || false; /* not false if user set their own dcpConfig global variable before init */
+globalThis.dcpConfig = originalDcpConfig || { __filename };
 
 const distDir = path.resolve(path.dirname(module.filename), 'dist');
+
+/* Registry import code knows to make strings into URLs when going on top of URLs; so we need to provide
+ * nodes of the right that we can expect to be overwritten by the registry.
+ */
+const bootstrapConfig = {
+    build: 'bootstrap',
+    bundleConfig: true,
+    scheduler:          { location: new URL('http://bootstrap.distributed.computer/') },
+    bank:               { location: new URL('http://bootstrap.distributed.computer/') },
+    packageManager:     { location: new URL('http://bootstrap.distributed.computer/') },
+    needs: { urlPatchUp: true },
+};
 
 const bundleSandbox = {
   URL,
@@ -61,50 +74,23 @@ const bundleSandbox = {
   Float64Array,
   BigInt64Array,
   BigUint64Array,
-  // To make instanceof checks for Promises work while serializing dcpConfig
   Promise,
-  require,
+  Error,
+  ArrayBuffer,
+  require, /* becomes requireNative in webpack-native-bridge */
   console,
   setInterval,  clearInterval,
   setTimeout,   clearTimeout,
   setImmediate, clearImmediate,
   crypto: { getRandomValues: require('polyfill-crypto.getrandomvalues') },
-  dcpConfig: {
-    build: 'bootstrap',
-    bundleConfig: true,
-    scheduler: {},
-    bank: {
-      location: new URL('http://bootstrap.distributed.computer/')
-    },
-    packageManager: {
-      location: new URL('http://bootstrap.distributed.computer/')
-    },
-    needs: { urlPatchUp: true },
-  },
+  window: globalThis,
 };
 
 function runSandboxedCode(sandbox, code, options)
 {
-  if (process.env.DCP_CLIENT_LEGACY_CONTEXT_SANDBOXING)
-  {
-    const script = new vm.Script(code, options);
-    return script.runInNewContext(vm.createContext(sandbox), options);
-  }
-
-  if (typeof runSandboxedCode.extraGlobalProps === 'undefined')
-    runSandboxedCode.extraGlobalProps = {};
-
-  for (let prop in sandbox)
-  {
-    if (!globalThis.hasOwnProperty(prop) || runSandboxedCode.extraGlobalProps.hasOwnProperty(prop))
-    {
-      globalThis[prop] = sandbox[prop];
-      runSandboxedCode.extraGlobalProps[prop] = true; /* Memoize global prop list mutation to allow re-mutation */
-    }
-  }
-  
+  const ctx = vm.createContext(sandbox);
   const script = new vm.Script(code, options);
-  return script.runInThisContext(options);
+  return script.runInContext(ctx, options);
 }
 
 /** Evaluate a file in a sandbox without polluting the global object.
@@ -139,44 +125,31 @@ function evalScriptInSandbox(filename, sandbox)
  */
 function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringInSandbox)')
 {
-  /**
-   * Remove comments and then decide if this config file contains an IIFE. If
-   * not, we need to wrap it as an IIFE to avoid "SyntaxError: Illegal return
-   * statement" from being thrown for files with top level return statements.
-   */
-  const iifeRegex = /\([\s\S]*\(\)[\s\S]*\{[\s\S]*\}\)\(\);?/;
-  let lineOffset = 0;
-  if (!withoutComments(code).match(iifeRegex)) {
-    code = `(() => {\n${code}\n})();`;
+  var result;
+  const codeHasVeryLongLine = Boolean(/[^\n]{1000,}[^\n]*\n/.test(code));
+  const runOptions = {
+    filename,
+    lineOffset: 0,
+    columnOffset: 12, /* use strict */
+    displayErrors: !codeHasVeryLongLine
+  };
 
-    // To account for the newline in "(() => { \n${code}..."
-    lineOffset = -1;
+  /* We support two types of strings - one produces a value, the other returns a value. Use the JS
+   * parser to figure out which syntax this code is in. In the case of a produced value, we use the
+   * last value which was evaluated by the engine as the result, just like eval.
+   */
+  try
+  {
+    result = runSandboxedCode(sandbox, '"use strict";' + code, runOptions);
   }
+  catch(error)
+  {
+    if (!/^Illegal return statement/.test(error.message))
+      throw error;
 
-  let result;
-
-  /**
-   * Need to wrap in trycatch so that we can control the stack trace that is
-   * printed.
-   */
-  try {
-    result = runSandboxedCode(sandbox, code, {
-      filename,
-      lineOffset,
-      /**
-       * If the code is a minified bundle (i.e. nigh unreadable), avoid printing
-       * the whole stack trace to stderr by default.
-       */
-      displayErrors: false,
-    });
-  } catch (error) {
-    if (reportErrors)
-    {
-      console.error(error.message);
-      debug('dcp-client:evalStringInSandbox')(error);
-      process.exit(1);
-    }
-    throw error;
+    code = `(() => {;${code}})()`; /* wrap in IIFE so conf can return objects */
+    runOptions.columnOffset += 9;
+    result = runSandboxedCode(sandbox, '"use strict";' + code, runOptions);
   }
 
   return result;
@@ -191,16 +164,20 @@ function withoutComments(code) {
   return code.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '')
 }
 
-/** Load the bootstrap bundle - used primarily to plumb in utils::justFetch.
- *  Runs in a different, but identical, sandbox as the config files and client code.
+/** 
+ * Load the bootstrap bundle - used primarily to plumb in utils::justFetch.
+ * Runs in a different, but identical, sandbox as the config files and client code. This code is
+ * evaluated with the bootstrap config as dcpConfig so that static initialization of dcpConfig in
+ * any of the bootstrap modules can mutate the bottom-most layer of the dcpConfig stack.
  */
 function loadBootstrapBundle() {
   let sandbox = {}
 
   Object.assign(sandbox, bundleSandbox)
-  sandbox.window = sandbox
   sandbox.globalThis = sandbox;
-
+  sandbox.window     = sandbox;
+  sandbox.dcpConfig  = bootstrapConfig;
+  
   return evalScriptInSandbox(path.resolve(distDir, 'dcp-client-bundle.js'), sandbox)
 }
 
@@ -282,8 +259,8 @@ injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
 
 KVIN = new (require('dcp/internal/kvin')).KVIN();
-KVIN.userCtors.dcpUrl$$DcpURL  = ctxPatchupMemoFactory(require('dcp/dcp-url').DcpURL);
-KVIN.userCtors.dcpEth$$Address = ctxPatchupMemoFactory(require('dcp/wallet').Address);
+KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
+KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
 
 /** Merge a new configuration object on top of an existing one. The new object
  *  is overlaid on the existing object, so that properties specified in the 
@@ -305,6 +282,8 @@ KVIN.userCtors.dcpEth$$Address = ctxPatchupMemoFactory(require('dcp/wallet').Add
 function addConfig (existing, neo) {
   const { DcpURL } = require('dcp/dcp-url');
 
+  debug('dcp-client:config-verbose')('adding', neo);
+
   for (let prop in neo) {
     if (!neo.hasOwnProperty(prop))
       continue;
@@ -322,14 +301,6 @@ function addConfig (existing, neo) {
       existing[prop] = neo[prop]
     }
   }
-}
-
-/* existing ... neo */
-function addConfigs() {
-  var neo = arguments[arguments.length - 1];
-
-  for (const existing of Array.from(arguments).slice(0, -1))
-    addConfig(existing, neo);
 }
 
 /**
@@ -403,46 +374,6 @@ function readSafePermsFile(fullPath)
   return false;
 }
 
-/** Create a memo of where DcpURL instances are in the object graph */
-function makeURLMemo(obj, where) {
-  const { DcpURL } = require('dcp/dcp-url');
-  var memo = [];
-  var here;
-
-  if (!where)
-    where = '';
-
-  for (let prop in obj) {
-    if (typeof obj[prop] !== 'object')
-      continue;
-    here = where ? where + '.' + prop : prop;
-    if (DcpURL.isURL(obj[prop])) {
-      memo.push(here);
-    } else {
-      memo = memo.concat(makeURLMemo(obj[prop], here));
-    }
-  }
-
-  return memo;
-}
-
-/** Change any properties in the urlMemo which are strings into URLs */
-function applyURLMemo(urlMemo, top) {
-  const { DcpURL } = require('dcp/dcp-url');
-  for (let objDotPath of urlMemo) {
-    let obj = top;
-    let pathEls, pathEl;
-
-    for (pathEls = objDotPath.split('.'), pathEl = pathEls.shift();
-         pathEls.length;
-         pathEl = pathEls.shift()) {
-      obj = obj[pathEl];      
-    }
-    if (typeof obj[pathEl] === 'string')
-      obj[pathEl] = new DcpURL(obj[pathEl]);
-  }
-}
-
 /** Merge a new configuration object on top of an existing one, via
  *  addConfig().  The file is read, turned into an object, and becomes
  *  the neo config.
@@ -459,6 +390,30 @@ function addConfigFile(existing /*, file path components ... */) {
     fullPath = path.join(fullPath, arguments[i]);
   }
 
+  /**
+   * Make a the global object for this context this config file is evaluated in.
+   * - Top-level keys from dcpConfig become properties of this object, so that we can write statements 
+   *   like scheduler.location='XXX' in the file.
+   * - A variable named `dcpConfig` is also added, so that we could replace nodes wholesale, eg
+   *   `dcpConfig.scheduler = { location: 'XXX' }`.
+   * - A require object that resolves relative to the config file is injected
+   * - All of the globals that we use for evaluating the bundle are also injected
+   */
+  function makeConfigSandbox()
+  {
+    var configSandbox = Object.assign({}, bundleSandbox, {
+      dcpConfig: existing,
+      require:   moduleSystem.createRequire(fullPath),
+    });
+
+    for (let key in existing)
+      if (!configSandbox.hasOwnProperty(key))
+        configSandbox[key] = configSandbox.dcpConfig[key];
+
+    assert(configSandbox.console);
+    return configSandbox;
+  }
+  
   if (fullPath && checkConfigFileSafePerms(fullPath + '.json'))
   {
     fullPath = fullPath + './json';
@@ -467,11 +422,20 @@ function addConfigFile(existing /*, file path components ... */) {
     return;
   }
 
+  if (fullPath && checkConfigFileSafePerms(fullPath + '.kvin'))
+  {
+    fullPath = fullPath + './kvin';
+    debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
+    addConfig(existing, KVIN.parse(fs.readFileSync(fullPath)));
+    return;
+  }
+
   if (fullPath && checkConfigFileSafePerms(fullPath + '.js'))
   {
+    const configSandbox = makeConfigSandbox();
     let neo;
     let code
-    
+
     fullPath = fullPath + '.js';
     debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
     code = readSafePermsFile(fullPath, 'utf-8');
@@ -480,26 +444,21 @@ function addConfigFile(existing /*, file path components ... */) {
     
     if (withoutComments(code).match(/^\s*{/)) {
       /* config file is just a JS object literal */
-      const neo = evalStringInSandbox(`'use strict'; return (${code});`, bundleSandbox, fullPath);
+      const neo = evalStringInSandbox(`return (${code});`, configSandbox, fullPath);
       addConfig(existing, neo);
     } else {
       /* overlay the context's global namespace with the dcpConfig namespace so 
        * that we have good syntax to modify with arbitrary JS; then find changes 
        * and apply to aggregate config.
        */
-      let configSandbox = {}
       let knownGlobals;
-      let urlMemo;
-      
-      neo = {};
-      configSandbox.console = console
-      Object.assign(configSandbox, bundleSandbox)
-      Object.assign(configSandbox, existing);
-      urlMemo = makeURLMemo(existing);
-      
-      knownGlobals = Object.keys(configSandbox);
-      const ret = evalStringInSandbox(`'use strict'; ${code};`, configSandbox, fullPath);
 
+      neo = {};
+      knownGlobals = Object.keys(configSandbox);
+
+      const ret = evalStringInSandbox(code, configSandbox, fullPath);
+      Object.assign(neo, ret);
+      
       // handle programmatic assignment to top-level config
       // via sandbox globals
       for (let key of Object.keys(configSandbox)) {
@@ -511,15 +470,38 @@ function addConfigFile(existing /*, file path components ... */) {
           neo[key] = configSandbox[key];
       }
 
-      applyURLMemo(urlMemo, neo);
-      // use return values now if available
-      if (ret !== null && typeof ret === "object") Object.assign(neo, ret);
     }
     addConfig(existing, neo);
     return;
   }
 
   debug('dcp-client:config')(` . did not load configuration file ${fullPath}`);
+}
+
+/**
+ * Since there are limited types in the registry, we have decided that certain property
+ * names coming from the registry will always be represented by specific types in dcpConfig.
+ *
+ * o.href => o is a URL
+ */
+function coerceMagicRegProps(o, seen)
+{
+  /* seen list keeps up from blowing the stack on graphs with cycles */
+  if (!seen)
+    seen = [];
+  if (seen.indexOf(o) !== -1)
+    return;
+  seen.push(o);
+
+  for (let key in o)
+  {
+    if (!o.hasOwnProperty(key) || typeof o[key] !== 'object')
+      continue;
+    if (o[key].hasOwnProperty('href'))
+      o[key] = new URL(o[key]);
+    else
+      coerceMagicRegProps(o[key], seen)
+  }
 }
 
 /** Merge a new configuration object on top of an existing one, via
@@ -533,8 +515,8 @@ async function addConfigRKey(existing, hive, keyTail) {
     return;
   neo = await require('./windows-registry').getObject(hive, keyTail);
   debug('dcp-client:config')(` * Loading configuration from ${hive} ${keyTail}`);
-  if (neo)
-    addConfig(existing, neo);
+  if (!neo)
+    addConfig(existing, coerceMagicRegProps(neo));
 }
 
 /** Merge a new configuration object on top of an existing one, via
@@ -550,6 +532,7 @@ function addConfigEnv(existing, prefix) {
       continue
     }
     if (process.env[v][0] === '{') {
+      debug('dcp-client:config')(` * Loading configuration object from env ${v}`);
       let prop = fixCase(v.slice(prefix.length))
       if (typeof neo[prop] !== 'object') {
         neo[prop] = {}
@@ -578,6 +561,73 @@ function fixCase(ugly)
   return fixed;
 }
 
+/**
+ * Patch up an object graph to fix up minor class instance issues. For example, if we get a URL from the
+ * internal bundle and then download a new URL class, it won't be an instance of the new class and it
+ * won't benefit from any bug fixes, new functionality, etc.
+ *
+ * @param {object} patchupList    a mapping which tells us how to fix these problems for specific
+ *                                classes. This map is an array with each element having the shape 
+ *                                { how, right, wrong }.
+ *
+ *                                right - the right constructor to use
+ *                                wrong - the wrong constructor we want to fixup
+ *                                how   - the method to use getting from wrong to right
+ */
+function patchupClasses(patchupList, o, seen)
+{
+  /* seen list keeps up from blowing the stack on graphs with cycles */
+  if (!seen)
+    seen = [];
+  if (seen.indexOf(o) !== -1)
+    return;
+  seen.push(o);
+
+  for (let key in o)
+  {
+    let moreTraverse = true;
+    if (!o.hasOwnProperty(key) || typeof o[key] !== 'object')
+      continue;
+
+    for (let i=0; i < patchupList.length; i++)
+    {
+      if (Object.getPrototypeOf(o[key]) !== patchupList[i].wrong.prototype)
+        continue;
+      assert(patchupList[i].wrong !== patchupList[i].right);
+      
+      switch (patchupList[i].how)
+      {
+        case 'kvin':
+          o[key] = KVIN.unmarshal(KVIN.marshal(o[key]));
+          break;
+        case 'ctorStr':
+          o[key] = new (patchupList[i].right)(String(o[key]));
+          break;
+        case 'ctor':
+          o[key] = new (patchupList[i].right)(o[key]);
+          break;
+        case 'cast':
+          o[key] = (patchupList[i].right)(o[key]);
+          break;
+        case 'from':
+          o[key] = (patchupList[i].right).from(o[key]);
+          break;
+        case 'proto':
+          Object.setPrototypeOf(o[key], patchupList[i].right.prototype);
+          break;
+        default:
+          throw new Error(`unknown patchup method ${patchupList[i].how}`);
+      }
+
+      moreTraverse = false; /* don't patch up props of stuff we've patched up */
+      break;
+    }
+
+    if (moreTraverse)
+      patchupClasses(patchupList, o[key], seen);
+  }
+}
+
 /** 
  * Tasks which are run in the early phases of initialization
  * - plumb in global.XMLHttpRequest which lives forever -- that way KeepAlive etc works.
@@ -601,10 +651,19 @@ exports._initHead = function dcpClient$$initHead() {
  * 4 - verify versioning information for key core components against running scheduler
  * 5 - load and cache identity & bank keystores if they are provided and options.parseArgv allows (default)
  * 6 - create the return object
- * 
+ *
+ * @param {object} configFrags          configuration fragments;
+ *                                      .localConfig      - config we figured out locally
+ *                                      .defaultConfig    - config we figured out internally
+ *                                      .remoteConfigKVIN - serialized config we downloaded from scheduler
+ *                                      .internalConfig   - reference to bootstrap bundle's dcpConfig object
+ * @param {object} options              options argument passed to init()
+ * @param {string} finalBundleCode      [optional] the code to evaluate as the final bundle, eg autoupdate
+ * @param {object} finalBundleURL       [optional] instance of URL telling us the location where we
+ *                                       downloaded the final bundle from
  * @returns the same `dcp` object as we expose in the vanilla-web dcp-client
  */
-function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
+function initTail(configFrags, options, finalBundleCode, finalBundleURL)
 {
   var nsMap;            /* the final namespace map to go from bundle->dcp-client environment */
   var bundle;           /* the final bundle, usually a copy of the bootstrap bundle */
@@ -614,40 +673,19 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   var schedConfLocFun = require('dcp/protocol-v4').getSchedulerConfigLocation;
 
   /* 1 */
+  bundleSandbox.dcpConfig = configFrags.internalConfig;
   if (finalBundleCode) {
     finalBundleLabel = String(finalBundleURL);
-
-    /**
-     * The finalBundleCode may include dcpConfig.bank.location.resolve, which
-     * means we need to convert the URLs in the bundleSandbox into DcpURLs.
-     */
-    require('dcp/dcp-url').patchup(bundleSandbox);
-    bundle = evalStringInSandbox(
-      finalBundleCode,
-      bundleSandbox,
-      finalBundleLabel,
-    );
+    bundle = evalStringInSandbox(finalBundleCode, bundleSandbox, finalBundleLabel);
   } else {
     const bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
     finalBundleLabel = bundleFilename;
-
-    /**
-     * FIXME(bryan-hoang/wesgarland): Re-evaluating the bundle used to bootstrap
-     * config loading will cause some issues w.r.t. closures and `instanceof`
-     * checks. `instanceof` checks fail when these newly evaluated
-     * functions/classes are injected into the module system, which differ from
-     * their instances in the config. e.g. DcpURL
-     *
-     * For now, we're saving the initial references for closures and patching up
-     * instances for DcpURL, but these different instances could cause future
-     * bugs.
-     */
     bundle = evalScriptInSandbox(bundleFilename, bundleSandbox);
   }
   nsMap = bundle.nsMap || require('./ns-map');  /* future: need to move non-bootstrap nsMap into bundle for stable auto-update */
 
   if (bundle.initTailHook) /* for use by auto-update future backwards compat */ 
-    bundle.initTailHook(aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
+    bundle.initTailHook(configFrags, bundle, finalBundleLabel, bundleSandbox, injectModule);
 
   /* 2 */
   debug('dcp-client:modules')(`Begin phase 2 module injection '${finalBundleLabel}'`);
@@ -657,70 +695,63 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   injectModule('dcp/client-bundle', bundle);
 
   /**
-   * Preserving the initial instance of the function, else it closes over the
-   * wrong variable and returns `undefined` even though fetch has been used.
+   * We preserve the initial instance of the function from the initial bundle evaluation, otherwise it
+   * closes over the wrong variable and returns `undefined` even though fetch has been used.
    */
   if (schedConfLocFun)
     require('dcp/protocol-v4').getSchedulerConfigLocation = schedConfLocFun;
 
-  /** XXXwg at this point, stuff loaded from initial bundle has wrong instanceof ctors. The code below doesn't quite fix that. */
+  /* Class patch-up is necessary because the KVIN deserialzation and default initializations earlier
+   * would have made instances  of classes inside the first bundle instead of the final bundle.
+   *
+   * URL->DcpURL patch is not strictly necessary at this stage, but it saves is from using the
+   * dcpUrl patchup utility and thus a full traversal of the dcpConfig object graph.
+   */
+  const patchupList = [
+    { how: 'kvin', wrong: KVIN.userCtors.dcpEth$$Address, right: require('dcp/wallet').Address },
+    { how: 'kvin', wrong: KVIN.userCtors.dcpUrl$$DcpURL,  right: require('dcp/dcp-url').DcpURL },
+    { how: 'ctor', wrong: URL,                            right: require('dcp/dcp-url').DcpURL },
+  ];
+  patchupClasses(patchupList, configFrags);
+
+  /* Ensure KVIN deserialization from now on uses the current bundle's implementation for these classes */
   KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
   KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
 
-  /**
-   * Patch up URLs present in the config AFTER final module injection, else
-   * future `instanceof` checks for DcpURL can break if `initSync` is used.
+  /* 3. Rebuild the final dcpConfig from the config fragments and other sources. The config fragments in
+   * the bundle are considered secure even if they came from the auto-update bundle, as a user choosing
+   * that feature is already executing arbitrary code from the scheduler with this loader.
    *
-   * Caused by the difference in how `initSync` differs in patching up URLs in
-   * the config during initialization to make it compatible with serialization.
+   * The remote config is re-deserialized, in case the auto-update carried bugfixes in the serializer.
    */
-  require('dcp/dcp-url').patchup(aggrConfig);
+  const workingDcpConfig = require('dcp/dcp-config'); /* reference to final bundle's internal global dcpConfig */
+  const remoteConfig = configFrags.remoteConfigKVIN ? KVIN.parse(configFrags.remoteConfigKVIN) : {};
+  for (let protectedKey of protectedDcpConfigKeys) /* never accept modifications to these keys from scheduler */
+    delete remoteConfig[protectedKey];
 
-  /* 3 */
-  if (hadOriginalDcpConfig) {
-    /* dcpConfig was defined before dcp-client was initialized: assume dev knows what he/she is doing */
-    debug('dcp-client:config')('Dropping bundle dcp-config in favour of global dcpConfig')
-    addConfig(require('dcp/dcp-config'), global.dcpConfig);
-    bundleSandbox.dcpConfig = global.dcpConfig;
-    injectModule('dcp/dcp-config', global.dcpConfig, true);
-  } else {
-    let internalDcpConfig = require('dcp/dcp-config');
+  addConfig(workingDcpConfig, configFrags.internalConfig);
+  addConfig(workingDcpConfig, remoteConfig);
+  addConfig(workingDcpConfig, configFrags.localConfig);
+  addConfig(workingDcpConfig, originalDcpConfig);
 
-    /* Layer in new default config nodes from the (possibly autoupdate) bundle which are not protected nodes */
-    const dcpDefaultConfig = Object.assign({}, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));
-    for (let protectedKey of protectedDcpConfigKeys)
-      delete dcpDefaultConfig[protectedKey];
-
-    addConfig(internalDcpConfig, dcpDefaultConfig);
-    addConfig(internalDcpConfig, aggrConfig);
-    bundleSandbox.dcpConfig = internalDcpConfig;
-  }
-
-  bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
-
-  Object.defineProperty(exports, 'distDir', {
-    value: function dcpClient$$distDir$getter() {
-      return distDir;
-    },
-    configurable: false,
-    writable: false,
-    enumerable: false
-  })
+  bundleSandbox.dcpConfig = workingDcpConfig;
+  globalThis.dcpConfig    = workingDcpConfig;
+  bundleSandbox.dcpConfig.build = require('dcp/build').config.build; /* dcpConfig.build deprecated mar 2023 /wg */
 
   /* 4 */
-  if (aggrConfig.scheduler.configLocation !== false && typeof process.env.DCP_CLIENT_SKIP_VERSION_CHECK === 'undefined')
+  if (workingDcpConfig.scheduler.configLocation !== false && typeof process.env.DCP_CLIENT_SKIP_VERSION_CHECK === 'undefined')
   {
-    if (!aggrConfig.scheduler.compatibility || !aggrConfig.scheduler.compatibility.minimum)
-      throw require('dcp/utils').versionError(aggrConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
+    if (!workingDcpConfig.scheduler.compatibility || !workingDcpConfig.scheduler.compatibility.minimum)
+      throw require('dcp/utils').versionError(workingDcpConfig.scheduler.location.href, 'scheduler', 'dcp-client', '4.0.0', 'EDCP_CLIENT_VERSION');
 
-    if (aggrConfig.scheduler.compatibility)
+    if (workingDcpConfig.scheduler.compatibility)
     {
       let ourVer = require('dcp/protocol').version.provides;
-      let minVer = aggrConfig.scheduler.compatibility.minimum.dcp;
+      let minVer = workingDcpConfig.scheduler.compatibility.minimum.dcp;
       let ok = require('semver').satisfies(ourVer, minVer);
       debug('dcp-client:version')(` * Checking compatibility; dcp-client=${ourVer}, scheduler=${minVer} => ${ok ? 'ok' : 'fail'}`);
       if (!ok)
-        throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', aggrConfig.scheduler.location.href, minVer, 'EDCP_PROTOCOL_VERSION');
+        throw require('dcp/utils').versionError('DCP Protocol', 'dcp-client', workingDcpConfig.scheduler.location.href, minVer, 'EDCP_PROTOCOL_VERSION');
     }
   }
   
@@ -748,7 +779,7 @@ function initTail(aggrConfig, options, finalBundleCode, finalBundleURL)
   /* 6 */
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
-    ret = bundle.postInitTailHook(ret, aggrConfig, bundle, finalBundleLabel, bundleSandbox, injectModule);
+    ret = bundle.postInitTailHook(ret, configFrags, bundle, finalBundleLabel, bundleSandbox, injectModule);
   dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
 
   return ret;
@@ -829,15 +860,15 @@ function handleInitArgs(initArgv)
  */
 exports.init = async function dcpClient$$init() {
   var { initConfig, options } = handleInitArgs(arguments);
-  var aggrConfig;
+  var configFrags;
   var finalBundleCode = false;
   var finalBundleURL;
 
   reportErrors = options.reportErrors;
   exports._initHead();
-  aggrConfig = await exports.createAggregateConfig(initConfig, options);
+  configFrags = await exports.createConfigFragments(initConfig, options);
 
-  finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
+  finalBundleURL = configFrags.localConfig.bundle.autoUpdate ? configFrags.localConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
       debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
@@ -853,7 +884,7 @@ exports.init = async function dcpClient$$init() {
     }
   }
 
-  return initTail(aggrConfig, options, finalBundleCode, finalBundleURL);
+  return initTail(configFrags, options, finalBundleCode, finalBundleURL);
 }
 
 /**
@@ -861,14 +892,14 @@ exports.init = async function dcpClient$$init() {
  */
 exports.initSync = function dcpClient$$initSync() {
   var { initConfig, options } = handleInitArgs(arguments);
-  var aggrConfig;
+  var configFrags;
   var finalBundleCode = false;
   var finalBundleURL;
   
   exports._initHead();
-  aggrConfig = createAggregateConfigSync(initConfig, options);
+  configFrags = createConfigFragmentsSync(initConfig, options);
 
-  finalBundleURL = aggrConfig.bundle.autoUpdate ? aggrConfig.bundle.location : false;
+  finalBundleURL = configFrags.localConfig.bundle.autoUpdate ? configFrags.localConfig.bundle.location : false;
   if (finalBundleURL) {
     try {
       debug('dcp-client:bundle')(` * Loading autoUpdate bundle from ${finalBundleURL.href}`);
@@ -884,7 +915,7 @@ exports.initSync = function dcpClient$$initSync() {
     }
   }
 
-  return initTail(aggrConfig, options, finalBundleCode, finalBundleURL);
+  return initTail(configFrags, options, finalBundleCode, finalBundleURL);
 }
 
 /**
@@ -892,9 +923,11 @@ exports.initSync = function dcpClient$$initSync() {
  */
 function mkEnvConfig()
 {
+  debug('dcp-client:config')(` * Loading configuration from environment`);
+
   const envConfig = { scheduler: {}, bundle: {} };
   const env = process.env;
-  
+
   if (env.DCP_SCHEDULER_LOCATION)     addConfig(envConfig.scheduler, { location: new URL(env.DCP_SCHEDULER_LOCATION) });
   if (env.DCP_CONFIG_LOCATION)        addConfig(envConfig.scheduler, { configLocation: new URL(env.DCP_CONFIG_LOCATION) });
   if (env.DCP_CONFIG_LOCATION === '') addConfig(envConfig.scheduler, { configLocation: false }); /* explicitly request no remote config */
@@ -910,6 +943,8 @@ function mkEnvConfig()
 function mkCliConfig(cliOpts)
 {
   const cliConfig = { scheduler: {} };
+
+  debug('dcp-client:config')(` * Loading configuration from CLI options`);
 
   if (cliOpts.dcpScheduler) cliConfig.scheduler.location = new URL(cliOpts.dcpScheduler);
 
@@ -936,15 +971,21 @@ function mkCliConfig(cliOpts)
  *      - configScope    {string}:      arbitrary name to use in forming various config fragment filenames
  *      - configName     {string}:      arbitrary name to use to resolve a config fragment filename 
  *                                      relative to the program module
+ * @returns {object} with the following properties:
+ *  - defaultConfig:    this is the configuration buried in dcp-client (mostly from the bundle but also index.js)
+ *  - localConfig:      this is the configuration we determined solely from local sources
+ *  - remoteConfigKVIN: this is the serialized configuration we downloaded from the scheduler
+ *  - internalConfig:   this is a reference to the internal dcpConfig object
  */
-exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(initConfig, options)
+exports.createConfigFragments = async function dcpClient$$createConfigFragments(initConfig, options)
 {
 /* The steps that are followed are in a very careful order; there are default configuration options 
  * which can be overridden by either the API consumer or the scheduler; it is important that the wishes 
- * of the API consumer always take priority.
+ * of the API consumer always take priority, and that the scheduler is unable to override parts of 
+ * dcpConfig which are security-critical, like allowOrigins, minimum wage, bundle auto update, etc.
  *
- *  1 - create the local config by 
- *       - reading the config in dcp-client/etc/dcp-config.js
+ *  1 - create the local config by
+ *       - checking an existing dcpConfig variable
  *       - reading the config buried in the bundle and defined at module load
  *       - reading files in ~/.dcp, /etc/dcp, etc or using hard-coded defaults
  *       - reading the registry
@@ -952,72 +993,28 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
  *       - arguments to init()
  *       - use the config + environment + arguments to figure out where the scheduler is
  *       - etc  (see dcp-docs file dcp-config-file-regkey-priorities)
- *  2 - merge the passed-in configuration on top of the default configuration
- *  5 - pull the scheduler's config, and layer it on top of the current configuration
- *  6 - reapply the passed-in configuration into the current configuration
- *
- * Note re strategy - we always write to localConfig and read from aggrConfig. We sync aggr to local
- * before any reads.  This lets us rebuild aggr from various sources at any future point without
- * conflating local configuration and defaults, either hard-coded or remote.  The localConfig is used
- * to figure out where to download the scheduler.
+ *  2 - merge the passed-in configuration on top of the default configuration 
+ *  5 - pull the scheduler's config, and layer it on top of the current configuration to find scheduler
  */
   const cliOpts = require('dcp/cli').base().help(false).parse();
-  var   remoteConfigCode;
   const etc  = process.env.DCP_ETCDIR || (os.platform() === 'win32' ? process.env.ALLUSERSPROFILE : '/etc');
   const home = process.env.DCP_HOMEDIR || os.homedir();
   let programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
-  const defaultConfig = require('dcp/dcp-config'); /* global dcpConfig - probably empty */
-  const aggrConfig = {};
+  var   remoteConfig, remoteConfigKVIN;
+  const internalConfig = require('dcp/dcp-config'); /* needed to resolve dcpConfig.future - would like to eliminate this /wg */
 
-  /* 1 - determine local config, merge into aggrConfig. The dcp-default-config buried within the bundle
-   *     can supply configuration defaults for protected nodes (eg dcpConfig.worker) here, since it is
-   *     being loaded from a privileged location (local disk) -- however, these cannot be modified by
-   *     an autoupdate bundle.
-   */
-  const localConfig = Object.assign(KVIN.unmarshal(require('dcp/internal/dcp-default-config'), {
-    scheduler: {
-      location: new URL('https://scheduler.distributed.computer/')
-    },
-    bundle: {}
-  }));
-  let remoteConfig;
-  
-  assert(dcpConfig === require('dcp/dcp-config'), "bundle's internal dcpConfig object is not the same as this program's");
-  addConfig(aggrConfig, defaultConfig);
-  addConfig(aggrConfig, localConfig);
+  const defaultConfig = Object.assign({}, bootstrapConfig);
+  addConfig(defaultConfig, internalConfig);
+  addConfig(defaultConfig, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));
+  defaultConfig.scheduler = { location: new URL('https://scheduler.distributed.computer/') };
+  const localConfig = Object.assign({}, defaultConfig);
 
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
     programName = path.basename(programName, '.js');
-  let config = localConfig;
-
-  /* This follows spec doc line-by-line */
-  addConfigFile(config, __dirname, 'etc/dcp-config');
-  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
-  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
-  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
-  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config.js`);
-  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
-  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
-  
-  /* This follows spec doc line-by-line */
-  await addConfigRKey(config, 'HKLM', 'dcp-client/dcp-config');
-  addConfigFile(config, etc, 'dcp/dcp-client/dcp-config');
-  programName && await addConfigRKey(config, 'HKLM', `dcp-client/${programName}/dcp-config`);
-  programName && addConfigFile(config, etc, `dcp/dcp-client/${programName}/dcp-config`);
-  addConfigFile(config, home, '.dcp/dcp-client/dcp-config');
-  programName && addConfigFile(config, home, `.dcp/dcp-client/${programName}/dcp-config`);
-  await addConfigRKey(config, 'HKCU', 'dcp-client/dcp-config');
-  programName && await addConfigRKey(config, 'HKCU', `dcp-client/${programName}/dcp-config`);
-
-  addConfigEnv(localConfig, 'DCP_CONFIG_');
-  addConfigFile(localConfig, etc, 'dcp/override/dcp-config');
-  addConfig(aggrConfig, localConfig);
 
   /**
    * 4. Use the config + environment + arguments to figure out where the
@@ -1025,7 +1022,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
    *
    * Only override the scheduler from argv if cli specifies a scheduler.
    * e.g. the user specifies a --dcp-scheduler option.
-  /* See spec doc dcp-config-file-regkey-priorities 
+   * See spec doc dcp-config-file-regkey-priorities 
    * Note: this code is Sep 2022, overriding older spec, spec update to come. /wg
    * 
    * The basic idea is that key collisions are overridden on the basis of "most specificity to current
@@ -1045,7 +1042,7 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   await addConfigRKey(localConfig, 'HKCU', `dcp/${programName}/dcp-config`);
         addConfigFile(localConfig, home,  '.dcp/scope', configScope);
   await addConfigRKey(localConfig, 'HKCU', 'dcp/scope', configScope);
-        addConfig    (localConfig, initConfig); 
+        addConfig    (localConfig, initConfig);
         addConfigEnv (localConfig, 'DCP_CONFIG_');
         addConfig    (localConfig, mkEnvConfig());
         addConfig    (localConfig, mkCliConfig(cliOpts));
@@ -1057,15 +1054,23 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   await addConfigRKey(localConfig, 'HKLM', 'dcp/scope', configScope);
   await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config'); /* legacy - used by screen saver, /wg sep'22 */
 
+  /* 5. Use the aggregate of the default and local configs to figure out where the scheduler is. Use
+   *    this to figure where the web config is and where an auto-update bundle would be if auto-update
+   *    were enabled.
+   */
+  const aggrConfig = Object.assign({}, defaultConfig);
   addConfig(aggrConfig, localConfig);
+  addConfig(aggrConfig, originalDcpConfig);
+  require('dcp/dcp-url').patchup(aggrConfig);
 
-  /* 5 */
-  if (!aggrConfig.scheduler.configLocation &&
-      aggrConfig.scheduler.configLocation !== false) {
-    addConfigs(aggrConfig.scheduler, localConfig.scheduler, { 
-      configLocation: new URL(`${aggrConfig.scheduler.location}etc/dcp-config.kvin?ver=2.0.0`)
-    });
-  }
+  if (!aggrConfig.scheduler.configLocation && aggrConfig.scheduler.configLocation !== false)
+    localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
+  if (!aggrConfig.bundle.location)
+    localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js');
+  localConfig.scheduler.location = aggrConfig.scheduler.location;
+  
+  debug('dcp-client:config')(` . scheduler is at ${localConfig.scheduler.location}`);
+  debug('dcp-client:config')(` . auto-update is ${localConfig.bundle.autoUpdate ? 'on' : 'off'}; bundle is at ${localConfig.bundle.location}`);
 
   if (aggrConfig.scheduler.configLocation === false)
     debug('dcp-client:config')(` * Not loading configuration from remote scheduler`);
@@ -1074,8 +1079,10 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
     try
     {
       debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
-      const serializedConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
-      remoteConfig = KVIN.parse(serializedConfig);
+      remoteConfigKVIN = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
+      remoteConfig = KVIN.parse(remoteConfigKVIN);
+      for (let protectedKey of protectedDcpConfigKeys) /* never accept modifications to these keys from scheduler */
+        delete remoteConfig[protectedKey];
     }
     catch(error)
     {
@@ -1087,51 +1094,18 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
       }
       throw error;
     }
-    if (remoteConfig.length === 0)
-      throw new Error('Configuration is empty at ' + aggrConfig.scheduler.configLocation.href);
   }
-      
-  /* 6 */
-  bundleSandbox.Error = Error; // patch Error so webpacked code gets the same reference
-  bundleSandbox.XMLHttpRequest = XMLHttpRequest;
-  bundleSandbox.window = bundleSandbox
-  bundleSandbox.globalThis = bundleSandbox
-  if (remoteConfig)
-  {
-    let newConfig = {};
-    for (let key of protectedDcpConfigKeys)
-      delete remoteConfig[key];
-    addConfig(remoteConfig, bundleSandbox.dcpConfig);
-
-    /* remote config has lower precedence than local modifications, but gets loaded
-     * later because the local scheduler config tells us where to find it, so we
-     * rebuild the aggregate config object in order to get correct override precedence.
-     */
-    addConfig(newConfig,  defaultConfig);
-    addConfig(newConfig,  remoteConfig);
-    addConfig(newConfig,  localConfig);   /* re-adding here causes strings to become URLs if they URLs in remote */
-    addConfig(aggrConfig, newConfig); 
-    bundleSandbox.dcpConfig = aggrConfig; /* assigning globalThis.dcpConfig in remoteConfigCode context creates 
-                                             a new dcpConfig in the bundle - put it back */ 
-  }
-
+  
   /**
    * Default location for the auto update bundle is the scheduler so that the
    * scheduler and the client are on the same code.
    */
-  if (
-    !aggrConfig.bundle.location &&
-    aggrConfig.scheduler &&
-    aggrConfig.scheduler.location
-  ) {
-    localConfig.bundle.location = new URL(
-      `${aggrConfig.scheduler.location}dcp-client/dist/dcp-client-bundle.js`,
-    );
-
+  if (!aggrConfig.bundle.location && aggrConfig.scheduler && aggrConfig.scheduler.location) {
+    localConfig.bundle.location = new URL(`${aggrConfig.scheduler.location}dcp-client/dist/dcp-client-bundle.js`);
     addConfig(aggrConfig, localConfig);
   }
 
-  return aggrConfig;
+  return { defaultConfig, localConfig, remoteConfigKVIN, internalConfig };
 }
 
 exports.initcb = require('./init-common').initcb
@@ -1146,12 +1120,11 @@ exports.initcb = require('./init-common').initcb
  * so we should be able to have the exact same derived configuration for
  * clients using either init() or initSync().
  *
- * @param {object} initConfig   parameter for createAggregateConfig()
- * @param {object} options      parameter for createAggregateConfig()
+ * @param {object} initConfig   parameter for createConfigFragments()
+ * @param {object} options      parameter for createConfigFragments()
  */
-function createAggregateConfigSync(initConfig, options)
+function createConfigFragmentsSync(initConfig, options)
 {
-  const { patchup: patchUp } = require('dcp/dcp-url');
   const { Address } = require('dcp/wallet');
 
   const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
@@ -1173,17 +1146,17 @@ function createAggregateConfigSync(initConfig, options)
       input: KVIN.stringify({ initConfig, options }),
     },
   );
-
   
   if (child.status !== 0) {
     throw new Error(`Child process returned exit code ${child.status}`);
   }
 
   const serializedOutput = String(child.output[3]);
-  const aggregateConfig = KVIN.parse(serializedOutput);
+  const configFrags = KVIN.parse(serializedOutput);
+  configFrags.internalConfig = require('dcp/dcp-config');
 
-  debug('dcp-client:init')('fetched aggregate configuration', aggregateConfig);
-  return aggregateConfig;
+  debug('dcp-client:init')('fetched configuration fragments', Object.keys(configFrags));
+  return configFrags;
 }
   
 /** Fetch a web resource from the server, blocking the event loop. Used by initSync() to
@@ -1225,6 +1198,8 @@ exports.fetchSync = function fetchSync(url) {
     throw new Error(`Child process returned exit code ${child.status}`);
   return child.output[3].toString('utf-8');
 }
+
+exports.__KVIN = KVIN;
 
 /** Factory function which returns an object which is all of the dcp/ modules exported into
  *  node's module space via the namespace-mapping (ns-map) module. These all original within

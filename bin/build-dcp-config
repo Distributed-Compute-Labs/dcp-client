@@ -10,20 +10,23 @@
 const fs = require('fs');
 
 const dcpClient = require('..');
+const assert  = require('assert');
 const { Address } = require('dcp/wallet');
 const kvin = require('dcp/internal/kvin');
 
 let outputFd = +(process.env.BUILD_DCP_CONFIG_OUTPUT_FD || "3");
 
 async function main() {
-  const custom = new kvin.KVIN();
-  custom.userCtors.dcpEth$$Address = Address;
+  const custom = dcpClient.__KVIN;
+  assert(custom.userCtors.dcpEth$$Address);
+  assert(custom.userCtors.dcpUrl$$DcpURL);
 
   dcpClient._initHead();
 
   const input = fs.readFileSync(process.stdin.fd, 'utf-8');
   const { initConfig, options } = custom.deserialize(input);
-  const outputObjects = await dcpClient.createAggregateConfig(initConfig, options);
+  const outputObjects = await dcpClient.createConfigFragments(initConfig, options);
+  delete outputObjects.internalConfig;
   const output = await custom.serializeAsync(outputObjects);
   
   try {
