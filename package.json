@@ -33,6 +33,8 @@
     "bravojs": "^1.0.16",
     "btoa": "^1.2.1",
     "chalk": "^4.1.2",
+    "ethereumjs-util": "^7.1.5",
+    "ethereumjs-wallet": "^1.0.2",
     "html-to-text": "^5.1.1",
     "http-proxy-agent": "^4.0.1",
     "https-agent": "^1.0.0",
@@ -44,6 +46,7 @@
     "polyfill-crypto.getrandomvalues": "^1.0.0",
     "regedit": "^3.0.3",
     "semver": "^7.3.5",
+    "socket.io-client": "^4.6.1",
     "webpack": "^5.75.0",
     "webpack-cli": "^4.7.2",
     "yargs": "16.2.0"
