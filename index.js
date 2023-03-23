@@ -361,19 +361,6 @@ function checkConfigFileSafePerms(fullPath, statBuf)
   throw new Error('did not load configuration file due to invalid permissions: ' + fullPath);
 }
 
-/**
- * Synchronously load the contents of a file, provided it is safe to do so.
- * @see checkConfigFileSafePerms
- *
- * @returns false when fullPath does not exist
- */
-function readSafePermsFile(fullPath)
-{
-  if (checkConfigFileSafePerms(fullPath))
-    return fs.readFileSync(fullPath, 'utf-8');
-  return false;
-}
-
 /** Merge a new configuration object on top of an existing one, via
  *  addConfig().  The file is read, turned into an object, and becomes
  *  the neo config.
@@ -432,45 +419,22 @@ function addConfigFile(existing /*, file path components ... */) {
 
   if (fullPath && checkConfigFileSafePerms(fullPath + '.js'))
   {
-    const configSandbox = makeConfigSandbox();
-    let neo;
-    let code
-
     fullPath = fullPath + '.js';
     debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
-    code = readSafePermsFile(fullPath, 'utf-8');
-    if (!code)
-      return;
-    
-    if (withoutComments(code).match(/^\s*{/)) {
-      /* config file is just a JS object literal */
-      const neo = evalStringInSandbox(`return (${code});`, configSandbox, fullPath);
-      addConfig(existing, neo);
-    } else {
-      /* overlay the context's global namespace with the dcpConfig namespace so 
-       * that we have good syntax to modify with arbitrary JS; then find changes 
-       * and apply to aggregate config.
-       */
-      let knownGlobals;
 
-      neo = {};
-      knownGlobals = Object.keys(configSandbox);
+    const configSandbox = makeConfigSandbox();
+    const code = fs.readFileSync(fullPath, 'utf-8');
+    let neo;
 
-      const ret = evalStringInSandbox(code, configSandbox, fullPath);
-      Object.assign(neo, ret);
-      
-      // handle programmatic assignment to top-level config
-      // via sandbox globals
-      for (let key of Object.keys(configSandbox)) {
-        if (knownGlobals.indexOf(key) === -1)
-          neo[key] = configSandbox[key];  /* new global in sandbox = new top-level config object */
-      }
-      for (let key of Object.keys(existing)) {
-        if (configSandbox.hasOwnProperty(key))
-          neo[key] = configSandbox[key];
-      }
-
+    if (withoutComments(code).match(/^\s*{/)) /* config file is just a JS object literal */
+      neo = evalStringInSandbox(`return (${code});`, configSandbox, fullPath);
+    else
+    {
+      /* memoize globals so that we can detect the appearance of new ones */
+      const knownGlobals = Object.keys(configSandbox);
+      neo = evalStringInSandbox(code, configSandbox, fullPath);
     }
+
     addConfig(existing, neo);
     return;
   }
