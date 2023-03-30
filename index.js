@@ -429,11 +429,7 @@ function addConfigFile(existing /*, file path components ... */) {
     if (withoutComments(code).match(/^\s*{/)) /* config file is just a JS object literal */
       neo = evalStringInSandbox(`return (${code});`, configSandbox, fullPath);
     else
-    {
-      /* memoize globals so that we can detect the appearance of new ones */
-      const knownGlobals = Object.keys(configSandbox);
       neo = evalStringInSandbox(code, configSandbox, fullPath);
-    }
 
     addConfig(existing, neo);
     return;
