@@ -1092,7 +1092,6 @@ exports.initcb = require('./init-common').initcb
  */
 function createConfigFragmentsSync(initConfig, options)
 {
-  const { Address } = require('dcp/wallet');
   const spawnArgv = [require.resolve('./bin/build-dcp-config')].concat(process.argv.slice(2));
   const input = KVIN.stringify({ initConfig, options });
   const env = process.env.DEBUG ? Object.assign({}, process.env) : process.env;
@@ -1141,7 +1140,6 @@ function createConfigFragmentsSync(initConfig, options)
 exports.fetchSync = function fetchSync(url) {
   var child;
   var argv = [ process.execPath, require.resolve('./bin/download'), '--fd=3' ];
-  var output = '';
   var env = { FORCE_COLOR: 1 };
   
   if (reportErrors === false)
