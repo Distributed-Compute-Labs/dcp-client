@@ -391,6 +391,7 @@ function addConfigFile(existing /*, file path components ... */) {
     var configSandbox = Object.assign({}, bundleSandbox, {
       dcpConfig: existing,
       require:   moduleSystem.createRequire(fullPath),
+      url:       (href) => new (require('dcp/dcp-url').DcpURL)(href),
     });
 
     for (let key in existing)
@@ -551,7 +552,7 @@ function patchupClasses(patchupList, o, seen)
 
     for (let i=0; i < patchupList.length; i++)
     {
-      if (Object.getPrototypeOf(o[key]) !== patchupList[i].wrong.prototype)
+      if (typeof o[key] !== 'object' || (Object.getPrototypeOf(o[key]) !== patchupList[i].wrong.prototype))
         continue;
       assert(patchupList[i].wrong !== patchupList[i].right);
       
