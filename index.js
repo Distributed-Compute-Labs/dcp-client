@@ -552,7 +552,7 @@ function patchupClasses(patchupList, o, seen)
 
     for (let i=0; i < patchupList.length; i++)
     {
-      if (typeof o[key] !== 'object' || (Object.getPrototypeOf(o[key]) !== patchupList[i].wrong.prototype))
+      if (typeof o[key] !== 'object' || o[key] === null || (Object.getPrototypeOf(o[key]) !== patchupList[i].wrong.prototype))
         continue;
       assert(patchupList[i].wrong !== patchupList[i].right);
       
