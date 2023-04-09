@@ -190,6 +190,7 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
     }
     return moduleIdentifier;
   }
+
   return resolveFilenamePrevious.apply(null, arguments)
 }
 /** 
@@ -901,6 +902,7 @@ function mkEnvConfig()
   if (env.DCP_CONFIG_LOCATION === '') addConfig(envConfig.scheduler, { configLocation: false }); /* explicitly request no remote config */
   if (env.DCP_BUNDLE_AUTOUPDATE)      addConfig(envConfig.bundle,    { autoUpdate: !!env.DCP_BUNDLE_AUTOUPDATE.match(/^true$/i) } );
   if (env.DCP_BUNDLE_LOCATION)        addConfig(envConfig.bundle,    { location: new URL(env.DCP_BUNDLE_LOCATION) });
+  if (env.DCP_BUNDLE_LOCATION === '') addConfig(envConfig.bundle,    { location: false }); /* explicitly request no remote bundle */
 
   return envConfig;
 }
@@ -1033,8 +1035,8 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
 
   if (!aggrConfig.scheduler.configLocation && aggrConfig.scheduler.configLocation !== false)
     localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
-  if (!aggrConfig.bundle.location)
-    localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js');
+  if (!aggrConfig.bundle.location && aggrConfig.bundle.location !== false)
+    localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js')
   localConfig.scheduler.location = aggrConfig.scheduler.location;
   
   debug('dcp-client:config')(` . scheduler is at ${localConfig.scheduler.location}`);
