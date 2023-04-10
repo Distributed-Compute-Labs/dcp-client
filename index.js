@@ -1041,8 +1041,13 @@ exports.createAggregateConfig = async function dcpClient$$createAggregateConfig(
   {
     try
     {
-      debug('dcp-client:config')(` * Loading configuration from ${aggrConfig.scheduler.configLocation.href}`);
-      remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(aggrConfig.scheduler.configLocation);
+      const configLoc = aggrConfig.scheduler.configLocation;
+      // If we aren't already requesting the updated config format, add that flag now
+      if (!configLoc.searchParams.get('ver'))
+        configLoc.searchParams.set('ver', '2.0.0');
+
+      debug('dcp-client:config')(` * Loading configuration from ${configLoc.href}`);
+      remoteConfig = await require('dcp/protocol').fetchSchedulerConfig(configLoc);
     }
     catch(error)
     {
@@ -1120,8 +1125,10 @@ function createAggregateConfigSync(initConfig, options)
 {
   const { patchup: patchUp } = require('dcp/dcp-url');
   const { Address } = require('dcp/wallet');
+  const { DcpURL } = require('dcp/dcp-url');
   const custom = new kvin.KVIN();
   custom.userCtors.dcpEth$$Address = Address;
+  custom.userCtors.dcpUrl$$DcpURL = DcpURL;
 
   const spawnArgv = [require.resolve('./bin/build-dcp-config'), process.argv.slice(2)];
   /* XXX @todo - in debug build,  spawnArgv.unshift('--inspect'); */
