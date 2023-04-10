@@ -1170,6 +1170,7 @@ exports.fetchSync = function fetchSync(url) {
 }
 
 exports.__KVIN = KVIN;
+exports.__require = require;
 
 /** Factory function which returns an object which is all of the dcp/ modules exported into
  *  node's module space via the namespace-mapping (ns-map) module. These all original within
