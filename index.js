@@ -377,7 +377,8 @@ function addConfigFile(existing /*, file path components ... */) {
       return;
     fullPath = path.join(fullPath, arguments[i]);
   }
-
+  const fpSnap = fullPath;
+  
   /**
    * Make a the global object for this context this config file is evaluated in.
    * - Top-level keys from dcpConfig become properties of this object, so that we can write statements 
@@ -408,7 +409,7 @@ function addConfigFile(existing /*, file path components ... */) {
     fullPath = fullPath + './json';
     debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
     addConfig(existing, require(fullPath));
-    return;
+    return fullPath;
   }
 
   if (fullPath && checkConfigFileSafePerms(fullPath + '.kvin'))
@@ -416,7 +417,7 @@ function addConfigFile(existing /*, file path components ... */) {
     fullPath = fullPath + './kvin';
     debug('dcp-client:config')(` * Loading configuration from ${fullPath}`);
     addConfig(existing, KVIN.parse(fs.readFileSync(fullPath)));
-    return;
+    return fullPath;
   }
 
   if (fullPath && checkConfigFileSafePerms(fullPath + '.js'))
@@ -434,10 +435,10 @@ function addConfigFile(existing /*, file path components ... */) {
       neo = evalStringInSandbox(code, configSandbox, fullPath);
 
     addConfig(existing, neo);
-    return;
+    return fullPath;
   }
 
-  debug('dcp-client:config')(` . did not load configuration file ${fullPath}`);
+  debug('dcp-client:config')(` . did not load configuration file ${fpSnap}.*`);
 }
 
 /**
@@ -1003,9 +1004,10 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
    * any intelligent user can always change the source code to do whatever they please, but it does
    * make sense for campus configurations where sysadmins believe the machines are locked down, etc.
    */
+  let cn;
         addConfigFile(localConfig, etc,    'dcp/dcp-config');
   await addConfigRKey(localConfig, 'HKLM', 'dcp/dcp-config');
-        addConfigFile(localConfig, options.configName && path.resolve(progDir, options.configName));
+   cn = addConfigFile(localConfig, options.configName && path.resolve(progDir, options.configName));
         addConfigFile(localConfig, home,  '.dcp/dcp-config');
   await addConfigRKey(localConfig, 'HKCU', 'dcp/dcp-config');
         addConfigFile(localConfig, home,  `.dcp/${programName}/dcp-config`);
@@ -1024,6 +1026,8 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   await addConfigRKey(localConfig, 'HKLM', 'dcp/scope', configScope);
   await addConfigRKey(localConfig, 'HKLM', 'dcp-client/dcp-config'); /* legacy - used by screen saver, /wg sep'22 */
 
+  exports.__cn = cn; /* memoize for use by dcp-worker etc who need to know where local conf came from */
+  
   /* 5. Use the aggregate of the default and local configs to figure out where the scheduler is. Use
    *    this to figure where the web config is and where an auto-update bundle would be if auto-update
    *    were enabled.
