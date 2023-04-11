@@ -12,21 +12,7 @@
  *  @author     Wes Garland, wes@kingsds.network
  *  @date       Aug 2019
  */
-const allScripts = document.getElementsByTagName('SCRIPT');
-const thisScript = allScripts[allScripts.length - 1];
-
-if (thisScript.getAttribute('data-autoinit') === 'false')
-{
-  thisScript.removeAttribute('data-autoinit');
-  window.dcp = { init: namespace };
-}
-else
-{
-  namespace();
-}
-
-function namespace()
-{
+(function namespaceIIFE() {
 
   console.log(`%c
    _____ _____ ___________   _   
@@ -45,6 +31,8 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
   var _dcpConfig = typeof dcpConfig === 'object' ? dcpConfig : undefined;
   
   {
+    let allScripts = document.getElementsByTagName('SCRIPT');
+    let thisScript = allScripts[allScripts.length - 1];
     let thisScriptURL = new URL(thisScript.src)
     let schedulerURL;
     let dcpConfigHref = thisScript.getAttribute('dcpConfig');
@@ -189,5 +177,5 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     loadBundle(shimCallback);
     loadLinks();
   }
-};
+})();
  

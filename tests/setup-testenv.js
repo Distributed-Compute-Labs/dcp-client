@@ -16,6 +16,8 @@ if (!process.env.DCP_CONFIG_LOCATION)
    process.env.DCP_CONFIG_LOCATION = '';
 if (process.env.DCP_SCHEDULER_LOCATION)
   process.env.DCP_SCHEDULER_LOCATION = '';
+if (!process.env.DCP_BUNDLE_LOCATION)
+  process.env.DCP_BUNDLE_LOCATION = 'https://scheduler.distributed.computer/dcp-client/dist/dcp-client-bundle.js';
 process.env.DCP_REGISTRY_BASEKEY = `Software\\Distributive\\DCP-Client-Tests\\Peter`;
 
 if (require('os').platform() === 'win32')
