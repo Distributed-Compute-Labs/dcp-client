@@ -1,9 +1,9 @@
 #! /usr/bin/env node
-/** 
- *  @file       testEventLoopTiming.simple
- * 
+/**
+ *  @file       event-loop-timing.simple
+ *
  *  Test timing of the event loop using a function that contains a delay, await, then another delay.
- * 
+ *
  *  @author     Ryan Saweczko, ryansaweczko@kingsds.network
  *  @date       January 2022
  */
