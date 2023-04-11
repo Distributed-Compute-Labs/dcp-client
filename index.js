@@ -394,6 +394,7 @@ function addConfigFile(existing /*, file path components ... */) {
       dcpConfig: existing,
       require:   moduleSystem.createRequire(fullPath),
       url:       (href) => new (require('dcp/dcp-url').DcpURL)(href),
+      env:       process.env,
     });
 
     for (let key in existing)
