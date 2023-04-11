@@ -51,7 +51,10 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     return true;
   }
 
-  TimeInterval.prototype.isEnded = function isEnded() { return this.end === null; }
+  TimeInterval.prototype.isEnded = function isEnded()
+  {
+    return typeof this.end === 'number';
+  };
 
   protectedStorage.TimeInterval = TimeInterval;
 
