@@ -140,7 +140,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
 
   protectedStorage.timers = {
     cpu:    new TimeCPU(),
-    webGPU: new TimeThing(),
+    webGPU: new TimeWebGPU(),
     webGL:  new TimeThing(),
   }
 
