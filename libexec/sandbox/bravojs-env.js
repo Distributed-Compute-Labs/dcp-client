@@ -177,30 +177,23 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   /* Report metrics to sandbox/supervisor */
   async function reportTimes ()
   {
-    try
-    {
-      const timers = protectedStorage.timers;
-      const total = totalTime.length;
-      const webGL = timers.webGL.duration();
-      const webGPU = await timers.webGPU.duration();
+    const timers = protectedStorage.timers;
+    const total = totalTime.length;
+    const webGL = timers.webGL.duration();
+    const webGPU = await timers.webGPU.duration();
 
-      timers.cpu.mostRecentInterval.stop();
-      let CPU = timers.cpu.duration();
-      CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
+    timers.cpu.mostRecentInterval.stop();
+    let CPU = timers.cpu.duration();
+    CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
 
-      totalTime.stop();
+    totalTime.stop();
 
-      timers.cpu.reset();
-      timers.webGL.reset();
-      timers.webGPU.reset();
-      protectedStorage.clearAllTimers();
+    timers.cpu.reset();
+    timers.webGL.reset();
+    timers.webGPU.reset();
+    protectedStorage.clearAllTimers();
 
-      ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
-    }
-    catch (error)
-    {
-      ring3PostMessage({ request: 'sandboxError', error });
-    }
+    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
   }
 
   /* Report an error from the work function to the supervisor */
