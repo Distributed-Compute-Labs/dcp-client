@@ -6,6 +6,10 @@
 
 # Default job properties.
 default:
+  # Use in-house GitLab runners.
+  tags:
+    - dcp
+    - linux
   image: node:lts
 
 # This folder is cached between builds
