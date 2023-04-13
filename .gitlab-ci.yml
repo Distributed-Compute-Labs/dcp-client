@@ -1,6 +1,9 @@
-# This file is a template, and might need editing before it works on your project.
-# Official framework image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/node/tags/
+# @file    .gitlab-ci.yml - Configures the GitLab CI pipeline for the project.
+#
+# @author  Bryan Hoang <bryan@distributive.network>
+# @author  Eddie Roosenmallen <eddie@distributive.network>
+# @date    Jan. 2021
+
 image: node:14
 
 # This folder is cached between builds
