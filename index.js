@@ -305,6 +305,39 @@ function addConfig (existing, neo) {
 }
 
 /**
+ * Returns a graph of empty objects with the same edges as the passed-in node.
+ * Only base Objects are considered, not instances of derived classes (like URL).
+ *
+ * @param {object} node     the top of the object graph
+ * @param {object} seen     internal use only
+ *
+ * @returns {object}
+ */
+function graphEdges(node, seen)
+{
+  var edgeNode = {};
+
+  if (!seen)
+    seen = new Map();
+  if (seen.has(node))
+    return seen.get(node);
+
+  for (let prop in node)
+  {
+    if (node.hasOwnProperty(prop) && typeof node[prop] === 'object' && node[prop].constructor === {}.constructor)
+    {
+      if (node[prop] === node)
+        edgeNode[prop] = edgeNode;
+      else
+        edgeNode[prop] = graphEdges(node[prop], seen);
+      seen.set(node[prop], edgeNode[prop]);
+    }
+  }
+
+  return edgeNode;
+}
+
+/**
  * Throw an exception if the given fullPath is not a "safe" file to load.
  * "Safe" files are those that are unlikely to contain malicious code, as 
  * they are owned by an administrator or the same person who loaded the
@@ -541,7 +574,7 @@ function fixCase(ugly)
  */
 function patchupClasses(patchupList, o, seen)
 {
-  /* seen list keeps up from blowing the stack on graphs with cycles */
+  /* seen list keeps us from blowing the stack on graphs with cycles */
   if (!seen)
     seen = [];
   if (seen.indexOf(o) !== -1)
@@ -982,7 +1015,14 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   addConfig(defaultConfig, internalConfig);
   addConfig(defaultConfig, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));
   defaultConfig.scheduler = { location: new URL('https://scheduler.distributed.computer/') };
-  const localConfig = Object.assign({}, defaultConfig);
+
+  /* localConfig eventually overrides remoteConfig, and is the dcpConfig variable that is modified by
+   * local include files. Pre-populating the graph edges with config nodes that always exist allows
+   * config file writers to add properties to leaf nodes without having to construct the entire graph;
+   * then these leaf nodes eventually overwrite the same-pathed nodes which arrive in the remote conf.
+   */
+  const localConfig = graphEdges(internalConfig);
+  addConfig(localConfig, graphEdges(defaultConfig));
 
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
@@ -1034,15 +1074,16 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
    *    this to figure where the web config is and where an auto-update bundle would be if auto-update
    *    were enabled.
    */
-  const aggrConfig = Object.assign({}, defaultConfig);
+  const aggrConfig = Object.assign({}, internalConfig);
+  addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
   addConfig(aggrConfig, originalDcpConfig);
   require('dcp/dcp-url').patchup(aggrConfig);
 
   if (!aggrConfig.scheduler.configLocation && aggrConfig.scheduler.configLocation !== false)
-    localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
+    aggrConfig.scheduler.configLocation = localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
   if (!aggrConfig.bundle.location && aggrConfig.bundle.location !== false)
-    localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js')
+    aggrConfig.bundle.location = localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js')
   localConfig.scheduler.location = aggrConfig.scheduler.location;
   
   debug('dcp-client:config')(` . scheduler is at ${localConfig.scheduler.location}`);
@@ -1124,9 +1165,8 @@ function createConfigFragmentsSync(initConfig, options)
     },
   );
   
-  if (child.status !== 0) {
-    throw new Error(`Child process returned exit code ${child.status}`);
-  }
+  if (child.status !== 0 || !child.output[3])
+    throw new Error(`Error running ${spawnArgv[0]} (exitCode=${child.status})`);
 
   const serializedOutput = String(child.output[3]);
   const configFrags = KVIN.parse(serializedOutput);
