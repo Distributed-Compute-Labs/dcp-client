@@ -4,7 +4,9 @@
 # @author  Eddie Roosenmallen <eddie@distributive.network>
 # @date    Jan. 2021
 
-image: node:14
+# Default job properties.
+default:
+  image: node:lts
 
 # This folder is cached between builds
 # http://docs.gitlab.com/ee/ci/yaml/README.html#cache
