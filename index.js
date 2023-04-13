@@ -1165,7 +1165,7 @@ function createConfigFragmentsSync(initConfig, options)
     },
   );
   
-  if (child.status !== 0 || !child.output[3])
+  if (child.status !== 0 || !child.output[3] || child.output[3].length === 0)
     throw new Error(`Error running ${spawnArgv[0]} (exitCode=${child.status})`);
 
   const serializedOutput = String(child.output[3]);
