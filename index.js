@@ -113,6 +113,30 @@ function evalScriptInSandbox(filename, sandbox)
   return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
 }
 
+/**
+ * Evaluate a file inside a namespace-protecting IIFE; similar the new vm contexts used for configury,
+ * but using the current context so that Object literals are instances of this context's Object.
+ *
+ * @param {string} filename The name of a file which contains a single JS expression
+ * @param {object} sandbox  An object which simulates the global object via symbol collision; any
+ *                          symbols which don't collide are resolved up the scope chain against this
+ *                          context's global object.
+ * @returns the value of the expression in the file
+ */
+function evalFileInIIFE(filename, sandbox)
+{
+  debugger;
+  const prologue = '(function __dynamic_evalFile__IIFE(' + Object.keys(sandbox).join(',') + '){ return '
+  const epilogue = '});';
+  const options = { filename, lineNumber: 0 };
+  
+  debug('dcp-client:evalFileInIIFE')('evaluating', filename);
+  const fileContents = fs.readFileSync(path.resolve(distDir, filename), 'utf8');
+  const fun = vm.runInThisContext(prologue + fileContents + epilogue, options);
+
+  return fun.apply(null, Object.values(sandbox));
+}
+
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
  *  file, and the sandbox is a special container with limited objects that we setup
  *  during config file processing.
@@ -678,7 +702,7 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   } else {
     const bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
     finalBundleLabel = bundleFilename;
-    bundle = evalScriptInSandbox(bundleFilename, bundleSandbox);
+    bundle = evalFileInIIFE(bundleFilename, bundleSandbox);
   }
   nsMap = bundle.nsMap || require('./ns-map');  /* future: need to move non-bootstrap nsMap into bundle for stable auto-update */
 
