@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Client Modals Test</title>
+    <!-- import dcp-client -->
+    <script src="http://scheduler.staging.office.kingsds.network/dcp-client/dcp-client.js"></script>
+    <!-- <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script> -->
+​
+    <style>
+      body {
+        font-family: 'Courier New', Courier, monospace;
+      }
+      button {
+        background-color: #1aa473;
+        color: white;
+        padding: 10px;
+        font-size: 20px;
+        font-weight: bold;
+        border: none;
+      }
+      button:hover {
+        background-color: #6fc495;
+        cursor: pointer;
+      }
+      .flex {
+        display: flex;
+        justify-content: center;
+      }
+      #top {
+        text-align: center;
+      }
+      #middle {
+        margin-top: 50px;
+        column-gap: 100px;
+      }
+      #bottom p {
+        flex: 2;
+        padding-left: 50px;
+      }
+      #bottom div {
+        flex: 1;
+      }
+      #unlock-btn {
+        visibility:hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="top">
+      <h1>Client Modals Test</h1>
+      <p>Refresh page to restart.</p>
+      <h2>Flow: <span id="flow-text">Keystore Upload</span></h2>
+      <button onclick="toggleFlow()">Toggle Flow</button>
+    </div>
+    <div id="middle" class="flex">
+      <div>
+        <p><strong>This calls wallet.get().</strong></p>
+        <button onclick="fetchKeystore()">Fetch Keystore</button>
+        <button id="unlock-btn" onclick="unlockKeystore()">Unlock Keystore</button>
+      </div>
+      <div>
+        <p><strong>This launches a job.</strong></p>
+        <button onclick="launchJob()">Launch Job</button>
+      </div>
+    </div>
+    <div id="bottom" class="flex">
+      <div></div>
+      <p id="keystore-log"></p>
+      <p id="job-log"></p>
+      <div></div>
+    </div>
+    <script>
+      let { wallet, compute } = dcp;
+      // get client modal flow
+      let isOauth = JSON.parse(localStorage.getItem('env'));
+      let text = document.getElementById('flow-text');
+
+      // update front-end
+      if (isOauth)
+      {
+        isOauth = isOauth['dcp-wallet-oauth-integration'];
+        text.innerText = isOauth ? 'OAuth' : 'Keystore Upload';
+      }
+      else
+      {
+        isOauth = false;
+        text.innerText = 'Keystore Upload';
+      }
+
+      // toggle dcp-wallet-oauth-intergration flow
+      function toggleFlow()
+      {
+        if (isOauth)
+        {
+          text.innerText = 'Keystore Upload';
+          localStorage.setItem('env', '{"dcp-wallet-oauth-integration": false}');
+        }
+        else
+        {
+          text.innerText = 'OAuth';
+          localStorage.setItem('env', '{"dcp-wallet-oauth-integration": true}');
+        }
+
+        isOauth = !isOauth;
+      }
+
+      let keystore;
+      let log = document.getElementById('keystore-log');
+
+      async function fetchKeystore()
+      {
+        try
+        {
+          // get keystore
+          keystore = await wallet.get(); // triggers client modal
+          log.innerHTML = `Successfully Loaded: <br>${keystore.label} ${keystore.address.address}`;
+          
+          let unlockBtn = document.getElementById('unlock-btn');
+          unlockBtn.style.visibility = 'visible';
+        }
+        catch (error)
+        {
+          console.error(error);
+          log.innerText = error.toString();
+        }
+      }
+
+      async function unlockKeystore()
+      {
+        try
+        {
+          // unlock keystore
+          await keystore.unlock(); // triggers client modal
+          log.innerHTML += '<br><br>Successfully Unlocked :)';
+        }
+        catch (error)
+        {
+          console.error(error);
+          log.innerText = error.toString();
+        }
+      }
+
+      async function launchJob()
+      {
+        let log = document.getElementById('job-log');
+        try
+        {
+          // create job
+          let job = compute.for(['success'], (s) => s.toUpperCase());
+          // update front-end log
+          job.on('readystatechange', (ev) => {
+            log.innerHTML += `<br>${ev}`;
+          });
+          job.on('result', (ev) => {
+            log.innerHTML += `<br>${ev}`;
+          })
+          job.on('error', (ev) => {
+            throw new Error(ev);
+          })
+          // exec
+          let res = await job.exec(); // triggers client modal
+          log.innerHTML += `<br><br>Job finished successfully :)`; 
+        }
+        catch (error)
+        {
+          console.error(error);
+          log.innerText = error.toString();
+        }
+      }
+    </script>
+  </body>
+</html>
