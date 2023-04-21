@@ -125,7 +125,6 @@ function evalScriptInSandbox(filename, sandbox)
  */
 function evalFileInIIFE(filename, sandbox)
 {
-  debugger;
   const prologue = '(function __dynamic_evalFile__IIFE(' + Object.keys(sandbox).join(',') + '){ return '
   const epilogue = '});';
   const options = { filename, lineNumber: 0 };
@@ -329,17 +328,19 @@ function addConfig (existing, neo) {
 }
 
 /**
- * Returns a graph of empty objects with the same edges as the passed-in node.
- * Only base Objects are considered, not instances of derived classes (like URL).
+ * Returns a graph of empty objects with the same edges as the passed-in node. Only base Objects are
+ * considered, not instances of derived classes (like URL). The newly-created nodes inherit from their 
+ * equivalent nodes. The net effect is that the returned graph can have its nodes read like usual, but
+ * writes "stick" to the new nodes instead of modifying the original node.
  *
  * @param {object} node     the top of the object graph
  * @param {object} seen     internal use only
  *
  * @returns {object}
  */
-function graphEdges(node, seen)
+function magicView(node, seen)
 {
-  var edgeNode = {};
+  var edgeNode = Object.create(node);
 
   if (!seen)
     seen = new Map();
@@ -353,7 +354,7 @@ function graphEdges(node, seen)
       if (node[prop] === node)
         edgeNode[prop] = edgeNode;
       else
-        edgeNode[prop] = graphEdges(node[prop], seen);
+        edgeNode[prop] = magicView(node[prop], seen);
       seen.set(node[prop], edgeNode[prop]);
     }
   }
@@ -1044,14 +1045,35 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
    * local include files. Pre-populating the graph edges with config nodes that always exist allows
    * config file writers to add properties to leaf nodes without having to construct the entire graph;
    * then these leaf nodes eventually overwrite the same-pathed nodes which arrive in the remote conf.
+   *
+   * The pre-populated localConfig graph then has each of its nodes inherit from the equivalent node
+   * in defaultConfig. This allows us to read properties in localConfig and get values from 
+   * defaultConfig (assuming they haven't been overwritten), but writing to localConfig won't alter
+   * the defaultConfig.  This is important, because need to preserve the config stack but allow
+   * user-supplied dcp-config.js files to read the existing config and use it to generate new
+   * configs... in particular, the worker uses this mechanism to specify default allow origins in terms
+   * of the current value of scheduler.location.
    */
-  const localConfig = graphEdges(internalConfig);
-  addConfig(localConfig, graphEdges(defaultConfig));
+  const localConfig = magicView(defaultConfig);
 
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
     programName = path.basename(programName, '.js');
+
+  /* "warm up" the local ahead of actually reading in the config files. These options are higher-
+   * precedence than reading them at the base level, but providing them at the base level first
+   * means that lower-level config files can see them. The class example again is that the worker
+   * needs to know the scheduler location in order to generate the default allow lists, but the
+   * scheduler location can be override by the environment or command-line.  The one thing that
+   * we can't really support easily is having a config file modify something in terms of what
+   * gets loaded in a later config file. That would require a much more complex syntax (futures)
+   * and is probably not worth it.
+   */
+  addConfig    (localConfig, initConfig);
+  addConfigEnv (localConfig, 'DCP_CONFIG_');
+  addConfig    (localConfig, mkEnvConfig());
+  addConfig    (localConfig, mkCliConfig(cliOpts));
 
   /**
    * 4. Use the config + environment + arguments to figure out where the
