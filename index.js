@@ -803,7 +803,7 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, configFrags, bundle, finalBundleLabel, bundleSandbox, injectModule);
-  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build; /* dcpConfig.build deprecated March 2023 */
 
   return ret;
 }

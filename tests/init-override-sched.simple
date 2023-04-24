@@ -15,8 +15,6 @@ const alternateScheduler = 'ftp://anvil.acme.com/';
 
 dcpClient.init(alternateScheduler).then(() => {
   let dcpConfig = require('dcp/dcp-config');
+  console.log('scheduler alternate location is:', dcpConfig.scheduler.location);
   assertEq3(dcpConfig.scheduler.location.href, alternateScheduler);
-})
-.catch(error => {
-  process.exit(1);
 });
