@@ -107,7 +107,7 @@ else
   DCP_SRC="`realpath \"$DCP_SRC\"`"
 fi >/dev/stderr
 
-echo "Building DCP Client bundle from DCP in ${DCP_SRC}"
+echo "Building DCP Client ${DCP_BUILD} bundle from DCP in ${DCP_SRC}"
 
 case "${DCP_BUILD}" in
   debug|release)

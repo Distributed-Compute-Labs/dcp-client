@@ -803,7 +803,7 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, configFrags, bundle, finalBundleLabel, bundleSandbox, injectModule);
-  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build; /* dcpConfig.build deprecated March 2023 */
 
   return ret;
 }
@@ -823,6 +823,8 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
  * Form 4 - {object} dcpConfig fragment, {object} options (DEPRECATED)
  *
  * Rather than use form 4, pass a dcpConfig option to form 3
+ *
+ * See init() for complete documentation of what this function can parse.
  */
 function handleInitArgs(initArgv)
 {
@@ -839,12 +841,17 @@ function handleInitArgs(initArgv)
       options = defaultOptions;
       break;
     case 1:
-      options = Object.assign(defaultOptions, initArgv[0]);
+      if (typeof initArgv[0] === 'string')                      /* form 1 */
+        options = { scheduler: new URL(initArgv[0]) };
+      else if (initArgv[0] instanceof URL)
+        options = { scheduler: initArgv[0] };                   /* form 2 */
+      else
+        options = Object.assign(defaultOptions, initArgv[0]);   /* form 3 */
       break;
     default:
       throw new Error('Too many arguments dcp-client::init()!');
     case 2:
-      options = Object.assign(defaultOptions, { dcpConfig: initArgv[0] }, initArgv[1]);
+      options = Object.assign(defaultOptions, { dcpConfig: initArgv[0] }, initArgv[1]); /* form 4 - deprecated */
       break;
   }
 
@@ -863,20 +870,34 @@ function handleInitArgs(initArgv)
 }
 
 /**
- * Initialize the dcp-client bundle for use by the compute API, etc.
- *
- * @param       {string|URL object}     [url="https://scheduler.distributed.computer"]
+ * Initialize the dcp-client bundle for use by the compute API, etc. - Form 1
+ * 
+ * @param       {string}                url
  *                                      Location of scheduler, from whom we download
  *                                      dcp-config.js, which in turn tells us where to
  *                                      find the bundle.
- * @param       {boolean}               [autoUpdate=false]
- * @param       {string|URL object}     [bundleLocation]        The location of the autoUpdate
- *                                      bundle; used to override the bunde.location in the
- *                                      remote dcpConfig.
- *
  * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
- *//**
- * Initialize the dcp-client bundle for use by the compute API, etc.
+ */
+/**
+ * Form 2
+ * 
+ * @param       {URL object}            url
+ *                                      Location of scheduler, from whom we download
+ *                                      dcp-config.js, which in turn tells us where to
+ *                                      find the bundle.
+ */
+/**
+ * Form 3
+ *
+ * @param       {object}                options         an options object, higher precedence config of
+ *                                                      - scheduler (URL or string)
+ *                                                      - parseArgv; false => not parse cli for scheduler/wallet
+ *                                                      - bundleLocation (URL or string)
+ *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
+ */
+/**
+ * Form 4
+ * @deprecated
  *
  * @param       {object}                dcpConfig       a dcpConfig object which can have
  *                                                      scheduler.location, bundle.location, bundle.autoUpdate
@@ -885,11 +906,12 @@ function handleInitArgs(initArgv)
  *                                                      - parseArgv; false => not parse cli for scheduler/wallet
  *                                                      - bundleLocation (URL or string)
  *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
- *
- * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
+ *                                                      - configName: filename to load as part of default dcpConfig
+ *                                                      - dcpConfig: object to include as part of default dcpConfig
  */
 exports.init = async function dcpClient$$init() {
   var { initConfig, options } = handleInitArgs(arguments);
+
   var configFrags;
   var finalBundleCode = false;
   var finalBundleURL;
@@ -1035,7 +1057,6 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
   var   remoteConfig, remoteConfigKVIN;
   const internalConfig = require('dcp/dcp-config'); /* needed to resolve dcpConfig.future - would like to eliminate this /wg */
-
   const defaultConfig = Object.assign({}, bootstrapConfig);
   addConfig(defaultConfig, internalConfig);
   addConfig(defaultConfig, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));

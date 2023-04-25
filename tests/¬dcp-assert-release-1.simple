@@ -12,10 +12,10 @@ async function main()
 {
   const assertLib = require('dcp/dcp-assert');
 
-  switch (dcpConfig.build)
+  switch (require('dcp/build').config.build)
   {
     default:
-      console.error('Unknown dcpConfig.build:', dcpConfig.build);
+      console.error('Unknown dcpConfig.build:', require('dcp/build').config.build);
       return;
       
     case 'release':
