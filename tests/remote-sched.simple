@@ -2,11 +2,13 @@
 /**
  * @file        remote-sched.simple
  *              Test that shows that we can load a config from a scheduler. Defaults to production
- *		scheduler, CI should override this via env.
+ *              scheduler, CI should override this via env.
  *
  * @author      Wes Garland, wes@kingsds.network
  * @date        Aug 2020
  */
+'use strict';
+
 var bootstrapBankHref;
 
 function main()
@@ -19,5 +21,5 @@ function main()
 }
 
 require('..');
-bootstrapBankHhef = require('dcp/dcp-config').bank.location.href;
+bootstrapBankHref = require('dcp/dcp-config').bank.location.href;
 require('..').init().then(main);
