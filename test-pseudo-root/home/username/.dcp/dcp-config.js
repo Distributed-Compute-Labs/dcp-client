@@ -7,6 +7,8 @@
 // Note: we are also using these test configs to test accepted forms
 // this file tests that we can use global keys like 'scheduler' and that
 // we can return an object
+const bootstrapConfig = require('dcp/dcp-config');
+dcpConfig.bank.location = bootstrapConfig.bank.location;
 dcpConfig.bank.location.pathname = '/from/tests-homedir/dcp-client/dcp-config';
 
 return {

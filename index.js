@@ -113,6 +113,29 @@ function evalScriptInSandbox(filename, sandbox)
   return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
 }
 
+/**
+ * Evaluate a file inside a namespace-protecting IIFE; similar the new vm contexts used for configury,
+ * but using the current context so that Object literals are instances of this context's Object.
+ *
+ * @param {string} filename The name of a file which contains a single JS expression
+ * @param {object} sandbox  An object which simulates the global object via symbol collision; any
+ *                          symbols which don't collide are resolved up the scope chain against this
+ *                          context's global object.
+ * @returns the value of the expression in the file
+ */
+function evalFileInIIFE(filename, sandbox)
+{
+  const prologue = '(function __dynamic_evalFile__IIFE(' + Object.keys(sandbox).join(',') + '){ return '
+  const epilogue = '});';
+  const options = { filename, lineNumber: 0 };
+  
+  debug('dcp-client:evalFileInIIFE')('evaluating', filename);
+  const fileContents = fs.readFileSync(path.resolve(distDir, filename), 'utf8');
+  const fun = vm.runInThisContext(prologue + fileContents + epilogue, options);
+
+  return fun.apply(null, Object.values(sandbox));
+}
+
 /** Evaluate code in a secure sandbox; in this case, the code is the configuration
  *  file, and the sandbox is a special container with limited objects that we setup
  *  during config file processing.
@@ -305,6 +328,41 @@ function addConfig (existing, neo) {
 }
 
 /**
+ * Returns a graph of empty objects with the same edges as the passed-in node. Only base Objects are
+ * considered, not instances of derived classes (like URL). The newly-created nodes inherit from their 
+ * equivalent nodes. The net effect is that the returned graph can have its nodes read like usual, but
+ * writes "stick" to the new nodes instead of modifying the original node.
+ *
+ * @param {object} node     the top of the object graph
+ * @param {object} seen     internal use only
+ *
+ * @returns {object}
+ */
+function magicView(node, seen)
+{
+  var edgeNode = Object.create(node);
+
+  if (!seen)
+    seen = new Map();
+  if (seen.has(node))
+    return seen.get(node);
+
+  for (let prop in node)
+  {
+    if (node.hasOwnProperty(prop) && typeof node[prop] === 'object' && node[prop].constructor === {}.constructor)
+    {
+      if (node[prop] === node)
+        edgeNode[prop] = edgeNode;
+      else
+        edgeNode[prop] = magicView(node[prop], seen);
+      seen.set(node[prop], edgeNode[prop]);
+    }
+  }
+
+  return edgeNode;
+}
+
+/**
  * Throw an exception if the given fullPath is not a "safe" file to load.
  * "Safe" files are those that are unlikely to contain malicious code, as 
  * they are owned by an administrator or the same person who loaded the
@@ -394,6 +452,8 @@ function addConfigFile(existing /*, file path components ... */) {
       dcpConfig: existing,
       require:   moduleSystem.createRequire(fullPath),
       url:       (href) => new (require('dcp/dcp-url').DcpURL)(href),
+      env:       process.env,
+      dcp:       { 'dcp-env': require('dcp/dcp-env') }, /* used for web-compat confs */
     });
 
     for (let key in existing)
@@ -539,7 +599,7 @@ function fixCase(ugly)
  */
 function patchupClasses(patchupList, o, seen)
 {
-  /* seen list keeps up from blowing the stack on graphs with cycles */
+  /* seen list keeps us from blowing the stack on graphs with cycles */
   if (!seen)
     seen = [];
   if (seen.indexOf(o) !== -1)
@@ -643,7 +703,7 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   } else {
     const bundleFilename = path.resolve(distDir, 'dcp-client-bundle.js');
     finalBundleLabel = bundleFilename;
-    bundle = evalScriptInSandbox(bundleFilename, bundleSandbox);
+    bundle = evalFileInIIFE(bundleFilename, bundleSandbox);
   }
   nsMap = bundle.nsMap || require('./ns-map');  /* future: need to move non-bootstrap nsMap into bundle for stable auto-update */
 
@@ -743,7 +803,7 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   ret = makeInitReturnObject();
   if (bundle.postInitTailHook) /* for use by auto-update future backwards compat */ 
     ret = bundle.postInitTailHook(ret, configFrags, bundle, finalBundleLabel, bundleSandbox, injectModule);
-  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build;
+  dcpConfig.build = bundleSandbox.dcpConfig.build = require('dcp/build').config.build; /* dcpConfig.build deprecated March 2023 */
 
   return ret;
 }
@@ -763,6 +823,8 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
  * Form 4 - {object} dcpConfig fragment, {object} options (DEPRECATED)
  *
  * Rather than use form 4, pass a dcpConfig option to form 3
+ *
+ * See init() for complete documentation of what this function can parse.
  */
 function handleInitArgs(initArgv)
 {
@@ -779,12 +841,17 @@ function handleInitArgs(initArgv)
       options = defaultOptions;
       break;
     case 1:
-      options = Object.assign(defaultOptions, initArgv[0]);
+      if (typeof initArgv[0] === 'string')                      /* form 1 */
+        options = { scheduler: new URL(initArgv[0]) };
+      else if (initArgv[0] instanceof URL)
+        options = { scheduler: initArgv[0] };                   /* form 2 */
+      else
+        options = Object.assign(defaultOptions, initArgv[0]);   /* form 3 */
       break;
     default:
       throw new Error('Too many arguments dcp-client::init()!');
     case 2:
-      options = Object.assign(defaultOptions, { dcpConfig: initArgv[0] }, initArgv[1]);
+      options = Object.assign(defaultOptions, { dcpConfig: initArgv[0] }, initArgv[1]); /* form 4 - deprecated */
       break;
   }
 
@@ -803,20 +870,34 @@ function handleInitArgs(initArgv)
 }
 
 /**
- * Initialize the dcp-client bundle for use by the compute API, etc.
- *
- * @param       {string|URL object}     [url="https://scheduler.distributed.computer"]
+ * Initialize the dcp-client bundle for use by the compute API, etc. - Form 1
+ * 
+ * @param       {string}                url
  *                                      Location of scheduler, from whom we download
  *                                      dcp-config.js, which in turn tells us where to
  *                                      find the bundle.
- * @param       {boolean}               [autoUpdate=false]
- * @param       {string|URL object}     [bundleLocation]        The location of the autoUpdate
- *                                      bundle; used to override the bunde.location in the
- *                                      remote dcpConfig.
- *
  * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
- *//**
- * Initialize the dcp-client bundle for use by the compute API, etc.
+ */
+/**
+ * Form 2
+ * 
+ * @param       {URL object}            url
+ *                                      Location of scheduler, from whom we download
+ *                                      dcp-config.js, which in turn tells us where to
+ *                                      find the bundle.
+ */
+/**
+ * Form 3
+ *
+ * @param       {object}                options         an options object, higher precedence config of
+ *                                                      - scheduler (URL or string)
+ *                                                      - parseArgv; false => not parse cli for scheduler/wallet
+ *                                                      - bundleLocation (URL or string)
+ *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
+ */
+/**
+ * Form 4
+ * @deprecated
  *
  * @param       {object}                dcpConfig       a dcpConfig object which can have
  *                                                      scheduler.location, bundle.location, bundle.autoUpdate
@@ -825,11 +906,12 @@ function handleInitArgs(initArgv)
  *                                                      - parseArgv; false => not parse cli for scheduler/wallet
  *                                                      - bundleLocation (URL or string)
  *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
- *
- * @returns     a Promise which resolves to the dcpConfig which bundle-supplied libraries will see.
+ *                                                      - configName: filename to load as part of default dcpConfig
+ *                                                      - dcpConfig: object to include as part of default dcpConfig
  */
 exports.init = async function dcpClient$$init() {
   var { initConfig, options } = handleInitArgs(arguments);
+
   var configFrags;
   var finalBundleCode = false;
   var finalBundleURL;
@@ -975,17 +1057,44 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
   var   remoteConfig, remoteConfigKVIN;
   const internalConfig = require('dcp/dcp-config'); /* needed to resolve dcpConfig.future - would like to eliminate this /wg */
-
   const defaultConfig = Object.assign({}, bootstrapConfig);
   addConfig(defaultConfig, internalConfig);
   addConfig(defaultConfig, KVIN.unmarshal(require('dcp/internal/dcp-default-config')));
   defaultConfig.scheduler = { location: new URL('https://scheduler.distributed.computer/') };
-  const localConfig = Object.assign({}, defaultConfig);
+
+  /* localConfig eventually overrides remoteConfig, and is the dcpConfig variable that is modified by
+   * local include files. Pre-populating the graph edges with config nodes that always exist allows
+   * config file writers to add properties to leaf nodes without having to construct the entire graph;
+   * then these leaf nodes eventually overwrite the same-pathed nodes which arrive in the remote conf.
+   *
+   * The pre-populated localConfig graph then has each of its nodes inherit from the equivalent node
+   * in defaultConfig. This allows us to read properties in localConfig and get values from 
+   * defaultConfig (assuming they haven't been overwritten), but writing to localConfig won't alter
+   * the defaultConfig.  This is important, because need to preserve the config stack but allow
+   * user-supplied dcp-config.js files to read the existing config and use it to generate new
+   * configs... in particular, the worker uses this mechanism to specify default allow origins in terms
+   * of the current value of scheduler.location.
+   */
+  const localConfig = magicView(defaultConfig);
 
   if (!programName)
     programName = process.mainModule && process.mainModule.filename || false;
   if (programName)
     programName = path.basename(programName, '.js');
+
+  /* "warm up" the local ahead of actually reading in the config files. These options are higher-
+   * precedence than reading them at the base level, but providing them at the base level first
+   * means that lower-level config files can see them. The class example again is that the worker
+   * needs to know the scheduler location in order to generate the default allow lists, but the
+   * scheduler location can be override by the environment or command-line.  The one thing that
+   * we can't really support easily is having a config file modify something in terms of what
+   * gets loaded in a later config file. That would require a much more complex syntax (futures)
+   * and is probably not worth it.
+   */
+  addConfig    (localConfig, initConfig);
+  addConfigEnv (localConfig, 'DCP_CONFIG_');
+  addConfig    (localConfig, mkEnvConfig());
+  addConfig    (localConfig, mkCliConfig(cliOpts));
 
   /**
    * 4. Use the config + environment + arguments to figure out where the
@@ -1032,15 +1141,16 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
    *    this to figure where the web config is and where an auto-update bundle would be if auto-update
    *    were enabled.
    */
-  const aggrConfig = Object.assign({}, defaultConfig);
+  const aggrConfig = Object.assign({}, internalConfig);
+  addConfig(aggrConfig, defaultConfig);
   addConfig(aggrConfig, localConfig);
   addConfig(aggrConfig, originalDcpConfig);
   require('dcp/dcp-url').patchup(aggrConfig);
 
   if (!aggrConfig.scheduler.configLocation && aggrConfig.scheduler.configLocation !== false)
-    localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
+    aggrConfig.scheduler.configLocation = localConfig.scheduler.configLocation = aggrConfig.scheduler.location.resolveUrl('/etc/dcp-config.kvin');
   if (!aggrConfig.bundle.location && aggrConfig.bundle.location !== false)
-    localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js')
+    aggrConfig.bundle.location = localConfig.bundle.location = aggrConfig.scheduler.location.resolveUrl('/dcp-client/dist/dcp-client-bundle.js')
   localConfig.scheduler.location = aggrConfig.scheduler.location;
   
   debug('dcp-client:config')(` . scheduler is at ${localConfig.scheduler.location}`);
@@ -1122,9 +1232,8 @@ function createConfigFragmentsSync(initConfig, options)
     },
   );
   
-  if (child.status !== 0) {
-    throw new Error(`Child process returned exit code ${child.status}`);
-  }
+  if (child.status !== 0 || !child.output[3] || child.output[3].length === 0)
+    throw new Error(`Error running ${spawnArgv[0]} (exitCode=${child.status})`);
 
   const serializedOutput = String(child.output[3]);
   const configFrags = KVIN.parse(serializedOutput);
