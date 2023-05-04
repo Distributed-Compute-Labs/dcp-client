@@ -60,27 +60,8 @@ module.declare([], function $$nsMap(require, exports, module) {
 
   /** 
    * LONG TERM PLAN
-   * - put external modules in their own namepsace in webpack bundle - /dcp/internal/ ?
    * - ensure names in webpack need no translation except adding /dcp (looks good now)
    * - remove this module
    * - test all three load modes
    */
-  
-  /* Provide internal copies of third-party npm libraries when external (native?) copies not available */
-  for (moduleIdentifier of [
-    'ethereumjs-util',
-    'ethereumjs-wallet',
-    'bignumber.js',
-    'socket.io-client',
-  ]) {
-    try {
-      require.resolve(moduleIdentifier);
-    } catch(e) {
-      if (e.code === 'MODULE_NOT_FOUND')
-        exports[moduleIdentifier] = moduleIdentifier;
-      else
-        throw e;
-    }
-  }
-  
 }); /* end of module */

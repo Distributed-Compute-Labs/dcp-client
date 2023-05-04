@@ -11,10 +11,23 @@
  *              Note: In registry-speak, keys are like directories and values are like files -- i.e. a key can
  *              contain keys and/or values, but values cannot contain keys; only strings and numbers and stuff.
  *
+ * 
+ * future - we will need a better way to return registry values, current proposal is to use
+ * REG_BINARY to encode richer types thus:
+ *   0x00 - null
+ *   0x20 - next 8 bytes are a little-endian float64
+ *   0x40 - next byte is start of Uint8Array
+ *   0x80 - false
+ *   0x81 - true
+ *   0x82 - undefined
+ * future - we should probably expand our understanding of types as follows
+ *   REG_DWORD - integer
+ *   REG_QWORD - bigint
+ *   REG_NONE  - treat as missing
+ *   
  * @author      Wes Garland, wes@kingsds.network
  * @date        Jul 2020
  */
-
 const machHive = 'HKLM';
 const userHive = 'HKCU';
 const regedit = require('regedit');
@@ -131,63 +144,6 @@ exports.getObject = async function dcpClient$$windowsRegistry$getObject(hive, ke
     return false;
   
   return tree;
-}
-
-/** 
- * @deprecated
- * Get a DCP Config object for a certain configuration "level". Levels always exist in a
- * 'this program' and 'any program' sandwhich, provided programName is not falsey.
- *
- * @param {string}     hive             the hive to check: used to allow us to
- *                                      differentiate between user-specific and 
- *                                      machine-wide configuration entries.
- * @param {string}     programName      the name of the program doing the configuration
- *                                      lookup (ignored if falsey).
- * @param {boolean}    override         true if we are looking at the top-most level
- *                                      of configury; used, for example, by registry
- *                                      entries written by an adminsitrator as some
- *                                      kind of group policy.
- *
- * @returns {object} a DCP config object describing the overrides at this specific configuration 
- *                   "level", with no inheritance from levels either below or above this one.
- */
-async function getDcpConfig(hive, programName, override) {
-  var tree = {};
-  var baseKey = keyJoin(hive, exports.baseKey, override ? 'override' : 'dcp-client');
-
-  if (await keyExists(keyJoin(baseKey, programName, 'dcp-config')))
-    await regTree(keyJoin(baseKey, programName, 'dcp-config'), tree);
-  if (await keyExists(keyJoin(baseKey, 'dcp-config')))
-    await regTree(keyJoin(baseKey, 'dcp-config'), tree);
-
-  return tree;
-}
-
-/** Return any DCP Config values defined in the registry for the user 
- * @deprecated
- */
-exports.getUserDcpConfig = async function dcpClient$$windowsRegistry$getUserDcpConfig(programName) {
-  if (!programName && programName !== false)
-    programName = path.basename(process.argv[1], '.js');
-  return getDcpConfig(userHive, programName, false);
-}
-
-/** Return any DCP Config values defined in the registry for the machine
- * @deprecated
- */
-exports.getMachDcpConfig = async function dcpClient$$windowsRegistry$getMachDcpConfig(programName) {
-  if (!programName && programName !== false)
-    programName = path.basename(process.argv[1], '.js');
-  return getDcpConfig(machHive, programName, false);
-}
-
-/** Return any DCP Config values defined in the registry as administrative overrides 
- * @deprecated
- */
-exports.getOverrideDcpConfig = async function dcpClient$$windowsRegistry$getOverrideDcpConfig() {
-  if (!programName && programName !== false)
-    programName = path.basename(process.argv[1], '.js');
-  return getDcpConfig(machHive, programName, true)
 }
 
 /** Make all exported functions fast-path false return on non-windows */

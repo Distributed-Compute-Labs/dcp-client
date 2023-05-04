@@ -15,28 +15,8 @@
 
 const process = require('process');
 const dcpClient = require('..');
-const { assertEq3, assertNeq3 } = require('dcp/dcp-assert').always;
 require('./setup-testenv');
 
-process.env.DCP_CONFIG_LOCATION =
-  'https://scheduler.distributed.computer/etc/dcp-config.kvin';
-
-async function main() {
-  const bootstrapBuild = require('dcp/build');
-  await dcpClient.init(undefined, true);
-
-  console.log('Bootstrap dcp-client:', bootstrapBuild);
-  console.log('Update dcp-client:', require('dcp/build'));
-  console.log('Update source:', dcpConfig.scheduler.location);
-
-  assertEq3(require('dcp/bootstrap-build'), bootstrapBuild);
-  assertNeq3(require('dcp/build'), require('dcp/bootstrap-build'));
-  assertNeq3(require('dcp/build').built, require('dcp/bootstrap-build').built);
-}
-
-main()
-  .then(() => process.exit(0))
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+require('..').init({autoUpdate: true}).then(() => {
+  require('./autoupdate-check')
+});

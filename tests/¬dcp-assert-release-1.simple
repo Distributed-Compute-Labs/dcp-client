@@ -1,0 +1,33 @@
+#! /usr/bin/env node
+/**
+ * @file        dcp-assert-release-1.js
+ *              dcp-assert tests for release-mode builds; ensures that either the
+ *              always or the normal asserts throw, depending on build.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        July 2022
+ */
+
+async function main()
+{
+  const assertLib = require('dcp/dcp-assert');
+  const build = require('dcp/build').config.build;
+
+  console.log(`Running test with ${build} bundle`);
+  switch (build)
+  {
+    default:
+      console.error('Unknown dcp-client bundle build:', build);
+      return;
+      
+    case 'release':
+      assertLib.always.assertEq3(true, false);
+      break;
+
+    case 'debug':
+      assertLib.assertEq3(true, false);
+      break;
+  }
+}
+
+require('..').init().then(main);

@@ -9,4 +9,60 @@
 # Username mapping:
 # @wesgarland -> Wes Garland <wes@distributive.network>
 
-* @wesgarland
+
+[]
+
+[Brandon]
+
+[Eddie]
+/package-lock.json @eroosenmaallen
+
+[Eddie or Wes]
+/dist/dcp-client-bundle.js @eroosenmaallen @wesgarland
+
+[Wes]
+/ns-map.js @wesgarland
+/lib/ @wesgarland
+/README.md @wesgarland
+/.npmrc @wesgarland
+/dist/ @wesgarland
+/favicon.ico @wesgarland
+/etc/ @wesgarland
+/test-pseudo-root/ @wesgarland
+/windows-registry.js @wesgarland
+/dcp-client.css @wesgarland
+/assets/ @wesgarland
+/build/ @wesgarland
+/tests/ @wesgarland
+/.npmignore @wesgarland
+/bin/ @wesgarland
+/.eslintrc.json @wesgarland
+/index.js @wesgarland
+/libexec/ @wesgarland
+/.tidelift @wesgarland
+/LICENSE.md @wesgarland
+/docs/ @wesgarland
+/cors-proxy.html @wesgarland
+/.gitlab-ci.yml @wesgarland
+/.gitignore @wesgarland
+/init-common.js @wesgarland
+/dcp-client.js @wesgarland
+/cjs2-shim.js @wesgarland
+/examples/ @wesgarland
+/templates/ @wesgarland
+/generated/ @wesgarland
+/templates/ @wesgarland
+/assets/ @wesgarland
+/test-pseudo-root/ @wesgarland
+/etc/ @wesgarland
+/examples/ @wesgarland
+/tests/ @wesgarland
+/build/ @wesgarland
+/docs/ @wesgarland
+/lib/ @wesgarland
+/libexec/ @wesgarland
+/dist/ @wesgarland
+/bin/ @wesgarland
+
+[Wes or Eddie]
+/package.json @wesgarland @eroosenmaallen

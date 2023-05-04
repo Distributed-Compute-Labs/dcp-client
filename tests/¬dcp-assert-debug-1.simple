@@ -1,0 +1,32 @@
+#! /usr/bin/env node
+/**
+ * @file        dcp-assert-debug-1.js
+ *              dcp-assert tests for debug-mode builds; ensures that the
+ *              asserts work in debug builds.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        July 2022
+ */
+
+async function main()
+{
+  const assertLib = require('dcp/dcp-assert');
+
+  switch (require('dcp/build').config.build)
+  {
+    default:
+      console.error('Unknown dcpConfig.build:', require('dcp/build').config.build);
+      return;
+      
+    case 'release':
+      assertLib.always.assertEq3(true, false);
+      break;
+
+    case 'debug':
+      assertLib.assertEq3(true, false);
+      console.error('test failed: this code should be unreachable');
+      break;
+  }
+}
+
+require('..').init().then(main);

@@ -1,0 +1,17 @@
+/**
+ * @file        config-sync.tap
+ *              In conjunction with test-etc/override/dcp-config.js, ensure correct
+ *              precendence of dcpConfig sources.
+ *
+ * @author      KC Erb
+ * @date        Jul 2020
+ */
+'use strict';
+
+const dcpClient = require('..');
+const options = { programName: 'config.tap' };
+require('./setup-testenv');
+
+dcpClient.init(undefined, options).then(() => {
+  require('./config.js');
+});
