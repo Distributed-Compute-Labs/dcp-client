@@ -23,20 +23,43 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
   const webGLTimer = protectedStorage.timers.webGL;
   const webGPUTimer = protectedStorage.timers.webGPU;
 
-
-  function threadedWrapperFactory(Class)
+  // WebAssembly doesn't have a prototype, can't use the factory the same way. But WebAssembly's spec is finalized so we don't need to be as general as for webGPU
+  for (const prop of Object.keys(WebAssembly))
   {
+    const fn = WebAssembly[prop];
+    WebAssembly[prop] = function timerWrapper(...args)
+    {
+      var returnValue =  fn.bind(this)(...args);
+      if (returnValue instanceof Promise)
+        return new Promise((resolve, reject) => {
+          returnValue.then(
+            (res) => setImmediate(() => resolve(res)),
+            (rej) => setImmediate(() => reject(rej)));
+        });
+      return returnValue;
+    }
+  }
 
+  /**
+   * Given a class, wrap all functions in that class so.
+   * The wrapper will not change the function if the function returns a value.
+   * If the function returns a promise, wrap the return value with another promise, so that
+   * when the original promise resolves or rejects, setImmediate will be called to resolve the
+   * wrapping promise. This causes the promise resolution to spend a moment on the event loop,
+   * allowing timing code to know the promise resolution occurred.
+   */
+  function wrapPrototypeFunctions(GPUClass)
+  {
     // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
-    if (!self[Class].prototype)
+    if (!self[GPUClass].prototype)
       return;
 
-    for (let prop of Object.keys(self[Class].prototype))
+    for (let prop of Object.keys(self[GPUClass].prototype))
     {
       let originalFn;
       try
       {
-        originalFn = self[Class].prototype[prop];
+        originalFn = self[GPUClass].prototype[prop];
         if (originalFn instanceof Promise)
         {
           originalFn.catch(() => {/* accessing properties from class constructors can be dangerous in weird ways */})
@@ -52,7 +75,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
       }
 
       // If the function returns a promise, wrap it with setImmediate. Triggers restart of CPU measurement.
-      self[Class].prototype[prop] = function timerWrapper(...args)
+      self[GPUClass].prototype[prop] = function timerWrapper(...args)
       {
         const fn = originalFn.bind(this);
         const returnValue =  fn(...args);
@@ -67,12 +90,16 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     }
   }
 
-
   if (self.OffscreenCanvas && new OffscreenCanvas(1,1))
   {
-
-    /* Factory to wrap a function from a context with a timer */
-    function timeWebGLFactory(context, prop)
+    /**
+     *  Wrap webGL function for a given context. The wrapper will add a time interval to the
+     *  webGLTimer that measures the execution time of the function run.
+     * 
+     * @param {obj} context - the OffscreenCanvas context for which a function needs to be wrapped
+     * @param {string} prop - property of the context to be wrapped 
+     */
+    function timeWebGLFunction(context, prop)
     {
       const originalFn = context[prop].bind(context);
       
@@ -102,53 +129,35 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
       const context = oldGetContext.bind(this)(type, options);
       for (const key of Object.getOwnPropertyNames(context.__proto__))
         if (typeof context[key] === 'function')
-          timeWebGLFactory(context, key);
+          timeWebGLFunction(context, key);
       return context;
     };
   }
 
-  if (navigator.gpu)
+  if (!navigator.gpu)
+    return
+
+  // Want to use the wrapped versions of these after all gpu functions are wrapped.
+  const originalSubmit = GPUQueue.prototype.submit;
+  const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
+
+  for (const key of Object.getOwnPropertyNames(self))
   {
-    // Want to use the wrapped versions of these after all gpu functions are wrapped.
-    const originalSubmit = GPUQueue.prototype.submit;
-    const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
-
-    for (const key of Object.getOwnPropertyNames(self))
-    {
-      if (key.startsWith('GPU'))
-      threadedWrapperFactory(key);
-    }
-
-    GPUQueue.prototype.submit = function submit(...args)
-    {
-      const fn = originalSubmit.bind(this);
-      fn(...args);
-
-      const queueP = originalSubmitDone.bind(this)();
-      const interval = new protectedStorage.TimeInterval();
-      webGPUTimer.push({ interval, queueP });
-
-      queueP.then(() => {
-        interval.stop();
-      })
-    }
+    if (key.startsWith('GPU'))
+    wrapPrototypeFunctions(key);
   }
 
-  // WebAssembly doesn't have a prototype, can't use the factory the same way. But WebAssembly's spec is finalized so we don't need to be as general as for webGPU
-  for (const prop of Object.keys(WebAssembly))
+  GPUQueue.prototype.submit = function submit(...args)
   {
-    const fn = WebAssembly[prop];
-    WebAssembly[prop] = function timerWrapper(...args)
-    {
-      var returnValue =  fn.bind(this)(...args);
-      if (returnValue instanceof Promise)
-        return new Promise((resolve, reject) => {
-          returnValue.then(
-            (res) => setImmediate(() => resolve(res)),
-            (rej) => setImmediate(() => reject(rej)));
-        });
-      return returnValue;
-    }
-  }
+    const fn = originalSubmit.bind(this);
+    fn(...args);
 
+    const queueP = originalSubmitDone.bind(this)();
+    const interval = new protectedStorage.TimeInterval();
+    webGPUTimer.push({ interval, queueP });
+
+    queueP.then(() => {
+      interval.stop();
+    });
+  }
 });
