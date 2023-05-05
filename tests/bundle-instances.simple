@@ -1,0 +1,39 @@
+#! /usr/bin/env node
+/**
+ * @file     bundle-instance.js   Ensure contents of webpacked bundle have correct object instances.
+ *
+ *           This is a regression test for a bug which came up during the development of the branch
+ *           wes/dcp-config-fix where job arguments were being serialized wrong because KVIN didn't
+ *           know that array literals from inside the dcp-client bundle were in fact Arrays; it
+ *           was trying to use the custom-class "feed it its own toString output" deserialization
+ *           which barfed on [Object object].
+ *
+ * @author   Wes Garland, wes@distributive.network
+ * @date     April 2023
+ */
+
+const assert = require('assert').strict;
+require('..').init({configLocation: false}).then(main);
+
+function main()
+{
+  const KVIN = new (require('dcp/internal/kvin').KVIN)();
+  const o = KVIN.unmarshal(KVIN.marshal({}));
+  const a = KVIN.unmarshal(KVIN.marshal([]));
+  const u = KVIN.unmarshal(KVIN.marshal(new URL('https://google.com')));
+  
+  assert(o instanceof Object, 'kvin in-out has wrong instance for Object');       
+  assert(a instanceof Array,  'kvin in-out has wrong instance for Array');
+  assert(u instanceof URL,    'kvin in-out has wrong instance for URL');
+
+  assert([].constructor === Array,  'test environment is broken for Array');
+  assert({}.constructor === Object, 'test environment is broken for Object');
+
+  const ctors = require('dcp/internal/engine-constructors');
+  assert(ctors.Function === main.constructor, 'bundle function literals have wrong constructor')
+  assert(ctors.Object   === {}.constructor,   'bundle object literals have wrong constructor')
+  assert(ctors.Array    === [].constructor,   'bundle array literals have wrong constructor')
+  assert(ctors.BigInt   === (1n).constructor, 'bundle bigint literals have wrong constructor')
+  assert(ctors.String   === String,           'bundle boxed strings have wrong constructor')
+}
+

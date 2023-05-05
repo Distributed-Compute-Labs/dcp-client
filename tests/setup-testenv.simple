@@ -13,13 +13,12 @@ async function main()
 {
   const { assert, assertEq3 } = require('dcp/dcp-assert').always;
 
-  /* Ensure dcpConfig.build is correct */
+  /* Ensure DCP bundle dcpConfig.build (deprecated March 2023) matches the bundle's actual build */
   assertEq3(require('dcp/build').config.build, dcpConfig.build);
 
   /* Make sure we are running without a full scheduler conf */
   assert(typeof dcpConfig.scheduler.services === 'undefined');
 
-  debugger;
   /* Make sure our homedir isn't the real homedir */
   assert(require('dcp/dcp-dot-dir').getHomeDir().endsWith('test-pseudo-root/home/username'));
 

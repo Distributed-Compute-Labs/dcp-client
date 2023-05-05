@@ -12,10 +12,10 @@ async function main()
 {
   const assertLib = require('dcp/dcp-assert');
 
-  switch (dcpConfig.build)
+  switch (require('dcp/build').config.build)
   {
     default:
-      console.error('Unknown dcpConfig.build:', dcpConfig.build);
+      console.error('Unknown dcpConfig.build:', require('dcp/build').config.build);
       return;
       
     case 'release':
@@ -24,9 +24,9 @@ async function main()
 
     case 'debug':
       assertLib.assertEq3(true, false);
+      console.error('test failed: this code should be unreachable');
       break;
   }
 }
 
-require('./setup-testenv');
-require('..').init().then(main).catch(err => process.exitCode = 2);
+require('..').init().then(main);

@@ -1,0 +1,26 @@
+#! /usr/bin/env node
+/**
+ * @file        remote-sched.simple
+ *              Test that shows that we can load a config from a scheduler. Defaults to production
+ *              scheduler, CI should override this via env.
+ *
+ * @author      Wes Garland, wes@kingsds.network
+ * @date        Aug 2020
+ */
+'use strict';
+var bootstrapPMHref;
+
+function main()
+{
+  const { assert } = require('dcp/dcp-assert').always;
+  
+  assert(dcpConfig.scheduler.services);
+  assert(Object.keys(dcpConfig.scheduler.services).length > 5);
+  assert(bootstrapPMHref && dcpConfig.packageManager.location.href !== bootstrapPMHref); /* ensure remote mutates running config */
+  console.log('packageManager:', dcpConfig.packageManager.location.href);
+}
+
+require('..');
+bootstrapPMHref = require('dcp/dcp-config').packageManager.location.href;
+require('..').initSync();
+main();

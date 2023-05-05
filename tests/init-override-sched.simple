@@ -7,16 +7,18 @@
  * @author      Wes Garland, wes@kingsds.network
  * @date        Aug 2020
  */
-require('./setup-testenv');
+'use strict';
+
+process.env.DCP_CONFIG_LOCATION=''
 
 const dcpClient = require('..');
-const { assertEq2, assertEq3 } = require('dcp/dcp-assert').always;
+const assert = require('assert');
 const alternateScheduler = 'ftp://anvil.acme.com/';
 
 dcpClient.init(alternateScheduler).then(() => {
-  let dcpConfig = require('dcp/dcp-config');
-  assertEq3(dcpConfig.scheduler.location.href, alternateScheduler);
-})
-.catch(error => {
-  process.exit(1);
+  const scheduler = require('dcp/dcp-config').scheduler;
+  console.log('scheduler location is:', scheduler.location.href);
+
+  assert.equal(dcpConfig.scheduler.location.href, alternateScheduler, 'dcpClient::init() did not change scheduler location properly)');
+  assert.equal(dcpConfig.scheduler, scheduler, 'dcpConfig is badly broken');
 });

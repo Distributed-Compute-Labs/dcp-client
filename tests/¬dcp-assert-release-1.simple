@@ -11,11 +11,13 @@
 async function main()
 {
   const assertLib = require('dcp/dcp-assert');
+  const build = require('dcp/build').config.build;
 
-  switch (dcpConfig.build)
+  console.log(`Running test with ${build} bundle`);
+  switch (build)
   {
     default:
-      console.error('Unknown dcpConfig.build:', dcpConfig.build);
+      console.error('Unknown dcp-client bundle build:', build);
       return;
       
     case 'release':
@@ -28,5 +30,4 @@ async function main()
   }
 }
 
-require('./setup-testenv');
-require('..').init().then(main).catch(err => process.exitCode = 2);
+require('..').init().then(main);

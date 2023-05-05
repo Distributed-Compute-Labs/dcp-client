@@ -21,7 +21,8 @@ async function main()
   assert.equal(dcpConfig.scheduler.location.constructor.name, "dcpUrl$$DcpURL");
   assert.equal(dcpConfig.scheduler.identity instanceof Promise, true);
   const identity = await dcpConfig.scheduler.identity;
-  assert.equal(typeof identity, 'string'); /* this should be Address someday */
+  assert.equal(typeof identity, 'object');
+  assert(identity.address instanceof wallet.Address);
 
   assert(dcpConfig === require('dcp/dcp-config'));
   process.exitCode = 0;
