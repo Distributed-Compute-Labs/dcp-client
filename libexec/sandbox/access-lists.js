@@ -15,7 +15,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
   const allowList = new Set([
     '__proto__',
-    '_console',
     'addEventListener',
     'applyAccesslist',
     'Array',
