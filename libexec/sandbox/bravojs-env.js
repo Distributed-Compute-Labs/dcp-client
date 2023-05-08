@@ -270,7 +270,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
      * especially in the case of a repeating message that hasn't been emitted yet
      */
     try { await tryFlushMicroTaskQueue(); } catch(e) {};
-    try { flushLastLog(); } catch(e) {};
+    try { protectedStorage.flushLastLog(); } catch(e) {};
     try { protectedStorage.markCPUTimeAsDone(); } catch(e) {};
 
     if (rejection)

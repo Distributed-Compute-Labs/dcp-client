@@ -120,7 +120,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     // Our own symbols
     'progress',
     'work',
-    'flushLastLog'
   ]);
 
   // Origin time for performance polyfill
