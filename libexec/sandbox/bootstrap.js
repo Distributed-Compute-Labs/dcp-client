@@ -80,13 +80,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     let progress, isIndeterminate = false;
     if (value === undefined) {
       progress = lastProgress || 0;
-      // if progress was set previously, don't show indeterminate
-      if (lastProgress === 0) {
-        isIndeterminate = true;
-      }
+      isIndeterminate = true;
     } else {
       progress = parseFloat(value);
-
       if (Number.isNaN(progress)) {
         isIndeterminate = true;
       } else {
@@ -98,8 +94,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     }
 
     if (progress < 0 || progress > 100) {
-      emitNoProgress(`Progress out of bounds: ${progress.toFixed(1)}%, last: ${lastProgress.toFixed(1)}%`);
-      return false;
+      progress = lastProgress || 0;
+      isIndeterminate = true;
     } else if (progress < lastProgress) {
       // Nerf reverse progress error, mark as indeterminate // RR Jan 2020
       progress = lastProgress;

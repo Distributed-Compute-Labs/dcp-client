@@ -12,14 +12,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+    <script src="http://scheduler.david.office.distributive.network/dcp-client/dcp-client.js"></script>
     <script type="module">
       const {
         wallet,
         worker: { Worker: DCPWorker },
       } = window.dcp;
 
-      // The maximum number of sanxboxes to have working in parallel.
+      // The maximum number of sandboxes to have working in parallel.
       const defaultMaxSliceCount = 1;
 
       // What bank account the worker will send its earned funds to.
@@ -28,12 +28,16 @@
       // What identity the worker will use to communicate to the scheduler.
       const identity = await wallet.getId();
 
-      const worker = new DCPWorker({
-        defaultMaxSliceCount,
-        paymentAddress,
-        // TODO: Change to `identityAddress` once the API is updated.
-        identity,
-      });
+      const options = {
+        paymentAddress: (await wallet.get()).address,
+        maxWorkingSandboxes: 1,
+        computeGroups: [],
+        leavePublicGroup: false,
+        // Make sure the worker is only allowed to work on the job addresses that we specify
+      };
+      
+      const worker = new DCPWorker(identity,
+        options);
 
       // Attaching event listeners to see what's going on.
       worker.on('start', () => {
@@ -44,6 +48,13 @@
         sandbox.on('ready', (event) => {
           console.log('sandbox ready', event);
         });
+        job.on('readystatechange', (ev) => {
+          if (ev === 'deployed')
+          {
+            worker.workerOptions.jobAddresses = [job.address];
+            worker.start();
+          }
+        })
 
         sandbox.on('start', ({ sandbox, job }) => {
           const { name = '', description = '', link = '' } = job;
@@ -55,7 +66,7 @@
           );
         });
 
-        sandbox.on('sliceProgress', (event) => {
+        sandbox.on('progress', (event) => {
           console.log(`Sandbox ${sandbox.id} progress`, event);
         });
 
