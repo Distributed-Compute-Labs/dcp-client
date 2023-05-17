@@ -1,77 +1,31 @@
 {
-  "_args": [
-    [
-      "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-      "/home/david/git/dcp"
-    ]
+  "name": "dcp-client",
+  "version": "4.2.28",
+  "description": "Core libraries for accessing DCP network",
+  "keywords": [
+    "dcp"
   ],
-  "_from": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-  "_id": "dcp-client@git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#a805cb10ae715553f8e8521627353da86cc628de",
-  "_inBundle": false,
-  "_integrity": "",
-  "_location": "/dcp-client",
-  "_phantomChildren": {
-    "@jridgewell/resolve-uri": "3.1.0",
-    "@jridgewell/source-map": "0.3.2",
-    "@jridgewell/sourcemap-codec": "1.4.14",
-    "@tootallnate/once": "1.1.2",
-    "@types/bn.js": "5.1.0",
-    "@types/eslint-scope": "3.7.3",
-    "@xtuc/ieee754": "1.2.0",
-    "@xtuc/long": "4.2.2",
-    "acorn-import-assertions": "1.8.0",
-    "agent-base": "6.0.2",
-    "ajv": "6.12.6",
-    "ajv-keywords": "3.5.2",
-    "bn.js": "5.2.0",
-    "browserslist": "4.16.6",
-    "buffer-from": "1.1.1",
-    "chrome-trace-event": "1.0.2",
-    "commander": "2.20.3",
-    "create-hash": "1.2.0",
-    "debug": "4.3.4",
-    "eslint-scope": "5.1.1",
-    "ethereum-cryptography": "0.1.3",
-    "events": "3.3.0",
-    "glob-to-regexp": "0.4.1",
-    "he": "1.2.0",
-    "htmlparser2": "3.10.1",
-    "jest-worker": "27.5.1",
-    "json-parse-even-better-errors": "2.3.1",
-    "loader-runner": "4.2.0",
-    "lodash": "4.17.21",
-    "lru-cache": "6.0.0",
-    "mime-types": "2.1.29",
-    "minimist": "1.2.6",
-    "neo-async": "2.6.2",
-    "randombytes": "2.1.0",
-    "rlp": "2.2.7",
-    "source-map": "0.6.1",
-    "tapable": "2.2.1",
-    "watchpack": "2.4.0",
-    "webpack-sources": "3.2.3"
-  },
-  "_requested": {
-    "type": "git",
-    "raw": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-    "rawSpec": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-    "saveSpec": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-    "fetchSpec": "ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git",
-    "gitCommittish": "develop"
-  },
-  "_requiredBy": [
-    "/",
-    "/dcp-util",
-    "/dcp-worker"
-  ],
-  "_resolved": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#a805cb10ae715553f8e8521627353da86cc628de",
-  "_spec": "git+ssh://git@gitlab.com/Distributed-Compute-Protocol/dcp-client.git#develop",
-  "_where": "/home/david/git/dcp",
-  "author": {
-    "name": "Distributive"
-  },
+  "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#readme",
   "bugs": {
     "url": "https://github.com/Distributed-Compute-Labs/dcp-client/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Distributed-Compute-Labs/dcp-client.git"
+  },
+  "license": "MIT",
+  "author": "Distributive",
+  "engines": {
+    "node": ">=14.15.0"
+  },
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build": "./build/bundle",
+    "test": "npx peter tests",
+    "vtest": "npx peter -v tests"
   },
   "dependencies": {
     "@kingsds/socket.io-client": "^4.5.4",
@@ -97,37 +51,13 @@
     "webpack-cli": "^4.7.2",
     "yargs": "16.2.0"
   },
-  "description": "Core libraries for accessing DCP network",
   "devDependencies": {
     "@kingsds/eslint-config": "1.0.1",
     "eslint": "7.30.0",
     "express": "^4.18.2",
     "peter": "^2.3.10"
   },
-  "directories": {
-    "example": "examples"
-  },
-  "engines": {
-    "node": ">=14.15.0"
-  },
-  "homepage": "https://github.com/Distributed-Compute-Labs/dcp-client#readme",
-  "keywords": [
-    "dcp"
-  ],
-  "license": "MIT",
-  "main": "index.js",
-  "name": "dcp-client",
   "peerDependencies": {
     "dcp-worker": "^3.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/Distributed-Compute-Labs/dcp-client.git"
-  },
-  "scripts": {
-    "build": "./build/bundle",
-    "test": "npx peter tests",
-    "vtest": "npx peter -v tests"
-  },
-  "version": "4.2.28"
+  }
 }
