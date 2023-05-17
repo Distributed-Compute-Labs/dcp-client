@@ -54,7 +54,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
         if (event.recur)
         {
-          event.when = Date.now() + event.recur;
+          event.when = performance.now() + event.recur;
           events.push(event);
           sortEvents();
         }
@@ -71,7 +71,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         if (!serviceEvents.sliceIsFinished && events.length)
         {
           serviceEvents.nextTimeout = events[0].when
-          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
+          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - performance.now());
         }
       }
     }
@@ -110,7 +110,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       timer = {
         eventType: 'timer',
         fn: callback,
-        when: Date.now() + (+timeout || 0),
+        when: performance.now() + (+timeout || 0),
         serial: events.serial,
         valueOf: function () { return this.serial; }
       }
@@ -120,14 +120,14 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       {
         if (!serviceEvents.nextTimeout)
         {
-          realSetTimeout(serviceEvents, events[0].when - Date.now());
+          realSetTimeout(serviceEvents, events[0].when - performance.now());
         }
         else
         {
           if (serviceEvents.nextTimeout > events[0].when)
           {
             realClearTimeout(serviceEvents.timeout);
-            realSetTimeout(serviceEvents, events[0].when - Date.now())
+            realSetTimeout(serviceEvents, events[0].when - performance.now())
           }
         }
       }
@@ -151,7 +151,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
           if (events.length)
           {
             realClearTimeout(serviceEvents.timeout);
-            realSetTimeout(serviceEvents, events[0].when - Date.now())
+            realSetTimeout(serviceEvents, events[0].when - performance.now())
           }
           else
             realClearTimeout(serviceEvents.timeout);
