@@ -1,48 +1,78 @@
 'use strict'
 
+/**
+ * @typedef {require('./webgpu-promise-registery.js').WebGPUPromiseRegistery} WebGPUPromiseRegistery
+ */
+
 // The TimerMonad is a monad that wraps a promise and adds a timer to it.
 // Since we define the then property on the TimerMonad, it is also a promise 
 // and can be awaited.
 //
 /**
- * @class TimerMonad
  * @template T
  */
-class TimerMonad
+class GPUTimingPromise
 {
   /**
    * @constructor
-   * @param {() => Promise<T>} promise
-   * @returns {TimerMonad<T>}
+   * @param {WebGPUPromiseRegistery} promiseRegistery
+   * @param {() => Promise<T>} promiseFn
+   * @returns {GPUTimingPromise<T>}
    */
   // this is also the right unit where we construct a monad
   // from a value, under no circumstances should one use the promise
   // paramesters afterwards in any way.
-  constructor(promiseFn)
+  constructor(promiseRegistery, promiseFn)
   {
-    this.wrapped = new Promise((resolve, reject) =>
-    {
-      this.before = performance.now();
-      this.after = null;
+    this.promiseRegistery = promiseRegistery;
+    this.begin = null;
+    this.end = null;
 
-      // actually start the promise
-      const innerPromise  = promiseFn();
-      
-      // chain the promise so the timer is stopped when the promise is resolved or rejected
-      innerPromise.then(
-        (res) =>
+    // TODO: forcing another round of event loop seems unideal, but this way we can work with the existing CPU timer
+    // only start the promise after the current event loop has finished, this ensures the CPU timer
+    // is reset before we start the promise
+    setImmediate(() =>
+    {
+      this.wrapped = new Promise((resolve, reject) =>
+      {
+        this.begin = performance.now();
+        this.end = null;
+
+        // TODO: populate it with the gpu functions that return promises
+        const gpuPromiseFnctions = [];
+        const isGPUFunction = gpuPromiseFnctions.includes(promiseFn);
+
+        // actually start the promise
+        const innerPromise = promiseFn();
+ 
+        // only time GPU promises
+        if (isGPUFunction)
         {
-          this.after = performance.now();
-          resolve(res);
-        },
-        (rej) =>
+          this.promiseRegistery.add(innerPromise);
+        }
+        else
         {
-          this.after = performance.now();
-          reject(rej);
-        })
+          // so that even if someone tries to get the duration, it will be 0 and the CPU
+          this.begin = 0;
+          this.end = 0;
+        }
+
+ 
+        // chain the promise so the timer is stopped when the promise is resolved or rejected
+        innerPromise.then(
+          (res) =>
+          {
+            this.end = this.end === 0 ? 0 : performance.now();
+            resolve(res);
+          },
+          (rej) =>
+          {
+            this.end = this.end === 0 ? 0 : performance.now();
+            reject(rej);
+          })
+      });
     });
   }
-
 
   // implement the promise/thennable interface
   // this is mostly a monadic bind, but technically it fails the association rules
@@ -50,7 +80,7 @@ class TimerMonad
   // it fails to be even an applicative 
   then(onFulfilled, onRejected)
   {
-    return new TimerMonad(() => this.innerPromise.then(onFulfilled, onRejected));
+    return new GPUTimingPromise(this.promiseRegistery, () => this.innerPromise.then(onFulfilled, onRejected));
   }
 
 
@@ -58,11 +88,11 @@ class TimerMonad
   // settled, we throw an error
   tryDuration()
   {
-    if (this.after === null)
+    if (this.end === null)
     {
       throw new Error('Promise has not settled yet');
     }
-    return this.after - this.before;
+    return this.end - this.begin;
   }
   
   // asynchronously get the duration of the promise, if the promise has not settled, we will
@@ -72,10 +102,10 @@ class TimerMonad
   // purpose of the monad, to try to get the duration of the promise synchronously, use tryDuration.
   async duration()
   {
-    if (this.after === null)
+    if (this.end === null)
     {
       await this.wrapped;
     }
-    return this.after - this.before;
+    return this.end - this.begin;
   }
 }
