@@ -14,23 +14,29 @@
 self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function bootstrap$$fn(protectedStorage, ring2PostMessage)
 {
   let lastProgress = 0,
-      postMessageSentTime = 0,
-      throttledProgress = 0, // how many progress events were throttled since last update
-      indeterminateProgress = true, // If there hasn't been a determinate call to progress since last update
-      flushedLastConsoleMessage = false, // flag used to determine if flushedLastLog() was called by client
-      lastConsoleMessage = null; // cache of the last message received throguh a console event
+    postMessageSentTime = 0,
+    throttledProgress = 0, // how many progress events were throttled since last update
+    indeterminateProgress = true, // If there hasn't been a determinate call to progress since last update
+    flushedLastConsoleMessage = false, // flag used to determine if flushedLastLog() was called by client
+    lastConsoleMessage = null; // cache of the last message received throguh a console event
 
-  addEventListener('message', async (event) => {
-    try {
+  addEventListener('message', async (event) =>
+  {
+    try
+    {
       var indirectEval = eval // eslint-disable-line
-      if (event.request === 'eval') {
-        try {
+      if (event.request === 'eval')
+      {
+        try
+        {
           let result = await indirectEval(event.data, event.filename)
           ring2PostMessage({
             request: `evalResult::${event.msgId}`,
             data: result
           })
-        } catch (error) {
+        }
+        catch (error)
+        {
           ring2PostMessage({
             request: 'error',
             error: {
@@ -43,7 +49,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
             }
           })
         }
-      } else if (event.request === 'resetState') {
+      }
+      else if (event.request === 'resetState')
+      {
         // This event is fired when the web worker is about to be reused with another slice
         lastProgress = 0;
         postMessageSentTime = 0;
@@ -52,7 +60,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         flushedLastConsoleMessage = false;
         ring2PostMessage({ request: 'resetStateDone' });
       }
-    } catch (error) {
+    }
+    catch (error)
+    {
       ring2PostMessage({
         request: 'error',
         error: {
@@ -64,7 +74,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     }
   })
 
-  const emitNoProgress = (message) => {
+  
+  const emitNoProgress = (message) => // deprecated
+  {
     lastProgress = null;
     postMessage({
       request: 'noProgress',
@@ -72,35 +84,43 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     });
   }
 
-  self.progress = function workerBootstrap$progress(value) {
+  self.progress = function workerBootstrap$progress(value)
+  {
     // lastProgress is set to null when noProgress is emitted,
     // prevents multiple noProgress events from firing
     if (lastProgress === null) return false;
 
     let progress, isIndeterminate = false;
-    if (value === undefined) {
+    if (value === undefined)
+    {
       progress = lastProgress || 0;
-      // if progress was set previously, don't show indeterminate
-      if (lastProgress === 0) {
-        isIndeterminate = true;
-      }
-    } else {
+      isIndeterminate = true;
+    }
+    else
+    {
       progress = parseFloat(value);
 
-      if (Number.isNaN(progress)) {
+      if (Number.isNaN(progress))
+      {
         isIndeterminate = true;
-      } else {
-        if (!(typeof value === 'string' && value.endsWith('%'))) {
+      }
+      else
+      {
+        if (!(typeof value === 'string' && value.endsWith('%')))
+        {
           // if the progres value isn't a string ending with % then multiply it by 100
           progress *= 100;
         }
       }
     }
 
-    if (progress < 0 || progress > 100) {
-      emitNoProgress(`Progress out of bounds: ${progress.toFixed(1)}%, last: ${lastProgress.toFixed(1)}%`);
-      return false;
-    } else if (progress < lastProgress) {
+    if (progress < 0 || progress > 100)
+    {
+      progress = lastProgress || 0;
+      isIndeterminate = true;
+    }
+    else if (progress < lastProgress)
+    {
       // Nerf reverse progress error, mark as indeterminate // RR Jan 2020
       progress = lastProgress;
       isIndeterminate = true;
@@ -111,7 +131,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     
     indeterminateProgress &= isIndeterminate;
     const throttleTime = ((protectedStorage.sandboxConfig && protectedStorage.sandboxConfig.progressThrottle) || 0.1) * 1000;
-    if (Date.now() - postMessageSentTime >= throttleTime) {
+    if (Date.now() - postMessageSentTime >= throttleTime)
+    {
       postMessageSentTime = Date.now();
       postMessage({
         request: 'progress',
@@ -123,7 +144,9 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
 
       throttledProgress = 0;
       indeterminateProgress = true;
-    } else {
+    }
+    else
+    {
       throttledProgress++;
     }
 
@@ -131,8 +154,10 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     return true;
   }
 
-  function workerBootstrap$work$emit(customEvent, value) {
-    if (typeof customEvent !== 'string') {
+  function workerBootstrap$work$emit(customEvent, value)
+  {
+    if (typeof customEvent !== 'string')
+    {
       throw new Error(`Event name passed to work.emit must be a string, not ${customEvent}.`);
     }
 
@@ -146,7 +171,8 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     });
   }
 
-  function workerBootstrap$work$reject(reason = 'false') {
+  function workerBootstrap$work$reject(reason = 'false')
+  {
     protectedStorage.workRejectReason = reason; // Memoize reason
     throw Symbol.for('workReject');
   }
@@ -163,12 +189,13 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     reject: workerBootstrap$work$reject,
   };
 
-  function workerBootstrap$console(level, ...args) {
+  function workerBootstrap$console(level, ...args)
+  {
     flushConsoleMessages({
-        level,
-        message: args,
-        fileName: undefined,
-        lineNumber: undefined});
+      level,
+      message: args,
+      fileName: undefined,
+      lineNumber: undefined });
   }
   // Polyfill console with our own function. Prevents console statements
   // within a user's work function from being displayed in a worker's console, and
@@ -183,11 +210,16 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
 
   // Function caches the most recent console message and counts how many identical messages are received
   // Once a different message is received (or when the slice completes) it is sent along with the counter value
-  function flushConsoleMessages(data){
-    if(lastConsoleMessage != null && data != null && lastConsoleMessage.message == data.message && lastConsoleMessage.level == data.level){
+  function flushConsoleMessages(data)
+  {
+    if(lastConsoleMessage != null && data != null && lastConsoleMessage.message == data.message && lastConsoleMessage.level == data.level)
+    {
       lastConsoleMessage.same++;
-    } else {
-      if(lastConsoleMessage != null){
+    }
+    else
+    {
+      if(lastConsoleMessage != null)
+      {
         postMessage({
           request: 'console',
           payload: lastConsoleMessage
@@ -195,18 +227,23 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         lastConsoleMessage = null;
       }
 
-      if(data != null){
+      if(data != null)
+      {
         data.same = 1;
         lastConsoleMessage = data;
       }
     }
-  };
+  }
   // Ensure all console statements will be sent after a job completes
-  self.flushLastLog = function workerBootstrap$flushLastLog(){
-    if(!flushedLastConsoleMessage){
-        flushConsoleMessages(null); 
+  self.flushLastLog = function workerBootstrap$flushLastLog()
+  {
+    if(!flushedLastConsoleMessage)
+    {
+        flushConsoleMessages(null);
         flushedLastConsoleMessage = true;
-    } else{
+    }
+    else
+    {
       throw new Error('client should not be calling flushLastLog');
     }
   }
