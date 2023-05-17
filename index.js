@@ -537,9 +537,12 @@ async function addConfigRKey(existing, hive, keyTail) {
   if (os.platform() !== 'win32')
     return;
   neo = await require('./windows-registry').getObject(hive, keyTail);
-  debug('dcp-client:config')(` * Loading configuration from ${hive} ${keyTail}`);
-  if (!neo)
-    addConfig(existing, coerceMagicRegProps(neo));
+  debug('dcp-client:config')(` * Loading configuration from ${hive} ${keyTail}`, neo);
+  if (neo)
+  {
+    coerceMagicRegProps(neo); // mutates `neo` in place
+    addConfig(existing, neo);
+  }
 }
 
 /** Merge a new configuration object on top of an existing one, via
