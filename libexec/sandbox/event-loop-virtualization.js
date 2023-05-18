@@ -106,11 +106,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
       }
 
-      events.serial = +events.serial + 1;
+      events.serial = Number(events.serial) + 1;
       timer = {
         eventType: 'timer',
         fn: callback,
-        when: performance.now() + (+timeout || 0),
+        when: performance.now() + (Number(timeout) || 0),
         serial: events.serial,
         valueOf: function () { return this.serial; }
       }
