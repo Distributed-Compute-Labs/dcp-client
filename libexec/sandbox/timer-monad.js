@@ -15,14 +15,15 @@ class GPUTimingPromise
 {
   /**
    * @constructor
-   * @param {WebGPUPromiseRegistery} promiseRegistery
-   * @param {() => Promise<T>} promiseFn
+   * @param {WebGPUPromiseRegistery} promiseRegistery the global promise registery to add all GPU promises to
+   * @param {() => Promise<T>} promiseFn an lazily evaluated function that returns a promise
+   * @param {boolean} isGPUFunction if true, the promise is a GPU promise and will be added to the promise registery
    * @returns {GPUTimingPromise<T>}
    */
   // this is also the right unit where we construct a monad
   // from a value, under no circumstances should one use the promise
   // paramesters afterwards in any way.
-  constructor(promiseRegistery, promiseFn)
+  constructor(promiseRegistery, promiseFn, isGPUFunction = false)
   {
     this.promiseRegistery = promiseRegistery;
     this.begin = null;
@@ -38,10 +39,6 @@ class GPUTimingPromise
         this.begin = performance.now();
         this.end = null;
 
-        // TODO: populate it with the gpu functions that return promises
-        const gpuPromiseFnctions = [];
-        const isGPUFunction = gpuPromiseFnctions.includes(promiseFn);
-
         // actually start the promise
         const innerPromise = promiseFn();
  
@@ -56,7 +53,6 @@ class GPUTimingPromise
           this.begin = 0;
           this.end = 0;
         }
-
  
         // chain the promise so the timer is stopped when the promise is resolved or rejected
         innerPromise.then(
@@ -80,6 +76,8 @@ class GPUTimingPromise
   // it fails to be even an applicative 
   then(onFulfilled, onRejected)
   {
+    // TODO: prove that it's fine to always treat the continuations like they are not GPU functions because
+    // somewhere in the chain, we will have a GPU function and the promise will be added to the registery
     return new GPUTimingPromise(this.promiseRegistery, () => this.innerPromise.then(onFulfilled, onRejected));
   }
 

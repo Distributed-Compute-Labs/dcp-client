@@ -15,13 +15,14 @@
  *  @date       Aug 2022
  */
 
-/* global WebGPUWindow GPU */
-// @ts-nocheck
+/* global WebGPUWindow GPU GPUQueue
+ */
 
 self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
   const webGLTimer = protectedStorage.timers.webGL;
   const webGPUTimer = protectedStorage.timers.webGPU;
+  const webGPUPromiseRegistry = protectedStorage.webGPUPromiseRegistry;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -71,13 +72,21 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     }
   }
 
+  // lift a regular webgpu funciton that returns a promise into our GPUTimingPromise
+  function liftWebGPUFunction(fn)
+  {
+    return function(...args)
+    {
+      return new GPUTimingPromise(webGPUPromiseRegistry, fn.bind(this, ...args), true);
+    }
+  }
+
+
   /**
-   * Given a class, wrap all functions in that class so.
-   * The wrapper will not change the function if the function returns a value.
-   * If the function returns a promise, wrap the return value with another promise, so that
-   * when the original promise resolves or rejects, setImmediate will be called to resolve the
-   * wrapping promise. This causes the promise resolution to spend a moment on the event loop,
-   * allowing timing code to know the promise resolution occurred.
+   * Given a class, map all functions that return a promise into our TimerMonad, which still implements the
+   * thennable interface, meaning it looks like a promise, swims like a promise, and quacks like a promise but
+   * has the added benefit of timing the promise. 
+   *
    */
   function wrapPrototypeFunctions(GPUClass)
   {
@@ -105,19 +114,8 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
         continue;
       }
 
-      // If the function returns a promise, wrap it with setImmediate. Triggers restart of CPU measurement.
-      self[GPUClass].prototype[prop] = function timerWrapper(...args)
-      {
-        const fn = originalFn.bind(this);
-        const returnValue =  fn(...args);
-        if (returnValue instanceof Promise)
-          return new Promise((resolve, reject) => {
-            returnValue.then(
-              (res) => setImmediate(() => resolve(res)),
-              (rej) => setImmediate(() => reject(rej)));
-          });
-        return returnValue;
-      }
+      // lift the function into our GPUTimingPromise monad
+      self[GPUClass].prototype[prop] = liftWebGPUFunction(originalFn);
     }
   }
 
@@ -166,17 +164,28 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
   }
 
   if (!navigator.gpu)
-    return
+    return;
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
   const originalSubmit = GPUQueue.prototype.submit;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
+  
+  // this classes contain functions that can return promises, so we need to wrap them
+  const requiredWrappingGPUClasses = [
+    'GPU',
+    'GPUAdapter',
+    'GPUDevice',
+    'GPUBuffer',
+    'GPUShaderModule',
+    'GPUQueue',
+  ];
 
-  for (const key of Object.getOwnPropertyNames(self))
-  {
-    if (key.startsWith('GPU'))
-    wrapPrototypeFunctions(key);
-  }
+
+  // ensure we can time all the webGPU functions that return promises
+  const globalProperties = Object.getOwnPropertyNames(self);
+  console.assert(requiredWrappingGPUClasses.every((className) => globalProperties.includes(className)));
+
+  requiredWrappingGPUClasses.forEach(wrapPrototypeFunctions);
 
   GPUQueue.prototype.submit = function submit(...args)
   {

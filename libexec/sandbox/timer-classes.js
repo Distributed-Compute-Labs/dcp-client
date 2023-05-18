@@ -180,16 +180,10 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    */
   TimeWebGPU.prototype.duration = async function duration()
   {
-    var totalTime = 0;
-    var previousEnd = 0;
+    const gpuPromiseRegistry = protectedStorage.gpuPromiseRegistry;
 
-    while (this.latestWebGPUCall)
-    {
-      const latestCall = this.latestWebGPUCall;
-      await this.latestWebGPUCall;
-      if (latestCall === this.latestWebGPUCall)
-        this.latestWebGPUCall = null;
-    }
+    // settle all promises from the GPU
+    await gpuPromiseRegistry.awaitAll();
 
     // we merge all the intervals, this gets rid of overlaps, then calcuating the duration is trivial
     // this is literally https://leetcode.com/problems/merge-intervals/
