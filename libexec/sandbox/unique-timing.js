@@ -15,14 +15,16 @@
  *  @date       Aug 2022
  */
 
-/* global WebGPUWindow GPU GPUQueue
+/* global GPUQueue
  */
+
+const { TimedPromise } = require('./timed-promise.js');
 
 self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
   const webGLTimer = protectedStorage.timers.webGL;
   const webGPUTimer = protectedStorage.timers.webGPU;
-  const webGPUPromiseRegistry = protectedStorage.webGPUPromiseRegistry;
+  const globalTracker = protectedStorage.globalTracker;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -72,12 +74,12 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     }
   }
 
-  // lift a regular webgpu funciton that returns a promise into our GPUTimingPromise
+  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUFunction(fn)
   {
     return function(...args)
     {
-      return new GPUTimingPromise(webGPUPromiseRegistry, fn.bind(this, ...args), true);
+      return new TimedPromise(globalTracker, fn.bind(this, ...args), 'WebGPU');
     }
   }
 
@@ -167,6 +169,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     return;
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
+  const originalGPUQueue = GPUQueue;
   const originalSubmit = GPUQueue.prototype.submit;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
   
@@ -187,17 +190,34 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
 
   requiredWrappingGPUClasses.forEach(wrapPrototypeFunctions);
 
+  // TODO: not complete yet, webGPU comes with an default queue, need to wrap that also 
+  GPUQueue.prototype.constructor = function ctor(...args) {
+    const queueConstructor = originalGPUQueue.bind(this);
+    const queue = new queueConstructor(...args);
+
+    // always register the queue with the global tracker
+    globalTracker.webGPUQueueRegistery.add(queue);
+
+    return queue;
+  }
+
+
+ 
+  // TODO: add doc
+  GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
+  {
+    const fn = originalSubmitDone.bind(this);
+    const queueLabel = this.label;
+    const onSubmittedWorkDoneContext = new WebGPUOnComplete({ queueLabel });
+
+    return new TimedPromise(globalTracker, () => fn(...args), onSubmittedWorkDoneContext);
+  }
+
+
+  // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
   GPUQueue.prototype.submit = function submit(...args)
   {
-    const fn = originalSubmit.bind(this);
-    fn(...args);
-
-    const queueP = originalSubmitDone.bind(this)();
-    const interval = new protectedStorage.TimeInterval();
-    webGPUTimer.push({ interval, queueP });
-
-    queueP.then(() => {
-      interval.stop();
-    });
+    const queueLabel = this.label;
+    return global.tracker.webGPUQueueRegistery.addSubmission(queueLabel, ...args);
   }
 });

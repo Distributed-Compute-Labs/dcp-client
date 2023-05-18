@@ -28,7 +28,13 @@
  * @date    Aug 2022
  */
 
-// @ts-nocheck
+/**
+ * @typedef {require('./global-trackers.js').GlobalTracker} GlobalTracker
+ * @typedef {require('./global-trackers.js').TimedPromise} TimedPromise
+ * @typedef {require('./global-trackers.js').WebGPUOnComplete} WebGPUOnComplete
+ * @typedef {require('./global-trackers.js').WebGPUPromiseRegistry} WebGPUQueueRegistery
+ * @typedef {require('./global-trackers.js').WebGPUQueueRegistery} WebGPUQueueRegistery
+ */
 
 self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$fn(protectedStorage)
 {
@@ -234,6 +240,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     cpu:    new TimeCPU(),
     webGPU: new TimeWebGPU(),
     webGL:  new TimeThing(),
+    globalTracker: new GlobalTracker(),
   }
 
 })
