@@ -31,7 +31,7 @@ class WebGPUPromiseRegistry
  *
  * @class GPUQueueRegistery
  */
-class GPUQueueRegistery
+class WebGPUQueueRegistery
 {
   /**
    * @constructor
@@ -121,6 +121,43 @@ class GPUQueueRegistery
 }
 
 
+/**
+ * @class GlobalTrackers
+ */
+class GlobalTrackers {
+  constructor()
+  {
+    this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
+    this.webGPUQueueRegistery = new WebGPUQueueRegistery();
+
+    /**
+     * @typedef {{begin: DOMHighResTimeStamp, end: DOMHighResTimeStamp}} Interval
+     */
+
+    /** @type {Interval[]} */
+    this.webGPUIntervals = [];
+    
+    /** @type {Interval[]} */
+    this.cpuIntervals = [];
+  }
+}
+
+
+/**
+ * @class WebGPUOnComplete
+ */
+class WebGPUOnComplete
+{
+  /**
+   * @constructor
+   * @param {String} queueLabel
+   * @returns {WebGPUOnComplete}
+   */
+  constructor(queueLabel)
+  {
+    this.queueLabel = queueLabel;
+  }
+}
 
 /**
  * @class TimedPromise
@@ -131,11 +168,31 @@ class TimedPromise
   /**
    * @function #calcualteTimeDelta
    * @private
-   * @param {"WebGPU" | "WebGL" | "WASM" | "WebGPUOnComplete"} originTag - if set, indicates the origin of the promise, it will affect where
+   * @param {"WebGPU" | "WebGL" | "WASM" | WebGPUOnComplete | undefined} originTag - if set, indicates the origin of the promise, it will affect where
    */
   #recordTimeDelta(originTag)
   {
-    switch (originTag) {
+    if (originTag instanceof WebGPUOnComplete)
+    {
+      const label = originTag.queueLabel;
+      const lastSubmittedTime = this.globalTracker.webGPUQueueRegistery.getLastSubmittedTime(label);
+
+      if (lastSubmittedTime === undefined)
+      {
+        throw new Error("Cannot find queue with label " + label);
+      } 
+
+      this.globalTracker.webGPUIntervals.push({begin: lastSubmittedTime, end: this.end});
+    }
+
+
+    switch (originTag)
+    {
+      // undefined is CPU, this occurs when the promise is generated from async await
+      case undefined:
+      {
+        this.globalTracker.cpuIntervals.push({begin: this.begin, end: this.end});
+      }
       case "WebGL":
       case "WASM":
       {
@@ -143,12 +200,12 @@ class TimedPromise
       }
       case "WebGPU":
       {
-        // TODO: store them in our global GPU timer
+        this.globalTracker.webGPUIntervals.push({begin: this.begin, end: this.end});
       }
-      case "WebGPUOnComplete":
+      default:
       {
-        // TODO: reach in our global GPU queue registery to calculate the time delta
-        // then store it just the same as webGPU
+        // users should not have access to this, most likely an internal error
+        throw new Error("Unknown origin tag");
       }
     }
   }
@@ -157,40 +214,49 @@ class TimedPromise
 
   /**
    * @contructor
-   * @param {GlobalTimers} globalTimers
+   * @param {GlobalTrackers} globalTimers
    * @param {() => Promise} promiseFn
-   * @param {"WebGPU" | "WebGL" | "WASM"} originTag - if set, indicates the origin of the promise, it will affect where
+   * @param {"WebGPU" | "WebGL" | "WASM" | "WebGPUOnComplete"} originTag - if set, indicates the origin of the promise, it will affect where
    * the time delta is stored
    * @returns {TimedPromise}
    */
-  constructor(globalTimer, promiseFn, originTag)
+  constructor(globalTracker, promiseFn, originTag)
   {
     this.begin = performance.now();
     this.end = null;
-    this.globalTimer = globalTimer;
+    this.globalTracker = globalTracker;
 
-
-
-
-
+    
     this.wrapped
       = promiseFn()
         .then(
           (onResolve) => {
             this.end = performance.now();
+            this.#recordTimeDelta(originTag);
             return onResolve;
           },
           (onReject) => {
             this.end = performance.now();
+            this.#recordTimeDelta(originTag);
             throw onReject;
           }
         );
   }
 
 
+  /**
+   * Implements the thennable interface, so we can chain promises and async await on them.
+   *
+   *
+   * @function then
+   * @param {Function} onFulfilled
+   * @param {Function} onRejected
+   * @returns {TimedPromise}
+   */
   then(onFulfilled, onRejected)
   {
-    return new TimedPromise(this.globalTimer, () => {
+    return new TimedPromise(this.globalTracker, () => {
+      // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
       return this.wrapped.then(onFulfilled, onRejected);
     });
   }
