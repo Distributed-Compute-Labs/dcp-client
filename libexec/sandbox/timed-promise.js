@@ -1,4 +1,33 @@
 /**
+ * All webGPU promises are to be placed in this global registry. So we can await them all.
+ */
+class WebGPUPromiseRegistry
+{
+  constructor()
+  {
+    this.promises = [];
+  }
+
+  /**
+   * Add a promise to the registry, returns the newly registered promise.
+   */
+  add(promise)
+  {
+    this.promises.push(promise);
+    return promise;
+  }
+
+  /**
+   * Wait for all promises in the registry to settle, returning the results.
+   */
+  async waitAll()
+  {
+    return await Promise.allSettled(this.promises);
+  }
+}
+
+
+/**
  *
  * @class GPUQueueRegistery
  */
@@ -88,5 +117,81 @@ class GPUQueueRegistery
   find(label)
   {
     return this.queues.get(label);
+  }
+}
+
+
+
+/**
+ * @class TimedPromise
+ */
+class TimedPromise
+{
+
+  /**
+   * @function #calcualteTimeDelta
+   * @private
+   * @param {"WebGPU" | "WebGL" | "WASM" | "WebGPUOnComplete"} originTag - if set, indicates the origin of the promise, it will affect where
+   */
+  #recordTimeDelta(originTag)
+  {
+    switch (originTag) {
+      case "WebGL":
+      case "WASM":
+      {
+        throw new Error("Not implemented");
+      }
+      case "WebGPU":
+      {
+        // TODO: store them in our global GPU timer
+      }
+      case "WebGPUOnComplete":
+      {
+        // TODO: reach in our global GPU queue registery to calculate the time delta
+        // then store it just the same as webGPU
+      }
+    }
+  }
+
+
+
+  /**
+   * @contructor
+   * @param {GlobalTimers} globalTimers
+   * @param {() => Promise} promiseFn
+   * @param {"WebGPU" | "WebGL" | "WASM"} originTag - if set, indicates the origin of the promise, it will affect where
+   * the time delta is stored
+   * @returns {TimedPromise}
+   */
+  constructor(globalTimer, promiseFn, originTag)
+  {
+    this.begin = performance.now();
+    this.end = null;
+    this.globalTimer = globalTimer;
+
+
+
+
+
+    this.wrapped
+      = promiseFn()
+        .then(
+          (onResolve) => {
+            this.end = performance.now();
+            return onResolve;
+          },
+          (onReject) => {
+            this.end = performance.now();
+            throw onReject;
+          }
+        );
+  }
+
+
+  then(onFulfilled, onRejected)
+  {
+    return new TimedPromise(this.globalTimer, () => {
+      return this.wrapped.then(onFulfilled, onRejected);
+    });
   }
 }
