@@ -10,7 +10,11 @@
  * 
  * TimeInterval is an object shaped like {start: X, stop: Y} with a few additional functions to stop the interval.
  * Start is set to the current time immediately when the interval is created, and stop is set when the `stop` function
- * is called. If the length of an interval is accessed before the interval is stopped, it will throw an error.
+ * is called. The semantics of a duration is half open, in [begin, end) fashion, this makes calculating duration trivial,
+ * it's simply end - start.
+ *
+ *
+ * If the length of an interval is accessed before the interval is stopped, it will throw an error.
  * A TimeThing contains a possibly-overlapping list of TimeIntervals. It adds a duration function to calculate the total
  * time of all intervals (double-counting any overlaps). If the Thing may need to have it's final interval stopped in an
  * area that won't otherwise have a reference to that interval, TimeCPU can be used. TimeCPU only adds a reference to the
@@ -89,10 +93,10 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    */
   TimeThing.prototype.duration = function totalDuration()
   {
-    let sum = 0;
-    for (let interval of this.intervals)
-      sum += interval.length;
-    return sum;
+    return this
+      .intervals
+      .map(interval => interval.length)
+      .reduce((a, b) => a + b);
   }
 
   /**
@@ -187,18 +191,33 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
         this.latestWebGPUCall = null;
     }
 
-    for (let interval of this.intervals)
+    // we merge all the intervals, this gets rid of overlaps, then calcuating the duration is trivial
+    // this is literally https://leetcode.com/problems/merge-intervals/
+    this.intervals.sort((a, b) => a.start - b.start);
+
+    // merge the intervals 
+    const merged = [];
+    for (const interval in this.intervals)
     {
-      if (previousEnd <= interval.start)
-        totalTime += interval.length
+      // if the last interval in the merged list have no ovverlap with the current interval, just push it
+      if (merged.length === 0 || merged[merged.length - 1].end < interval.start)
+      {
+        merged.push(interval);
+      }
       else
       {
-        if (!interval.hasEnded())
-          throw new Error("Invalid length: interval hasn't been stopped");
-        totalTime += interval.end - previousEnd;
+        // otherwise, there is overlap, so merge the current and last interval
+        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
       }
-      previousEnd = interval.end;
     }
+
+    this.intervals = merged;
+    
+    // now calculating the total duration is trivial
+    const totalTime = merged
+      .map(interval => interval.length)
+      .reduce((a, b) => a + b);
+
     return totalTime;
   }
 
