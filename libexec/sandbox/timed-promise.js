@@ -1,8 +1,13 @@
 /**
  * All webGPU promises are to be placed in this global registry. So we can await them all.
+ * @class WebGPUPromiseRegistry
  */
 class WebGPUPromiseRegistry
 {
+  /**
+   * @constructor
+   * @returns {WebGPUPromiseRegistry}
+   */
   constructor()
   {
     this.promises = [];
@@ -10,6 +15,9 @@ class WebGPUPromiseRegistry
 
   /**
    * Add a promise to the registry, returns the newly registered promise.
+   *
+   * @param {Promise} promise
+   * @returns {Promise}
    */
   add(promise)
   {
@@ -19,6 +27,7 @@ class WebGPUPromiseRegistry
 
   /**
    * Wait for all promises in the registry to settle, returning the results.
+   * @returns {Promise}
    */
   async waitAll()
   {
@@ -35,6 +44,7 @@ class WebGPUQueueRegistery
 {
   /**
    * @constructor
+   * @returns {GPUQueueRegistery}
    */
   constructor()
   {
@@ -125,6 +135,11 @@ class WebGPUQueueRegistery
  * @class GlobalTrackers
  */
 class GlobalTrackers {
+
+  /**
+   * @constructor
+   * @returns {GlobalTrackers}
+   */
   constructor()
   {
     this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
@@ -225,7 +240,6 @@ class TimedPromise
     this.begin = performance.now();
     this.end = null;
     this.globalTracker = globalTracker;
-
     
     this.wrapped
       = promiseFn()
