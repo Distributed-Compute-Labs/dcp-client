@@ -774,7 +774,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     global.requestAnimationFrame = callback => setTimeout(callback, 0);
   }
 
-  if (typeof OffscreenCanvas !== 'undefined') {
+  if (protectedStorage.hasWebglSupport()) {
 
     // This deals with Firefox bug 1529995, which causes the tab to crash if fenceSync is called.
     if (navigator.userAgent.indexOf('Firefox') >= 0) {
