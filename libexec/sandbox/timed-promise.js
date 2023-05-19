@@ -175,6 +175,7 @@ class WebGPUOnComplete
   }
 }
 
+// TODO: need to think about what's the best way to fake resolve
 const originalPromiseConstructor = Promise;
 const originalPromiseThen = Promise.prototype.then;
 const originalPromiseCatch = Promise.prototype.catch;
@@ -293,11 +294,12 @@ class TimedPromise
    */
   then(onFulfilled, onRejected)
   {
+    // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
+    const lazy = () => originalPromiseThen.call(this.wrapped, onFulfilled, onRejected);
     console.debug("fake then called");
-    return new TimedPromise(this.globalTracker, () => {
-      // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
-      return this.wrapped.then(onFulfilled, onRejected);
-    });
+
+    // the last parameter is undefined since all the continuation always starts from CPU
+    return new TimedPromise(this.globalTracker, lazy);
   }
 
 
