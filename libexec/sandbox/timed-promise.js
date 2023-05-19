@@ -1,5 +1,6 @@
 /**
  * All webGPU promises are to be placed in this global registry. So we can await them all.
+ * 
  * @class WebGPUPromiseRegistry
  */
 class WebGPUPromiseRegistry
@@ -240,18 +241,20 @@ class TimedPromise
     this.begin = performance.now();
     this.end = null;
     this.globalTracker = globalTracker;
+
+    const that = this;
     
     this.wrapped
       = promiseFn()
         .then(
           (onResolve) => {
-            this.end = performance.now();
-            this.#recordTimeDelta(originTag);
+            that.end = performance.now();
+            that.#recordTimeDelta(originTag);
             return onResolve;
           },
           (onReject) => {
-            this.end = performance.now();
-            this.#recordTimeDelta(originTag);
+            that.end = performance.now();
+            that.#recordTimeDelta(originTag);
             throw onReject;
           }
         );
