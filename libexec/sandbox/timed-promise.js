@@ -179,8 +179,6 @@ const originalPromiseConstructor = Promise;
 const originalPromiseThen = Promise.prototype.then;
 const originalPromiseCatch = Promise.prototype.catch;
 const originalPromiseFinally = Promise.prototype.finally;
-const originalPromiseAll = Promise.all;
-const originalPromiseAllSettled = Promise.allSettled;
 
 const globalTrackers = new GlobalTrackers();
 Promise = function(executor) {
@@ -301,6 +299,35 @@ class TimedPromise
       return this.wrapped.then(onFulfilled, onRejected);
     });
   }
+
+
+  /**
+   * Implements the catch method, so it smells like a promise to regular users.
+   *
+   * @function catch
+   * @param {Function} onRejected - the callback to be called when the promise is rejected
+   * @returns {TimedPromise}
+   */
+  catch(onRejected)
+  {
+    const lazy = () => originalPromiseCatch.call(this.wrapped, onRejected);
+    return new TimedPromise(this.globalTracker, lazy);
+  }
+
+  /**
+   * Implements the finally method, so it smells like a promise to regular users.
+   *
+   *
+   * @function finally
+   * @param {Function} onFinally - A function to asynchronously execute when this promise becomes settled. Its 
+   * return value is ignored unless the returned value is a rejected promise. The function is called with no arguments.
+   * @returns {TimedPromise}
+   */
+  finally(onFinally)
+  {
+    const lazy = () => originalPromiseFinally.call(this.wrapped, onFinally);
+    return new TimedPromise(this.globalTracker, lazy);
+  } 
 }
 
 
@@ -308,10 +335,7 @@ class TimedPromise
 async function main() {
   const fetch = require('node-fetch');
 
-  // for (let i  = 0; i != Number.MAX_SAFE_INTEGER; ++i) {
-  //   console.error(`why am I here? because I don't want the optmizer to be clever to be clever and remove the loop ${i}`);
-  // }
-  for (let start=Date.now(); Date.now() < start + 1000; ) {
+  for (let start = Date.now(); Date.now() < start + 1000; ) {
     console.error(`why am I here? because I don't want the optimizer to be clever to be clever and remove the loop`);
   }
   console.log("stupid loop done");
