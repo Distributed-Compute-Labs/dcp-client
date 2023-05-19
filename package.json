@@ -39,6 +39,7 @@
     "https-proxy-agent": "^5.0.0",
     "kvin": "^1.2.13",
     "nanoid": "^3.2.0",
+    "node-fetch": "^2.6.11",
     "node-localstorage": "^2.1.5",
     "physical-cpu-count": "^2.0.0",
     "polyfill-crypto.getrandomvalues": "^1.0.0",

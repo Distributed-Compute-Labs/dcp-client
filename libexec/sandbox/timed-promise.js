@@ -175,6 +175,23 @@ class WebGPUOnComplete
   }
 }
 
+const originalPromiseConstructor = Promise;
+const originalPromiseThen = Promise.prototype.then;
+const originalPromiseCatch = Promise.prototype.catch;
+const originalPromiseFinally = Promise.prototype.finally;
+const originalPromiseAll = Promise.all;
+const originalPromiseAllSettled = Promise.allSettled;
+
+const globalTrackers = new GlobalTrackers();
+Promise = function(executor) {
+  console.log("Promise constructor called");
+  // secrectly return our own promise
+  const lazy = () => new originalPromiseConstructor(executor);
+  const fakePromise = new TimedPromise(globalTrackers, lazy);
+  return fakePromise;
+}
+
+
 /**
  * @class TimedPromise
  */
@@ -199,6 +216,8 @@ class TimedPromise
       } 
 
       this.globalTracker.webGPUIntervals.push({begin: lastSubmittedTime, end: this.end});
+      console.log("WebGPU time delta: " + (this.end - lastSubmittedTime));
+      return;
     }
 
 
@@ -208,6 +227,8 @@ class TimedPromise
       case undefined:
       {
         this.globalTracker.cpuIntervals.push({begin: this.begin, end: this.end});
+        console.log("CPU time delta: " + (this.end - this.begin));
+        break;
       }
       case "WebGL":
       case "WASM":
@@ -217,6 +238,8 @@ class TimedPromise
       case "WebGPU":
       {
         this.globalTracker.webGPUIntervals.push({begin: this.begin, end: this.end});
+        console.log("WebGPU time delta: " + (this.end - this.begin));
+        break;
       }
       default:
       {
@@ -272,9 +295,34 @@ class TimedPromise
    */
   then(onFulfilled, onRejected)
   {
+    console.debug("fake then called");
     return new TimedPromise(this.globalTracker, () => {
       // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
       return this.wrapped.then(onFulfilled, onRejected);
     });
   }
 }
+
+
+//////////////////////////////////// jank testing /////////////////////////
+async function main() {
+  const fetch = require('node-fetch');
+
+  // for (let i  = 0; i != Number.MAX_SAFE_INTEGER; ++i) {
+  //   console.error(`why am I here? because I don't want the optmizer to be clever to be clever and remove the loop ${i}`);
+  // }
+  for (let start=Date.now(); Date.now() < start + 1000; ) {
+    console.error(`why am I here? because I don't want the optimizer to be clever to be clever and remove the loop`);
+  }
+  console.log("stupid loop done");
+ 
+  const stupidFetch = await fetch('https://www.google.com')
+  .then((res) => {
+    return res.text();
+  });
+
+  console.log(`stupid fetch done`);
+}
+
+
+main();
