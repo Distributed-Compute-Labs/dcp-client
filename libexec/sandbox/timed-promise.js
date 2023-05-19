@@ -337,12 +337,12 @@ class TimedPromise
 async function main() {
   const fetch = require('node-fetch');
 
-  for (let start = Date.now(); Date.now() < start + 1000; ) {
+  for (const start = Date.now(); Date.now() < (start + 3000); ) {
     console.error(`why am I here? because I don't want the optimizer to be clever to be clever and remove the loop`);
   }
   console.log("stupid loop done");
  
-  const stupidFetch = await fetch('https://www.google.com')
+  const stupidfetch = await fetch('https://www.google.com')
   .then((res) => {
     return res.text();
   });
@@ -350,5 +350,10 @@ async function main() {
   console.log(`stupid fetch done`);
 }
 
+const stupidMain = new TimedPromise(globalTrackers, main, undefined);
 
-main();
+originalPromiseThen.call(stupidMain.wrapped, 
+  () => {
+    debugger;
+    console.log(globalTrackers);
+  });
