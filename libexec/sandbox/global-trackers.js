@@ -1,5 +1,14 @@
 self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTrackers$$fn(protectedStorage) {
   /**
+   * @typedef {import ('./timer-classes.js').TimeThing} TimeThing
+   * @typedef {import ('./timer-classes.js').TimeInterval} TimeInterval
+   */
+  
+  const TimeThing = protectedStorage.timers.TimeThing;
+  const TimeInterval = protectedStorage.timers.TimeInterval;
+
+
+  /**
    * All webGPU promises are to be placed in this global registry. So we can await them all.
    * 
    * @class WebGPUPromiseRegistry
@@ -147,15 +156,11 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
       this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
       this.webGPUQueueRegistery = new WebGPUQueueRegistery();
 
-      /**
-       * @typedef {{begin: DOMHighResTimeStamp, end: DOMHighResTimeStamp}} Interval
-       */
-
-      /** @type {Interval[]} */
-      this.webGPUIntervals = [];
+      /** @type {TimeThing} */
+      this.webGPUIntervals = new TimeThing();
       
-      /** @type {Interval[]} */
-      this.cpuIntervals = [];
+      /** @type {TimeThing} */
+      this.cpuIntervals = new TimeThing();
     }
   }
 
@@ -221,8 +226,11 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
           throw new Error("Cannot find queue with label " + label);
         } 
 
-        this.globalTracker.webGPUIntervals.push({begin: lastSubmittedTime, end: this.end});
-        console.log("WebGPU time delta: " + (this.end - lastSubmittedTime));
+        // MAJOR CODE SMELL, SOMEONE PLEASE COME MAKE IT BETTER
+        this.duration.overrideInterval(lastSubmittedTime, this.duration.end);
+
+        this.globalTracker.webGPUIntervals.push(this.duration);
+        console.log("WebGPU time delta: " + (this.duration.length));
         return;
       }
 
@@ -232,8 +240,8 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
         // undefined is CPU, this occurs when the promise is generated from async await
         case undefined:
         {
-          this.globalTracker.cpuIntervals.push({begin: this.begin, end: this.end});
-          console.log("CPU time delta: " + (this.end - this.begin));
+          this.globalTracker.cpuIntervals.push(this.duration);
+          console.log("CPU time delta: " + this.duration.length);
           break;
         }
         case "WebGL":
@@ -243,8 +251,8 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
         }
         case "WebGPU":
         {
-          this.globalTracker.webGPUIntervals.push({begin: this.begin, end: this.end});
-          console.log("WebGPU time delta: " + (this.end - this.begin));
+          this.globalTracker.webGPUIntervals.push(this.duration);
+          console.log("WebGPU time delta: " + (this.duration.lenght));
           break;
         }
         default:
@@ -267,8 +275,7 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
      */
     constructor(globalTracker, promiseFn, originTag)
     {
-      this.begin = performance.now();
-      this.end = null;
+      this.duration = new TimeInterval();
       this.globalTracker = globalTracker;
 
       const that = this;
@@ -277,12 +284,12 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
         = promiseFn()
           .then(
             (onResolve) => {
-              that.end = performance.now();
+              that.duration.stop();
               that.#recordTimeDelta(originTag);
               return onResolve;
             },
             (onReject) => {
-              that.end = performance.now();
+              that.duration.stop();
               that.#recordTimeDelta(originTag);
               throw onReject;
             }

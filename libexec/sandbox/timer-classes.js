@@ -27,6 +27,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    * @property {number} end   - the end time of the interval
    * @property {function} stop - stop the interval, setting the end time to the current time
    * @property {function} hasEnded - check if the interval has been stopped
+   * @property {function} overrideInterval - override the interval with a new start and end time
    * @property {number} length - the length of the interval. This is a getter, and will throw an error
    * /
 
@@ -66,6 +67,26 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     this.end = performance.now();
     return true;
   }
+
+  /**
+   * FOR THE LOVE OF HUMANITY, CAN SOMEONE MAKE THE CONSTRUCTOR OF THIS NOT EAGERLY MEASURE AND ALLOW US PASS
+   * IN THE START AND END TIME?!
+   *
+   * THIS FUNCTION SHOULD REALLY RETURN A NEW INSTANCE OF THE INTERVAL, NOT MODIFY THE EXISTING ONE. 
+   * Override the interval with a new start and end time.
+   * @function {TimeInterval.overrideInterval}
+   * @param {number} start - the new start time
+   * @param {number} end   - the new end time
+   */
+  TimeInterval.prototype.overrideInterval = function overrideInterval(start, end)
+  {
+    // since users shoully shouldn't touch this, if this fails, it's almost certainly our fault
+    console.assert(start && end && start < end, 'Invalid interval');
+
+    this.start = start;
+    this.end = end;
+  }
+
 
   /**
    * Check if the interval has been stopped (end time has been set)
@@ -154,4 +175,5 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   {
     this.intervals = [];
   }
+  protectedStorage.TimeThing = TimeThing;
 });
