@@ -18,9 +18,12 @@
 /* global GPUQueue
  */
 
-const { TimedPromise } = require('./timed-promise.js');
 
-self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
+/**
+ * @typedef {import('./global-trackers').GlobalTracker} GlobalTracker
+ */
+
+self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
   const webGLTimer = protectedStorage.timers.webGL;
   const webGPUTimer = protectedStorage.timers.webGPU;
@@ -74,9 +77,21 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     }
   }
 
+
+  // lift WASM functions into our TimedPromise monad
+  function liftWASMFunction(fn)
+  {
+    console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
+    return function(...args)
+    {
+      return new TimedPromise(globalTracker, fn.bind(this, ...args), 'WASM');
+    }
+  }
+  
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUFunction(fn)
   {
+    console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
       return new TimedPromise(globalTracker, fn.bind(this, ...args), 'WebGPU');
