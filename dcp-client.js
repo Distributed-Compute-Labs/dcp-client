@@ -106,7 +106,7 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       const dcp          = bundleScript.exports;
       const leafMerge    = dcp.utils.leafMerge;
       const KVIN         = new dcp.kvin.KVIN();
-      
+
       if (typeof module !== 'undefined' && typeof module.declare !== 'undefined')
         require('/internal/dcp/cjs2-shim').init(bundleScript.exports); /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
       else
@@ -118,10 +118,10 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       /**
        * Slide baked-in config underneath the remote config to provide default values.
        */
-      KVIN.userCtors.dcpUrl$$DcpURL  = dcp['dcp-url'].DcpURL;                                                                                                                              
-      KVIN.userCtors.dcpEth$$Address = dcp.wallet.Address;                                                                                                                              
+      KVIN.userCtors.dcpUrl$$DcpURL  = dcp['dcp-url'].DcpURL;
+      KVIN.userCtors.dcpEth$$Address = dcp.wallet.Address;
       dcpConfig = dcp['dcp-config'] = dcp.utils.leafMerge(KVIN.unmarshal(dcp['dcp-default-config']), dcp['dcp-config']);
-      
+
       /**
        * Transform instances of Address-like values into Addresses. Necessary since
        * the config can't access the Address class before the bundle is loaded.
