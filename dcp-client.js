@@ -51,31 +51,73 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     }
 
     /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
-    function loadConfig() {
+    function loadConfig()
+    {
       configScript = document.createElement('SCRIPT');
       configScript.setAttribute('type', 'text/javascript');
       configScript.setAttribute('src', dcpConfigHref);
       configScript.setAttribute('id', '_dcp_config');
-      if (_dcpConfig || schedulerURL) { /* Preserve local configuration as overrides */
-        let html = '';
-        if (!thisScript.id)
-          thisScript.id='_dcp_client_loader';
-        html += configScript.outerHTML + '\n<script>';
-        if (_dcpConfig) {
-          thisScript.localDcpConfig = _dcpConfig;
-          html += `Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);`;
-        }
-        if (schedulerURL)
-          html += `dcpConfig.scheduler.location=new URL("${schedulerURL}");`;
-        html += '</scr'+'ipt>\n';
-        document.write(html);
-      } else {
-        document.write(configScript.outerHTML);
+
+      if (!thisScript.id)
+        thisScript.id = '_dcp_client_loader';
+
+      let html = configScript.outerHTML;
+
+      /* If we know about an alternate scheduler location - by any means but usually script attribute -
+       * add it into our local configuration delta; generate this delta as-needed.
+       */
+      if (schedulerURL)
+      {
+        if (!_dcpConfig)
+          _dcpConfig = {};
+        if (!_dcpConfig.scheduler)
+          _dcpConfig.scheduler = {};
+        _dcpConfig.scheduler.location = schedulerURL;
       }
+
+      /* Preserve the config delta so that it can be merged on top of the remote config, before the
+       * bundle is completely initialized. The global dcpConfig is replaced by this new script.
+       */
+      if (_dcpConfig)
+      {
+        thisScript.mergeConfig = mergeConfig;
+        html += `<script>document.getElementById('${thisScript.id}').mergeConfig();</scr` + 'ipt>';
+      }
+
+      document.write(html);
       configScript.onerror = (function(e) {
         alert('Error DCP-1001: Could not load or parse scheduler configuration from URL ("' + configScript.getAttribute('src') + '")');
         console.error('dcpConfig load error: ', e);
       }).toString();
+    }
+
+    function mergeConfig()
+    {
+      leafMerge(dcpConfig, _dcpConfig);
+
+      function leafMerge() /* lifted from dcp-client obj-merge.js c32e780fae88071df1bb4aebe3282220d518260e */
+      {
+        var target = {};
+
+        for (let i=0; i < arguments.length; i++)
+        {
+          let neo = arguments[i];
+          if (neo === undefined)
+            continue;
+
+          for (let prop in neo)
+          {
+            if (!neo.hasOwnProperty(prop))
+              continue;
+            if (typeof neo[prop] === 'object' && neo[prop] !== null && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name))
+              target[prop] = leafMerge(target[prop], neo[prop]);
+            else
+              target[prop] = neo[prop];
+          }
+        }
+
+        return target;
+      }
     }
 
     /* Shim to make CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) work with dcpClient in requireNative mode */
