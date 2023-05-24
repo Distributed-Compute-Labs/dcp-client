@@ -106,6 +106,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    * @property {function} duration - get the total duration of all intervals
    * @property {function} push - add a new interval to the list
    * @property {function} reset - clear the list of intervals
+   * @property {function} allSettled - check if all intervals have been stopped
    */
 
 
@@ -175,5 +176,18 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   {
     this.intervals = [];
   }
+  
+  /**
+   * Check if all intervals have been stopped.
+   * 
+   * @function {TimeThing.allSettled}
+   * @returns {boolean} - true if all intervals have been stopped, false otherwise
+   */
+  TimeThing.prototype.allSettled = function allSettled()
+  {
+    return this.intervals.every(interval => interval.hasEnded());
+  }
+
+
   protectedStorage.TimeThing = TimeThing;
 });

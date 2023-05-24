@@ -144,6 +144,13 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
 
   /**
    * @class GlobalTrackers
+   * @property {WebGPUPromiseRegistry} webGPUPromiseRegistry
+   * @property {WebGPUQueueRegistery} webGPUQueueRegistery
+   * @property {TimeThing} webGPUIntervals
+   * @property {TimeThing} cpuIntervals
+   * @property {TimeThing} webGLIntervals
+   * @property {TimeThing} wasmIntervals
+   * @function {getMetrics}
    */
   class GlobalTrackers {
 
@@ -161,6 +168,53 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
       
       /** @type {TimeThing} */
       this.cpuIntervals = new TimeThing();
+
+      // TODO: actually make them record stuff
+      /** @type {TimeThing} */
+      this.webGLIntervals = new TimeThing();
+
+      /** @type {TimeThing} */
+      this.wasmIntervals = new TimeThing();
+    }
+
+
+    // TODO: specifiy down the return type
+    /**
+     * Obtain the current metrics of our tracked resources, mostly about timings.
+     * @async
+     * @function {getMetrics}
+     */
+    async getMetrics()
+    {
+      // TODO: do a check to see all the two registries are empty
+   
+      if (
+             !this.webGPUIntervals.allSettled()
+          || !this.cpuIntervals.allSettled()
+          || !this.webGLIntervals.allSettled()
+          || !this.wasmIntervals.allSettled()
+         )
+      {
+        throw new Error("Not all intervals have settled");
+      }
+
+      // force all webGPU promises to run to completion
+      // TODO: maybe we want the results?
+      const _results = await this.webGPUPromiseRegistry.waitAll();
+
+      // TODO: Ryan said CPU should also include the WASM time
+      const webGPUTime = this.webGPUIntervals.duration();
+      const webGLTime = this.webGLIntervals.duration();
+      const wasmTime = this.wasmIntervals.duration();
+      const cpuTime = this.cpuIntervals.duration() + wasmTime;
+      const totalTime = webGPUTime + cpuTime + webGLTime;
+
+      return {
+        total: totalTime,
+        webGPU: webGPUTime,
+        cpu: cpuTime,
+        webGL: webGLTime,
+      };
     }
   }
 
