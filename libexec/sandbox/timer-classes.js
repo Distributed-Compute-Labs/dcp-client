@@ -136,14 +136,14 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     for (const interval in this.intervals)
     {
       // if the last interval in the merged list have no ovverlap with the current interval, just push it
-      if (merged.length === 0 || merged[merged.length - 1].end < interval.start)
+      if (merged.length === 0 || merged.at(-1).end < interval.start)
       {
         merged.push(interval);
       }
       else
       {
         // otherwise, there is overlap, so merge the current and last interval
-        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+        merged.at(-1).end = Math.max(merged.at(-1).end, interval.end);
       }
     }
 
@@ -152,7 +152,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     // now calculating the total duration is trivial
     const totalTime = merged
       .map(interval => interval.length)
-      .reduce((a, b) => a + b);
+      .reduce((a, b) => a + b, 0);
 
     return totalTime;
   }
