@@ -12,6 +12,7 @@
  *  @author     Wes Garland, wes@kingsds.network
  *  @date       Aug 2019
  */
+'use strict';
 (function namespaceIIFE() {
 
   console.log(`%c
@@ -50,32 +51,75 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
         dcpConfigHref = thisScriptURL.origin + thisScriptURL.pathname.replace(/\/dcp-client\/dcp-client.js$/, '/etc/dcp-config.js') + thisScriptURL.search;
     }
 
-    /** Load dcp-config.kvin from scheduler, and merge with running dcpConfig */
-    function loadConfig() {
+    /** Load dcp-config.js from scheduler, and merge with running dcpConfig */
+    function loadConfig()
+    {
       configScript = document.createElement('SCRIPT');
       configScript.setAttribute('type', 'text/javascript');
       configScript.setAttribute('src', dcpConfigHref);
       configScript.setAttribute('id', '_dcp_config');
-      if (_dcpConfig || schedulerURL) { /* Preserve local configuration as overrides */
-        let html = '';
-        if (!thisScript.id)
-          thisScript.id='_dcp_client_loader';
-        html += configScript.outerHTML + '\n<script>';
-        if (_dcpConfig) {
-          thisScript.localDcpConfig = _dcpConfig;
-          html += `Object.assign(dcpConfig, document.getElementById('${thisScript.id}').localDcpConfig);`;
-        }
-        if (schedulerURL)
-          html += `dcpConfig.scheduler.location=new URL("${schedulerURL}");`;
-        html += '</scr'+'ipt>\n';
-        document.write(html);
-      } else {
-        document.write(configScript.outerHTML);
+
+      if (!thisScript.id)
+        thisScript.id = '_dcp_client_loader';
+
+      let html = configScript.outerHTML;
+
+      /* If we know about an alternate scheduler location - by any means but usually script attribute -
+       * add it into our local configuration delta; generate this delta as-needed.
+       */
+      if (schedulerURL)
+      {
+        if (!_dcpConfig)
+          _dcpConfig = {};
+        if (!_dcpConfig.scheduler)
+          _dcpConfig.scheduler = {};
+        _dcpConfig.scheduler.location = schedulerURL;
       }
+
+      /* Preserve the config delta so that it can be merged on top of the remote config, before the
+       * bundle is completely initialized. The global dcpConfig is replaced by this new script.
+       */
+      if (_dcpConfig)
+      {
+        thisScript.mergeConfig = mergeConfig;
+        html += `<script>document.getElementById('${thisScript.id}').mergeConfig();</scr` + 'ipt>';
+      }
+
+      document.write(html);
       configScript.onerror = (function(e) {
         alert('Error DCP-1001: Could not load or parse scheduler configuration from URL ("' + configScript.getAttribute('src') + '")');
         console.error('dcpConfig load error: ', e);
       }).toString();
+    }
+
+    function mergeConfig()
+    {
+      const mergedConf = leafMerge(dcpConfig, _dcpConfig);
+      Object.assign(dcpConfig, mergedConf);
+
+      function leafMerge() /* lifted from dcp-client obj-merge.js c32e780fae88071df1bb4aebe3282220d518260e */
+      {
+        var target = {};
+
+        for (let i=0; i < arguments.length; i++)
+        {
+          let neo = arguments[i];
+          if (neo === undefined)
+            continue;
+
+          for (let prop in neo)
+          {
+            if (!neo.hasOwnProperty(prop))
+              continue;
+            if (typeof neo[prop] === 'object' && neo[prop] !== null && !Array.isArray(neo[prop]) && ['Function','Object'].includes(neo[prop].constructor.name))
+              target[prop] = leafMerge(target[prop], neo[prop]);
+            else
+              target[prop] = neo[prop];
+          }
+        }
+
+        return target;
+      }
     }
 
     /* Shim to make CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) work with dcpClient in requireNative mode */
@@ -83,7 +127,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     {
       var shimScript = document.createElement('SCRIPT');
       var shimSrc = thisScript.getAttribute("shim") || (thisScript.src.replace('/dcp-client.js', '/cjs2-shim.js'));
-      var tmp;
       
       shimScript.setAttribute('type',    'text/javascript');
       shimScript.setAttribute('src',     shimSrc);
@@ -102,8 +145,9 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     function bundleReadyIIFE() {
       const configScript = document.getElementById("_dcp_config");
       const bundleScript = document.getElementById("_dcp_client_bundle");
-      var ready          = bundleScript.getAttribute('onready');
-      var dcp            = bundleScript.exports;
+      const ready        = bundleScript.getAttribute('onready');
+      const dcp          = bundleScript.exports;
+      const KVIN         = new dcp.kvin.KVIN();
 
       if (typeof module !== 'undefined' && typeof module.declare !== 'undefined')
         require('/internal/dcp/cjs2-shim').init(bundleScript.exports); /* CommonJS Modules/2.0d8 environment (BravoJS, NobleJS) */
@@ -112,7 +156,14 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
 
       /** Let protocol know where we got out config from, so origin can be reasoned about vis a vis security */
       dcp.protocol.setSchedulerConfigLocation_fromScript(configScript);
-      
+
+      /**
+       * Slide baked-in config underneath the remote config to provide default values.
+       */
+      KVIN.userCtors.dcpUrl$$DcpURL  = dcp['dcp-url'].DcpURL;
+      KVIN.userCtors.dcpEth$$Address = dcp.wallet.Address;
+      dcpConfig = dcp['dcp-config'] = dcp.utils.leafMerge(KVIN.unmarshal(dcp['dcp-default-config']), dcp['dcp-config']);
+
       /**
        * Transform instances of Address-like values into Addresses. Necessary since
        * the config can't access the Address class before the bundle is loaded.
@@ -130,7 +181,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     function loadBundle(shimCallback) {
       var bundleScript = document.createElement('SCRIPT');
       var bundleSrc = thisScript.getAttribute("bundle") || (thisScript.src.replace('/dcp-client.js', '/dist/dcp-client-bundle.js'));
-      var tmp;
       
       bundleScript.setAttribute('type', 'text/javascript');
       bundleScript.setAttribute('src', bundleSrc);
