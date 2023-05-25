@@ -12,6 +12,7 @@
  *  @author     Wes Garland, wes@kingsds.network
  *  @date       Aug 2019
  */
+'use strict';
 (function namespaceIIFE() {
 
   console.log(`%c
@@ -93,7 +94,8 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
 
     function mergeConfig()
     {
-      leafMerge(dcpConfig, _dcpConfig);
+      const mergedConf = leafMerge(dcpConfig, _dcpConfig);
+      Object.assign(dcpConfig, mergedConf);
 
       function leafMerge() /* lifted from dcp-client obj-merge.js c32e780fae88071df1bb4aebe3282220d518260e */
       {
@@ -125,7 +127,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     {
       var shimScript = document.createElement('SCRIPT');
       var shimSrc = thisScript.getAttribute("shim") || (thisScript.src.replace('/dcp-client.js', '/cjs2-shim.js'));
-      var tmp;
       
       shimScript.setAttribute('type',    'text/javascript');
       shimScript.setAttribute('src',     shimSrc);
@@ -146,7 +147,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
       const bundleScript = document.getElementById("_dcp_client_bundle");
       const ready        = bundleScript.getAttribute('onready');
       const dcp          = bundleScript.exports;
-      const leafMerge    = dcp.utils.leafMerge;
       const KVIN         = new dcp.kvin.KVIN();
 
       if (typeof module !== 'undefined' && typeof module.declare !== 'undefined')
@@ -181,7 +181,6 @@ https://distributed.computer/`, "font-weight: bold; font-size: 1.2em; color: #00
     function loadBundle(shimCallback) {
       var bundleScript = document.createElement('SCRIPT');
       var bundleSrc = thisScript.getAttribute("bundle") || (thisScript.src.replace('/dcp-client.js', '/dist/dcp-client-bundle.js'));
-      var tmp;
       
       bundleScript.setAttribute('type', 'text/javascript');
       bundleScript.setAttribute('src', bundleSrc);
