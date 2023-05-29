@@ -19,7 +19,7 @@
         worker: { Worker: DCPWorker },
       } = window.dcp;
 
-      // The maximum number of sandboxes to have working in parallel.
+      // The maximum number of sanxboxes to have working in parallel.
       const defaultMaxSliceCount = 1;
 
       // What bank account the worker will send its earned funds to.
@@ -55,7 +55,7 @@
           );
         });
 
-        sandbox.on('progress', (event) => {
+        sandbox.on('sliceProgress', (event) => {
           console.log(`Sandbox ${sandbox.id} progress`, event);
         });
 
