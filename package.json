@@ -54,9 +54,6 @@
     "express": "^4.18.2",
     "peter": "^2.3.11"
   },
-  "peerDependencies": {
-    "dcp-worker": "^3.0.0"
-  },
   "engines": {
     "node": ">=16",
     "npm": ">=7"
