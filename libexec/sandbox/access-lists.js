@@ -152,7 +152,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'GPUTextureUsage',
     'GPUTextureView',
     'GPUUncapturedErrorEvent',
-    'GPUValidationError'
+    'GPUValidationError',
     // Our own symbols
     'progress',
     'work',
