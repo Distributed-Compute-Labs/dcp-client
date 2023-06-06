@@ -16,20 +16,49 @@
  */
 /* globals self */
 
+debugger;
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
-  (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
-    const cpuTimer = protectedStorage.timers?.cpu;
-    const events = [];
+  /** 
+   * @class       Event
+   * @classdesc   Class that represents an event on the event loop
+   * @property {string} eventType - the type of event (timer, immediate, interval)
+   * @property {functioon} fn - the function to be executed
+   * @property {Array} args - the arguments to be passed to the function
+   * @property {number} when - the time at which the event should be executed
+   * @property {boolean} recur - whether the event should be executed repeatedly
+   * @property {number} serial - the serial number of the event
+   */
+  class Event
+  {
+    constructor(eventType, fn, args, when, recur, serial)
+    {
+      this.eventType = eventType;
+      this.fn = fn;
+      this.args = args;
+      this.when = when;
+      this.recur = recur;
+      this.serial = serial;
+    }
+  }
+
+  // TODO: hide this for the final few layers that should not be allowed to see it
+  const events = [];
+
+
+  protectedStorage.Event = Event;
+  (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
+  {
+    const cpuTimer = protectedStorage.timers.cpu;
     events.serial = 0;
     let timersLocked = false;
 
-    protectedStorage.lockTimers =   function lockTimers()   { timersLocked = true;  }
+    protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
     protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
 
-
-    function sortEvents() {
-      events.sort(function (a, b) { return a.when - b.when; });
+    function sortEvents()
+    {
+      events.sort(function(a, b) { return a.when - b.when; });
     }
 
     /*
@@ -62,7 +91,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       // Can add handles for events to the event loop as needed (ie messages)
 
       // Measure the time on the event loop after everything has executed
-      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);
+      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle, 1);
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
@@ -76,6 +105,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
     }
 
+    // TODO: find a better way to export this
+    protectedStorage.serviceEvents = serviceEvents;
+
     /** Execute callback after at least timeout ms. 
      * 
      *  @param    callback          {function} Callback function to fire after a minimum callback time
@@ -83,23 +115,27 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
-    setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
+    setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg)
+    {
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
         return {};
 
       timeout = timeout || 0;
       let timer, args;
-      if (typeof callback === 'string') {
+      if (typeof callback === 'string')
+      {
         let code = callback;
-        callback = function eventLoop$$Worker$setTimeout$wrapper() {
+        callback = function eventLoop$$Worker$setTimeout$wrapper()
+        {
           let indirectEval = eval;
           return indirectEval(code);
         }
       }
 
       // if user supplies arguments, apply them to the callback function
-      if (arg) {
+      if (arg)
+      {
         args = Array.prototype.slice.call(arguments); // get a plain array from function arguments
         args = args.slice(2);                         // slice the first two elements (callback & timeout), leaving an array of user arguments
         let fn = callback;
@@ -107,13 +143,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
 
       events.serial = Number(events.serial) + 1;
-      timer = {
-        eventType: 'timer',
-        fn: callback,
-        when: performance.now() + (Number(timeout) || 0),
-        serial: events.serial,
-        valueOf: function () { return this.serial; }
-      }
+
+      timer = new Event('timer', callback, args, performance.now() + (Number(timeout) || 0), events.serial);
       events.push(timer);
       sortEvents();
       if (!serviceEvents.servicing)
@@ -157,7 +188,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
             realClearTimeout(serviceEvents.timeout);
         }
       }
-      if (typeof timeoutId === "object")
+      if (typeof timeoutId === 'object')
       {
         let i = events.indexOf(timeoutId);
         if (i !== -1)
@@ -165,7 +196,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         if (i === 0)
           checkService()
       }
-      else if (typeof timeoutId === "number")
+      else if (typeof timeoutId === 'number')
       { /* slow path - object has been reinterpreted in terms of valueOf() */
         for (let i = 0; i < events.length; i++)
         {
@@ -189,7 +220,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg)
     {
-      let timer = setTimeout(callback, +interval || 0, arg);
+      let timer = setTimeout(callback, Number(interval) || 0, arg);
       timer.recur = interval;
       return timer;
     }
@@ -199,7 +230,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
      */
-     setImmediate = function eventLoop$$Worker$setImmediate(callback, arg) {
+    setImmediate = function eventLoop$$Worker$setImmediate(callback, arg)
+    {
       let timer = setTimeout(callback, 0, arg);
       return timer;
     }
@@ -216,11 +248,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      * 
      *  @param    callback          {function} Callback function to fire
      */
-    queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback) {
+    queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
+    {
       Promise.resolve().then(callback);
     }
 
-    function clearAllTimers() {
+    function clearAllTimers()
+    {
       events.length = 0;
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);
@@ -233,7 +267,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     protectedStorage.clearAllTimers = clearAllTimers;
 
-  })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate);
+  })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, protectedStorage);
 
   self.setTimeout = setTimeout;
   self.setInterval = setInterval;

@@ -235,7 +235,6 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
     }
   }
 
-  // TODO: need to think about what's the best way to fake resolve
   const originalPromiseConstructor = Promise;
   const originalPromiseThen = Promise.prototype.then;
   const originalPromiseCatch = Promise.prototype.catch;
@@ -243,19 +242,25 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
   const originalResolve = Promise.resolve;
 
   const globalTrackers = new GlobalTrackers();
-  Promise = function(executor) {
-    console.log("Promise constructor called");
-    // secrectly return our own promise
-    const lazy = () => new originalPromiseConstructor(executor);
-    const fakePromise = new TimedPromise(globalTrackers, lazy);
-    return fakePromise;
-  }
+  // Promise = function(executor) {
+  //   console.log("Promise constructor called");
+  //   // secrectly return our own promise
+  //   const lazy = () => new originalPromiseConstructor(executor);
+  //   const fakePromise = new TimedPromise(globalTrackers, lazy);
+  //   return fakePromise;
+  // }
 
-  // this assume the global state of `globalTrackers` is already there, this assumption is relatively safe, if the assumption is violated,
-  // we can't time anything anyway.
-  Promise.resolve = function(value) {
-    return new TimedPromise(globalTrackers, () => originalResolve(value));
-  }
+  // // this assume the global state of `globalTrackers` is already there, this assumption is relatively safe, if the assumption is violated,
+  // // we can't time anything anyway.
+  // Promise.resolve = function(value) {
+  //   return new TimedPromise(globalTrackers, () => originalResolve(value));
+  // }
+
+
+  /** @typedef {import("./event-loop-virtualization.js").Event} Event */
+
+  /** @type {Event[]} */
+  const events = protectedStorage.events;
 
   /**
    * @class TimedPromise
@@ -317,14 +322,16 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
       }
     }
 
-
-
     /**
+     *
+     * It's safe to not kick off another around of event here because construction itself is synchronous, so it will
+     * not cause a "supurious" event. It's the continuation of the promise that is more problematic.
+     *
      * @contructor
      * @param {GlobalTrackers} globalTimers
      * @param {() => Promise} promiseFn
-     * @param {"WebGPU" | "WebGL" | "WASM" | "WebGPUOnComplete"} originTag - if set, indicates the origin of the promise, it will affect where
-     * the time delta is stored
+     * @param {"WebGPU" | "WebGL" | "WASM" | "WebGPUOnComplete"} originTag - if set, indicates the origin of the
+     * promise, it will affect where the time delta is stored.
      * @returns {TimedPromise}
      */
     constructor(globalTracker, promiseFn, originTag)
@@ -337,37 +344,60 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
       this.wrapped
         = promiseFn()
           .then(
-            (onResolve) => {
+            (resovledValue) => {
               that.duration.stop();
               that.#recordTimeDelta(originTag);
-              return onResolve;
+              return resovledValue;
             },
-            (onReject) => {
+            (rejectedReason) => {
               that.duration.stop();
               that.#recordTimeDelta(originTag);
-              throw onReject;
+              throw rejectedReason;
             }
           );
     }
 
 
     /**
-     * Implements the thennable interface, so we can chain promises and async await on them.
+     * Implements the thennable interface, so we can chain promises and async await on them. In general, we want to kick
+     * off another round of event loop here to get our continuation timed.
      *
      *
      * @function then
      * @param {Function} onFulfilled
      * @param {Function} onRejected
-     * @returns {TimedPromise}
+     * @returns {Thennable} go read MDN about what is a thennable 🙂
      */
     then(onFulfilled, onRejected)
     {
-      // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
-      const lazy = () => originalPromiseThen.call(this.wrapped, onFulfilled, onRejected);
-      console.debug("fake then called");
-
-      // the last parameter is undefined since all the continuation always starts from CPU
-      return new TimedPromise(this.globalTracker, lazy);
+      // // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable 
+      return originalPromiseThen.call(this.wrapped, 
+        (resolvedValue) => {
+          // force the continuation to kick off another round of event loop
+          const continuation = (resolution) => onFulfilled(resolution);
+          events.serial = Number(events.serial) + 1;
+          const event = new Event("off-thread-promise-continuation",
+            continuation,
+            resolvedValue,
+            performance.now(),
+            undefined,
+            events.serial);
+          events.push(event);
+          setTimeout(protectedStorage.serviceEvents, 0);
+        },
+        (rejectedReason) => {
+          // force the continuation to kick off another round of event loop
+          const continuation = (reason) => onRejected(reason);
+          events.serial = Number(events.serial) + 1;
+          const event = new Event("off-thread-promise-continuation",
+            continuation,
+            rejectedReason,
+            performance.now(),
+            undefined,
+            events.serial);
+          events.push(event);
+          setTimeout(protectedStorage.serviceEvents, 0);
+        });
     }
 
 
@@ -376,12 +406,11 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
      *
      * @function catch
      * @param {Function} onRejected - the callback to be called when the promise is rejected
-     * @returns {TimedPromise}
+     * @returns {Thennable}
      */
     catch(onRejected)
     {
-      const lazy = () => originalPromiseCatch.call(this.wrapped, onRejected);
-      return new TimedPromise(this.globalTracker, lazy);
+      return originalPromiseCatch.call(this.wrapped, onRejected);
     }
 
     /**
@@ -395,8 +424,7 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
      */
     finally(onFinally)
     {
-      const lazy = () => originalPromiseFinally.call(this.wrapped, onFinally);
-      return new TimedPromise(this.globalTracker, lazy);
+      return originalPromiseFinally.call(this.wrapped, onFinally);
     } 
   }
 
@@ -406,28 +434,3 @@ self.wrapScriptLoading({ scriptName: 'global-trackers' }, function globalTracker
     TimedPromise: TimedPromise,
   };
 });
-
-//////////////////////////////////// jank testing /////////////////////////
-async function main() {
-  const fetch = require('node-fetch');
-
-  for (const start = Date.now(); Date.now() < (start + 3000); ) {
-    console.error(`why am I here? because I don't want the optimizer to be clever to be clever and remove the loop`);
-  }
-  console.log("stupid loop done");
- 
-  const stupidfetch = await fetch('https://www.google.com')
-  .then((res) => {
-    return res.text();
-  });
-
-  console.log(`stupid fetch done`);
-}
-
-const stupidMain = new TimedPromise(globalTrackers, main, undefined);
-
-originalPromiseThen.call(stupidMain.wrapped, 
-  () => {
-    debugger;
-    console.log(globalTrackers);
-  });

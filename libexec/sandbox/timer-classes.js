@@ -15,7 +15,7 @@
  * @date    Aug 2022
  */
 
-
+debugger;
 self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$fn(protectedStorage)
 {
   /**
