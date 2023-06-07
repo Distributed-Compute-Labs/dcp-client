@@ -9,6 +9,7 @@
  */
 
 
+'use strict'
 process.exitCode = 1;
 
 
@@ -57,7 +58,7 @@ setTimeout(async () => {
 
 realSetTimeout(() => {
   self.wrapScriptLoading({ scriptName: 'test' }, function test(protectedStorage) {
-    const timeTaken = protectedStorage.timers.cpu.duration();
+    const timeTaken = protectedStorage.bigBrother.globalTrackers.cpuIntervals.duration();
     // Give 5% buffer for allowable times - can drift a little due to timeout etc
     if (timeTaken*1.05 > loopDelay * 2 && timeTaken*.95 < loopDelay * 2)
       expectedOutputs.cpuTime = true;

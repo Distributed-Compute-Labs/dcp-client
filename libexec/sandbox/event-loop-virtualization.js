@@ -270,7 +270,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   protectedStorage.Event = Event;
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
   {
-    debugger;
     // TODO: create a nice intereface so we're not just pulling the guts out all the time
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     events.serial = 0;
@@ -340,6 +339,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg)
     {
+      console.log('setTimeout called');
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
         return {};
@@ -367,24 +367,26 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       events.serial = Number(events.serial) + 1;
 
-      timer = new Event('timer', callback, args, performance.now() + (Number(timeout) || 0), events.serial);
+      timer = new Event('timer', callback, args, performance.now() + (Number(timeout) || 0), false, events.serial);
       events.push(timer);
       sortEvents();
-      if (!serviceEvents.servicing)
+      
+
+      if (serviceEvents.servicing) return timer;
+      console.log("not servicing");
+
+      if (!serviceEvents.nextTimeout)
       {
-        if (!serviceEvents.nextTimeout)
-        {
+        realSetTimeout(serviceEvents, events[0].when - performance.now());
+      }
+      else
+      {
+        if (serviceEvents.nextTimeout > events[0].when) {
+          realClearTimeout(serviceEvents.timeout);
           realSetTimeout(serviceEvents, events[0].when - performance.now());
         }
-        else
-        {
-          if (serviceEvents.nextTimeout > events[0].when)
-          {
-            realClearTimeout(serviceEvents.timeout);
-            realSetTimeout(serviceEvents, events[0].when - performance.now())
-          }
-        }
       }
+
       return timer;
     }
 

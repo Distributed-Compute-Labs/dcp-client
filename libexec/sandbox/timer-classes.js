@@ -15,7 +15,6 @@
  * @date    Aug 2022
  */
 
-debugger;
 self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$fn(protectedStorage)
 {
   /**
@@ -133,7 +132,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   TimeThing.prototype.duration = function totalDuration()
   {
     const merged = [];
-    for (const interval in this.intervals)
+    for (const interval of this.intervals)
     {
       // if the last interval in the merged list have no ovverlap with the current interval, just push it
       if (merged.length === 0 || merged.at(-1).end < interval.start)
@@ -191,3 +190,4 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
 
   protectedStorage.TimeThing = TimeThing;
 });
+  console.log("stupid promise done")
