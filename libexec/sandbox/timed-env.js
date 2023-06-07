@@ -25,10 +25,8 @@
 
 self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
-  debugger;
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
-  console.log(globalTrackers);
   const webGLTimer = globalTrackers.webGLIntervals;
   const wasmTimer = globalTrackers.wasmIntervals;
   const cpuTimer = globalTrackers.cpuIntervals;
