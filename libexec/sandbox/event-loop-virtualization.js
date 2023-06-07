@@ -234,6 +234,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   }
 
 
+  debugger;
   protectedStorage.bigBrother = {
     ...protectedStorage.bigBrother,
     globalTrackers: new GlobalTrackers()

@@ -23,7 +23,7 @@ var base = [
   'wrap-event-listeners',
   'timer-classes',
   'event-loop-virtualization',
-  'global-trackers',
+  'timed-promise',
   'timed-env',
   'access-lists',
   'bravojs-init',

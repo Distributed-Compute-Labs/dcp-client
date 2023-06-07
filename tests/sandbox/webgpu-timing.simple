@@ -18,12 +18,14 @@ const files = [
   require.resolve(sandboxScripts + 'script-load-wrapper.js'),
   require.resolve(sandboxScripts + 'timer-classes.js'),
   require.resolve(sandboxScripts + 'event-loop-virtualization.js'),
+  require.resolve(sandboxScripts + 'timed-promise.js'),
+  require.resolve(sandboxScripts + 'timed-env.js'),
 ];
 
 require('./globalPolyfillHelper').init(files);
 
 self.wrapScriptLoading({ scriptName: 'test' }, async function test(protectedStorage) {
-  const webGPUTimer = protectedStorage.timers.webGPU;
+  const webGPUTimer = protectedStorage.bigBrother.globalTracker.webGPUIntervals;
   const start = Date.now();
 
   /**

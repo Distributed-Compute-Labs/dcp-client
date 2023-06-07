@@ -25,12 +25,14 @@
 
 self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
+  debugger;
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
-  const globalTracker = protectedStorage.bigBrother.globalTracker;
-  const webGLTimer = globalTracker.webGLIntervals;
-  const wasmTimer = globalTracker.wasmIntervals;
-  const cpuTimer = globalTracker.cpuIntervals;
-  const webGPUTimer = globalTracker.webGPUIntervals;
+  const globalTrackers = protectedStorage.bigBrother.globalTrackers;
+  console.log(globalTrackers);
+  const webGLTimer = globalTrackers.webGLIntervals;
+  const wasmTimer = globalTrackers.wasmIntervals;
+  const cpuTimer = globalTrackers.cpuIntervals;
+  const webGPUTimer = globalTrackers.webGPUIntervals;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -88,7 +90,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
     return function(...args)
     {
-      return new TimedPromise(globalTracker, fn.bind(this, ...args), 'WASM');
+      return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WASM');
     }
   }
   
@@ -98,7 +100,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
-      return new TimedPromise(globalTracker, fn.bind(this, ...args), 'WebGPU');
+      return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WebGPU');
     }
   }
 
@@ -215,7 +217,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     const queue = new queueConstructor(...args);
 
     // always register the queue with the global tracker
-    globalTracker.webGPUQueueRegistery.add(queue);
+    globalTrackers.webGPUQueueRegistery.add(queue);
 
     return queue;
   }
@@ -228,7 +230,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     const queueLabel = this.label;
     const onSubmittedWorkDoneContext = new WebGPUOnComplete({ queueLabel });
 
-    return new TimedPromise(globalTracker, () => fn(...args), onSubmittedWorkDoneContext);
+    return new TimedPromise(globalTrackers, () => fn(...args), onSubmittedWorkDoneContext);
   }
 
 
@@ -237,7 +239,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   {
     const queueLabel = this.label;
     // TODO: addSumbission also does the job of actually calling submit on the original queue, should it?
-    return globalTracker.webGPUQueueRegistery.addSubmission(
+    return globalTrackers.webGPUQueueRegistery.addSubmission(
       queueLabel,
       ...args
     );

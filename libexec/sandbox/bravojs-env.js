@@ -177,7 +177,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   /* Report metrics to sandbox/supervisor */
   async function reportTimes ()
   {
-    const globalTracker = protectedStorage.bigBrother.globalTracker;
+    const globalTracker = protectedStorage.bigBrother.globalTrackers;
     const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
     protectedStorage.clearAllTimers();
 
