@@ -123,7 +123,6 @@ self.wrapScriptLoading(
        * @returns {Thennable} go read MDN about what is a thennable 🙂
        */
       then(onFulfilled, onRejected) {
-        // // I think this only works if our wrapped is an actual JavaScript Promise, not just a thennable
         return (
           this.wrapped.call(this.wrapped, (resolvedValue) => {
             // force the continuation to kick off another round of event loop
