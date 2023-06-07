@@ -20,14 +20,17 @@
 
 
 /**
- * @typedef {import('./global-trackers').GlobalTracker} GlobalTracker
+ * @typedef {import('./event-loop-virtualization').GlobalTracker} GlobalTracker
  */
 
 self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
 {
-  const webGLTimer = protectedStorage.timers.webGL;
-  const webGPUTimer = protectedStorage.timers.webGPU;
-  const globalTracker = protectedStorage.globalTracker;
+  const TimedPromise = protectedStorage.bigBrother.TimedPromise;
+  const globalTracker = protectedStorage.bigBrother.globalTracker;
+  const webGLTimer = globalTracker.webGLIntervals;
+  const wasmTimer = globalTracker.wasmIntervals;
+  const cpuTimer = globalTracker.cpuIntervals;
+  const webGPUTimer = globalTracker.webGPUIntervals;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -79,6 +82,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
 
 
   // lift WASM functions into our TimedPromise monad
+  // lift in the Haskell fmap/lift sense, mapping to a new category while preserving the structure (functionality)
   function liftWASMFunction(fn)
   {
     console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
@@ -105,7 +109,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
    * has the added benefit of timing the promise. 
    *
    */
-  function wrapPrototypeFunctions(GPUClass)
+  function liftWebGPUPrototypePromises(GPUClass)
   {
     // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
     if (!self[GPUClass].prototype)
@@ -203,7 +207,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const globalProperties = Object.getOwnPropertyNames(self);
   console.assert(requiredWrappingGPUClasses.every((className) => globalProperties.includes(className)));
 
-  requiredWrappingGPUClasses.forEach(wrapPrototypeFunctions);
+  requiredWrappingGPUClasses.forEach(liftWebGPUPrototypePromises);
 
   // TODO: not complete yet, webGPU comes with an default queue, need to wrap that also 
   GPUQueue.prototype.constructor = function ctor(...args) {
@@ -215,7 +219,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
 
     return queue;
   }
-
 
  
   // TODO: add doc
@@ -233,6 +236,10 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   GPUQueue.prototype.submit = function submit(...args)
   {
     const queueLabel = this.label;
-    return global.tracker.webGPUQueueRegistery.addSubmission(queueLabel, ...args);
+    // TODO: addSumbission also does the job of actually calling submit on the original queue, should it?
+    return globalTracker.webGPUQueueRegistery.addSubmission(
+      queueLabel,
+      ...args
+    );
   }
 });

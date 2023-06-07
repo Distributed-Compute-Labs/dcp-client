@@ -241,6 +241,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
 
   /** 
+   * //TODO: figure out how the result slot return interact with if the function throws an error 
    * @class       Event
    * @classdesc   Class that represents an event on the event loop
    * @property {string} eventType - the type of event (timer, immediate, interval)
@@ -249,10 +250,14 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
    * @property {number} when - the time at which the event should be executed
    * @property {boolean} recur - whether the event should be executed repeatedly
    * @property {number} serial - the serial number of the event
+   * @property {any} returnSlot - the result of application of fn(args) is stored here
+   * // TODO: figure out how it interact with thrown errors
+   * @property {function} callback - the callback to be executed when the event is complete, we only support closures
+   * that takes no arguments
    */
   class Event
   {
-    constructor(eventType, fn, args, when, recur, serial)
+    constructor(eventType, fn, args, when, recur, serial, callback)
     {
       this.eventType = eventType;
       this.fn = fn;
@@ -260,6 +265,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       this.when = when;
       this.recur = recur;
       this.serial = serial;
+      this.returnSlot = undefined;
+
+      // should we ensure the callback is actually a funciton and not something else?
+      // yes, we should, but JS is weekly typed and RTTI might not be cheap 
+      if (callback === undefined || callback === null)
+      {
+        // noop
+        this.callback = () => {};
+      }
+      else
+      {
+        this.callback = callback;
+      }
     }
   }
 
@@ -302,7 +320,15 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       const event = events.shift();
       if (event.eventType === 'timer')
       {
-        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+        serviceEvents.executingTimeout = realSetTimeout(() => {
+          // TODO: someone prove the following interacts correctly with `this` value nonsense
+          // store the result of the function in the event so it can be accessed later
+          event.returnSlot = event.fn(...event.args);
+          if (event.callback)
+          {
+            event.callback();
+          }
+        }, 0);
         if (event.recur)
         {
           event.when = performance.now() + event.recur;
@@ -339,7 +365,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg)
     {
-      console.log('setTimeout called');
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
         return {};
@@ -364,16 +389,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         let fn = callback;
         callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
       }
+      else
+      {
+        // TODO: else statement considered harmful, simplify
+        args = [];
+      }
 
       events.serial = Number(events.serial) + 1;
-
       timer = new Event('timer', callback, args, performance.now() + (Number(timeout) || 0), false, events.serial);
       events.push(timer);
       sortEvents();
       
 
       if (serviceEvents.servicing) return timer;
-      console.log("not servicing");
 
       if (!serviceEvents.nextTimeout)
       {

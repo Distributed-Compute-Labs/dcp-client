@@ -190,4 +190,3 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
 
   protectedStorage.TimeThing = TimeThing;
 });
-  console.log("stupid promise done")
