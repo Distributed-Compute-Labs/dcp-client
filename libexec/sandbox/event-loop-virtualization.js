@@ -233,20 +233,17 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     }
   }
 
-
-  debugger;
   protectedStorage.bigBrother = {
     ...protectedStorage.bigBrother,
     globalTrackers: new GlobalTrackers()
   };
-
 
   /** 
    * //TODO: figure out how the result slot return interact with if the function throws an error 
    * @class       Event
    * @classdesc   Class that represents an event on the event loop
    * @property {string} eventType - the type of event (timer, immediate, interval)
-   * @property {functioon} fn - the function to be executed
+   * @property {function} fn - the function to be executed
    * @property {Array} args - the arguments to be passed to the function
    * @property {number} when - the time at which the event should be executed
    * @property {boolean} recur - whether the event should be executed repeatedly
