@@ -113,6 +113,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'WorkerGlobalScope',
     // All webGPU symbols are allowed
     'WebGPUWindow',
+    
+    // Web GPU symbols
     'GPU',
     'GPUAdapter',
     'GPUAdapterInfo',
@@ -161,6 +163,17 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'GPUTextureView',
     'GPUUncapturedErrorEvent',
     'GPUValidationError',
+    'GPUBufferUsage',
+    'GPUShaderStage',
+    'GPUSupportedFeatures',
+    'GPUSupportedLimits',
+    'GPUTexture',
+    'GPUTextureUsage',
+    'GPUTextureView',
+    'GPUUncapturedErrorEvent',
+    'GPUValidationError',
+    'GPUAdapter',
+    'GPUDevice',
     // Our own symbols
     'progress',
     'work',
@@ -675,6 +688,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   function applyAccessLists(obj, allowList, blockList = {}, polyfills = {}) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
+      console.log(obj);
       if (Object.getOwnPropertyDescriptor(obj, prop).configurable) {
         if (!allowList.has(prop)) {
           let isSet = false;
@@ -852,9 +866,10 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         // apply restrictions to the environment based on the requirements.
         // Assume the scheduler gave us a nicely-shaped req object.
         const requirements = event.requirements;
-        blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
-        blockList.WebGPUWindow = !requirements.environment.webgpu;
-        blockList.GPU = !requirements.environment.webgpu;
+        // TODO: figure what this actually does
+        // blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
+        // blockList.WebGPUWindow = !requirements.environment.webgpu;
+        // blockList.GPU = !requirements.environment.webgpu;
         applyAllAccessLists();
 
         ring1PostMessage({ request: 'applyRequirementsDone' });
