@@ -1,7 +1,6 @@
 self.wrapScriptLoading(
   { scriptName: "timed-promise" },
   function globalTrackers$$fn(protectedStorage) {
-    console.log("asdlkfjas;dlkfja;lkfjl;asdkjfl;asdkfja;sklfjl;akjfdl;al;kjsjklfajsd;lflkja;sdfjkaskl")
     /**
      * @class WebGPUOnComplete
      */
