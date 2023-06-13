@@ -34,18 +34,22 @@
   const serialize = JSON.stringify
 
   function wrapPostMessage() {
-    debugger;
     const ringSource = ++currentRing;
     self.postMessage = function (value) {
-      debugger;
       // Objects may not be transferable objects (https://developer.mozilla.org/en-US/docs/Glossary/Transferable_objects),
       // and can remain non-transferable even after kvin.marshal, and it is very hard to detect such objects. One such object
       // is the `arguments` object of any function. In such a case, we need to serialize the message on top of 
-      const updatedMsg = marshal({ ringSource, value })
+      const updatedMsg = (() => {
+        try {
+          return marshal({ ringSource, value });
+        } catch (stuff) {
+          debugger;
+        }
+      })();
       try {
         currPostMessage(updatedMsg);
       }
-      catch {
+      catch (e) {
         const serializedMessage = {
           message: serialize(updatedMsg),
           serialized: true,

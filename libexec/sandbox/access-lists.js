@@ -867,7 +867,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   function applyAccessLists(obj, allowList, blockList = {}, polyfills = {}) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
-      console.log(obj);
       if (Object.getOwnPropertyDescriptor(obj, prop).configurable) {
         if (!allowList.has(prop)) {
           let isSet = false;
