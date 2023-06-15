@@ -59,6 +59,7 @@ const bootstrapConfig = {
 
 const bundleSandbox = {
   URL,
+  URLSearchParams,
   Function,
   Object,
   Array,
