@@ -1,6 +1,8 @@
 self.wrapScriptLoading(
   { scriptName: "timed-promise" },
   function globalTrackers$$fn(protectedStorage) {
+    const TimeInterval = protectedStorage.TimeInterval;
+
     /**
      * @class WebGPUOnComplete
      */
@@ -124,7 +126,7 @@ self.wrapScriptLoading(
        */
       then(onFulfilled, onRejected) {
         return (
-          this.wrapped.call(this.wrapped, (resolvedValue) => {
+          this.wrapped.then.call(this.wrapped, (resolvedValue) => {
             // force the continuation to kick off another round of event loop
             const continuation = (resolution) => onFulfilled(resolution);
             events.serial = Number(events.serial) + 1;

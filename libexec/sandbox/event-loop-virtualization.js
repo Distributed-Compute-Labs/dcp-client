@@ -281,7 +281,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
   // TODO: hide this for the final few layers that should not be allowed to see it
   const events = [];
-
+  protectedStorage.events = events;
 
   protectedStorage.Event = Event;
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
