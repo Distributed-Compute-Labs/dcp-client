@@ -85,7 +85,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   // lift in the Haskell fmap/lift sense, mapping to a new category while preserving the structure (functionality)
   function liftWASMFunction(fn)
   {
-    console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
+    // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
     return function(...args)
     {
       return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WASM');
@@ -95,7 +95,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUFunction(fn)
   {
-    console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
+    // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
       return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WebGPU');

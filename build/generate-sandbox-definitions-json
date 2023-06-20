@@ -20,8 +20,8 @@ console.log(`Generating sandbox definitions in ${target}`);
 /** All sandbox types use the base files */
 var base = [
   'script-load-wrapper',
-  'wrap-event-listeners',
   'timer-classes',
+  'wrap-event-listeners',
   'event-loop-virtualization',
   'timed-promise',
   'timed-env',
