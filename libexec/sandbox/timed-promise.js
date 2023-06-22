@@ -57,7 +57,7 @@ self.wrapScriptLoading(
           this.duration.overrideInterval(lastSubmittedTime, this.duration.end);
 
           this.globalTracker.webGPUIntervals.push(this.duration);
-          console.log("WebGPU time delta: " + this.duration.length);
+          // console.log("WebGPU time delta: " + this.duration.length);
           return;
         }
 
@@ -65,7 +65,7 @@ self.wrapScriptLoading(
           // undefined is CPU, this occurs when the promise is generated from async await
           case undefined: {
             this.globalTracker.cpuIntervals.push(this.duration);
-            console.log("CPU time delta: " + this.duration.length);
+            // console.log("CPU time delta: " + this.duration.length);
             break;
           }
           case "WebGL":
@@ -74,7 +74,7 @@ self.wrapScriptLoading(
           }
           case "WebGPU": {
             this.globalTracker.webGPUIntervals.push(this.duration);
-            console.log("WebGPU time delta: " + this.duration.lenght);
+            // console.log("WebGPU time delta: " + this.duration.lenght);
             break;
           }
           default: {
