@@ -17,11 +17,13 @@ self.wrapScriptLoading(
       }
     }
 
-    /** @typedef {import("./event-loop-virtualization.js").Event} Event */
+    /** @typedef {import("./event-loop-virtualization.js").FauxEvent} FauxEvent */
 
+    // this is a type
+    const FauxEvent = protectedStorage.FauxEvent;
     /** @type {Event[]} */
     const events = protectedStorage.events;
-
+    const bonaFideSetTimeout = protectedStorage.bonaFideSetTimeout;
     /**
      * TODO: actually think about how this is used and what are the implications
      *
@@ -130,43 +132,44 @@ self.wrapScriptLoading(
             // force the continuation to kick off another round of event loop
             const continuation = (resolution) => onFulfilled(resolution);
             events.serial = Number(events.serial) + 1;
-            const event = new Event(
+            const event = new FauxEvent(
               "timed-promise-continuation",
               continuation,
-              resolvedValue,
+              [resolvedValue],
               performance.now(),
               undefined,
               events.serial
             );
             events.push(event);
+            // console.debug(event);
 
             // exploit the fact that if the continuation of a `then` returns a promise, we get a Promose<T> rather than
             // Promise<Promise<T>>, this is the part of Promise that make it technically not a monad
             return new Promise((resolve, _reject) => {
               // yes this is very much a hack
               event.callback = resolve;
-              setTimeout(protectedStorage.serviceEvents, 0);
+              bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
             }).then(Promise.resolve(event.returnSlot));
           }),
           (rejectedReason) => {
             // force the continuation to kick off another round of event loop
             const continuation = (reason) => onRejected(reason);
             events.serial = Number(events.serial) + 1;
-            const event = new Event(
+            const event = new FauxEvent(
               "timed-promise-continuation",
               continuation,
-              rejectedReason,
+              [rejectedReason],
               performance.now(),
               undefined,
               events.serial
             );
             events.push(event);
-            setTimeout(protectedStorage.serviceEvents, 0);
+            bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
 
             // TODO: does it actually work with stupid exceptions?
             return new Promise((_resolve, reject) => {
               event.callback = reject;
-              setTimeout(protectedStorage.serviceEvents, 0);
+              bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
             }).then(Promise.reject(event.returnSlot));
           }
         );
@@ -183,7 +186,7 @@ self.wrapScriptLoading(
         return this.wrapped.catch((rejectedReason) => {
           const continuation = (reason) => onRejected(reason);
           events.serial = Number(events.serial) + 1;
-          const event = new Event(
+          const event = new FauxEvent(
             "timed-promise-continuation",
             continuation,
             rejectedReason,
@@ -196,7 +199,7 @@ self.wrapScriptLoading(
           // TODO: does it actually work with stupid exceptions?
           return new Promise((_resolve, reject) => {
             event.callback = reject;
-            setTimeout(protectedStorage.serviceEvents, 0);
+            bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
           }).then(Promise.reject(event.returnSlot));
         });
       }

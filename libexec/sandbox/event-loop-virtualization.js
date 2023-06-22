@@ -240,7 +240,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
   /** 
    * //TODO: figure out how the result slot return interact with if the function throws an error 
-   * @class       Event
+   * @class       FauxEvent
    * @classdesc   Class that represents an event on the event loop
    * @property {string} eventType - the type of event (timer, immediate, interval)
    * @property {function} fn - the function to be executed
@@ -253,7 +253,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
    * @property {function} callback - the callback to be executed when the event is complete, we only support closures
    * that takes no arguments
    */
-  class Event
+  class FauxEvent
   {
     constructor(eventType, fn, args, when, recur, serial, callback)
     {
@@ -283,7 +283,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   const events = [];
   protectedStorage.events = events;
 
-  protectedStorage.Event = Event;
+  protectedStorage.FauxEvent = FauxEvent;
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
   {
     // TODO: create a nice intereface so we're not just pulling the guts out all the time
@@ -316,7 +316,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       sortEvents();
       const event = events.shift();
-      if (event.eventType === 'timer')
+      if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
       {
         serviceEvents.executingTimeout = realSetTimeout(() => {
           // TODO: someone prove the following interacts correctly with `this` value nonsense
@@ -394,7 +394,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
 
       events.serial = Number(events.serial) + 1;
-      timer = new Event('timer', callback, args, performance.now() + (Number(timeout) || 0), false, events.serial);
+      timer = new FauxEvent('timer', callback, args, performance.now() + (Number(timeout) || 0), false, events.serial);
       events.push(timer);
       sortEvents();
       
@@ -518,6 +518,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     protectedStorage.clearAllTimers = clearAllTimers;
 
+    // TODO: yes the name is very stupid
+    protectedStorage.bonaFideSetTimeout = realSetTimeout;
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, protectedStorage);
 
   self.setTimeout = setTimeout;
