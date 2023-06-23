@@ -1,3 +1,18 @@
+/**
+ *  @file       timed-promise.js
+ *
+ *              A timed promise is a promise that will measure how long it took to resolve within our best abilities.
+ *              This class is *meant* to be expandable in the future! What you need to modify is the switch statement
+ *              for `originTag`, think of it as a sum type and you need to match every variant.
+ *
+ *              This class exists so we can measure resource usage for thing that happen off the main CPU thread.
+ *
+ *  @author     Liang Wang, liang@distributive.network
+ *  @date       2023
+ *
+ */
+"use strict"
+
 self.wrapScriptLoading(
   { scriptName: "timed-promise" },
   function globalTrackers$$fn(protectedStorage) {
