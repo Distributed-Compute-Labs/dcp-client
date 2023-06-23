@@ -18,274 +18,272 @@
 
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
-  // the JS way of thinking just because funtions are first class objects means they can confuse types and values is 
-  // driving me insane, the following should be viewed as a type
-  const TimeThing = protectedStorage.TimeThing;
-
-  /**
-   * All webGPU promises are to be placed in this global registry. So we can await them all.
-   * 
-   * @class WebGPUPromiseRegistry
-   */
-  class WebGPUPromiseRegistry
-  {
-    /**
-     * @constructor
-     * @returns {WebGPUPromiseRegistry}
-     */
-    constructor()
-    {
-      this.promises = [];
-    }
-
-    /**
-     * Add a promise to the registry, returns the newly registered promise.
-     *
-     * @param {Promise} promise
-     * @returns {Promise}
-     */
-    add(promise)
-    {
-      this.promises.push(promise);
-      return promise;
-    }
-
-    /**
-     * Wait for all promises in the registry to settle, returning the results.
-     * @returns {Promise}
-     */
-    async waitAll()
-    {
-      return await Promise.allSettled(this.promises);
-    }
-  }
-
-
-  /**
-   *
-   * @class GPUQueueRegistery
-   */
-  class WebGPUQueueRegistery
-  {
-    /**
-     * @constructor
-     * @returns {GPUQueueRegistery}
-     */
-    constructor()
-    {
-      /** @type Map<String, GPUQueue> */
-      this.queues = new Map();
-
-      /** @type Map<GPUQueue, DOMHighResTimeStamp[]> */
-      this.submissionTimeQueue = new Map();
-    }
-
-    /**
-     * Add a queue to the registry, returns the newly registered queue.
-     * @param {GPUQueue} queue
-     * @returns {GPUQueue}
-     */
-    add(queue)
-    {
-      this.queues.set(queue.label, queue);
-      return queue;
-    }
-
-
-    /**
-     * Add a submission to the registry.
-     *
-     * @param {GPUQueue | String} queue the Queue you wish to submit to, or the label of the queue
-     * @param {GPUCommandBuffer[]} commandBuffers the command buffers you wish to submit
-     * @returns {undefined}
-     */
-    addSubmission(queue, commandBuffers)
-    {
-      // we assume the queue is always already in the registry, should be enforced by changing all the
-      // places where a queue can be created to use the registery
-      if (typeof queue === 'string')
-      {
-        queue = this.find(queue);
-      }
-
-      if (!this.submissionTimeQueue.has(queue))
-      {
-        this.submissionTimeQueue.set(queue, []);
-      }
-
-      this.submissionTimeQueue.get(queue).push(performance.now());
-      
-      // submit returns undefined but just in case the user does something weird with the return value
-      // we return it to it's a drop in replacement
-      return queue.submit(commandBuffers);
-    }
-
-
-    /**
-     * Get the last submission time for a queue in FIFO order. Our special GPUQueueTimingPromise can use
-     * this to determine an upperbournd for when the queue has finished executing the command buffers.
-     * 
-     * If the queue has not been submitted to, returns undefined.
-     * 
-     * @param {GPUQueue | String | string} queue the Queue you wish to submit to, or the label of the queue
-     * @returns {DOMHighResTimeStamp | undefined} the last submission time for the queue
-    */
-    getLastSubmittedTime(queue)
-    {
-      if (typeof queue.toString() === 'string')
-      {
-        queue = this.find(queue);
-      }
-
-      const submissionQueue = this.submissionTimeQueue.get(queue);
-      return submissionQueue.shift();
-    }
-
-    /** 
-     * Get a queue from the registry by label. If a queue with the given label is not
-     * found, returns undefined.
-     *
-     * @function find
-     * @param {String} label
-     * @returns {GPUQueue}
-     */
-    find(label)
-    {
-      return this.queues.get(label);
-    }
-  }
-
-
-  /**
-   * @class GlobalTrackers
-   * @property {WebGPUPromiseRegistry} webGPUPromiseRegistry
-   * @property {WebGPUQueueRegistery} webGPUQueueRegistery
-   * @property {TimeThing} webGPUIntervals
-   * @property {TimeThing} cpuIntervals
-   * @property {TimeThing} webGLIntervals
-   * @property {TimeThing} wasmIntervals
-   * @function {getMetrics}
-   */
-  class GlobalTrackers
-  {
-
-    /**
-     * @constructor
-     * @returns {GlobalTrackers}
-     */
-    constructor()
-    {
-      this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
-      this.webGPUQueueRegistery = new WebGPUQueueRegistery();
-
-      /** @type {TimeThing} */
-      this.webGPUIntervals = new TimeThing();
-      
-      /** @type {TimeThing} */
-      this.cpuIntervals = new TimeThing();
-
-      // TODO: actually make them record stuff
-      /** @type {TimeThing} */
-      this.webGLIntervals = new TimeThing();
-
-      /** @type {TimeThing} */
-      this.wasmIntervals = new TimeThing();
-    }
-
-
-    // TODO: specifiy down the return type
-    /**
-     * Obtain the current metrics of our tracked resources, mostly about timings.
-     * @async
-     * @function {getMetrics}
-     */
-    async getMetrics()
-    {
-      // TODO: do a check to see all the two registries are empty
-   
-      if (
-             !this.webGPUIntervals.allSettled()
-          || !this.cpuIntervals.allSettled()
-          || !this.webGLIntervals.allSettled()
-          || !this.wasmIntervals.allSettled()
-         )
-      {
-        throw new Error('Not all intervals have settled');
-      }
-
-      // force all webGPU promises to run to completion
-      // TODO: maybe we want the results?
-      const _results = await this.webGPUPromiseRegistry.waitAll();
-
-      // TODO: Ryan said CPU should also include the WASM time
-      const webGPUTime = this.webGPUIntervals.duration();
-      const webGLTime = this.webGLIntervals.duration();
-      const wasmTime = this.wasmIntervals.duration();
-      const cpuTime = this.cpuIntervals.duration() + wasmTime;
-      const totalTime = webGPUTime + cpuTime + webGLTime;
-
-      return {
-        total: totalTime,
-        webGPU: webGPUTime,
-        cpu: cpuTime,
-        webGL: webGLTime,
-      };
-    }
-  }
-
-  protectedStorage.bigBrother = {
-    ...protectedStorage.bigBrother,
-    globalTrackers: new GlobalTrackers()
-  };
-
-  /** 
-   * //TODO: figure out how the result slot return interact with if the function throws an error 
-   * @class       FauxEvent
-   * @classdesc   Class that represents an event on the event loop
-   * @property {string} eventType - the type of event (timer, immediate, interval)
-   * @property {function} fn - the function to be executed
-   * @property {Array} args - the arguments to be passed to the function
-   * @property {number} when - the time at which the event should be executed
-   * @property {boolean} recur - whether the event should be executed repeatedly
-   * @property {number} serial - the serial number of the event
-   * @property {any} returnSlot - the result of application of fn(args) is stored here
-   * // TODO: figure out how it interact with thrown errors
-   * @property {function} callback - the callback to be executed when the event is complete, we only support closures
-   * that takes no arguments
-   */
-  class FauxEvent
-  {
-    constructor(eventType, fn, args, when, recur, serial, callback)
-    {
-      this.eventType = eventType;
-      this.fn = fn;
-      this.args = args;
-      this.when = when;
-      this.recur = recur;
-      this.serial = serial;
-      this.returnSlot = undefined;
-
-      // should we ensure the callback is actually a funciton and not something else?
-      // yes, we should, but JS is weekly typed and RTTI might not be cheap 
-      if (callback === undefined || callback === null)
-      {
-        // noop
-        this.callback = () => {};
-      }
-      else
-      {
-        this.callback = callback;
-      }
-    }
-  }
-
-  // TODO: hide this for the final few layers that should not be allowed to see it
-  const events = [];
-  protectedStorage.events = events;
-
-  protectedStorage.FauxEvent = FauxEvent;
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
   {
+    const TimeThing = protectedStorage.TimeThing;
+
+    /**
+     * All webGPU promises are to be placed in this global registry. So we can await them all.
+     * 
+     * @class WebGPUPromiseRegistry
+     */
+    class WebGPUPromiseRegistry
+    {
+      /**
+       * @constructor
+       * @returns {WebGPUPromiseRegistry}
+       */
+      constructor()
+      {
+        this.promises = [];
+      }
+
+      /**
+       * Add a promise to the registry, returns the newly registered promise.
+       *
+       * @param {Promise} promise
+       * @returns {Promise}
+       */
+      add(promise)
+      {
+        this.promises.push(promise);
+        return promise;
+      }
+
+      /**
+       * Wait for all promises in the registry to settle, returning the results.
+       * @returns {Promise}
+       */
+      async waitAll()
+      {
+        return await Promise.allSettled(this.promises);
+      }
+    }
+
+
+    /**
+     *
+     * @class GPUQueueRegistery
+     */
+    class WebGPUQueueRegistery
+    {
+      /**
+       * @constructor
+       * @returns {GPUQueueRegistery}
+       */
+      constructor()
+      {
+        /** @type Map<String, GPUQueue> */
+        this.queues = new Map();
+
+        /** @type Map<GPUQueue, DOMHighResTimeStamp[]> */
+        this.submissionTimeQueue = new Map();
+      }
+
+      /**
+       * Add a queue to the registry, returns the newly registered queue.
+       * @param {GPUQueue} queue
+       * @returns {GPUQueue}
+       */
+      add(queue)
+      {
+        this.queues.set(queue.label, queue);
+        return queue;
+      }
+
+
+      /**
+       * Add a submission to the registry.
+       *
+       * @param {GPUQueue | String} queue the Queue you wish to submit to, or the label of the queue
+       * @param {GPUCommandBuffer[]} commandBuffers the command buffers you wish to submit
+       * @returns {undefined}
+       */
+      addSubmission(queue, commandBuffers)
+      {
+        // we assume the queue is always already in the registry, should be enforced by changing all the
+        // places where a queue can be created to use the registery
+        if (typeof queue === 'string')
+        {
+          queue = this.find(queue);
+        }
+
+        if (!this.submissionTimeQueue.has(queue))
+        {
+          this.submissionTimeQueue.set(queue, []);
+        }
+
+        this.submissionTimeQueue.get(queue).push(performance.now());
+        
+        // submit returns undefined but just in case the user does something weird with the return value
+        // we return it to it's a drop in replacement
+        return queue.submit(commandBuffers);
+      }
+
+
+      /**
+       * Get the last submission time for a queue in FIFO order. Our special GPUQueueTimingPromise can use
+       * this to determine an upperbournd for when the queue has finished executing the command buffers.
+       * 
+       * If the queue has not been submitted to, returns undefined.
+       * 
+       * @param {GPUQueue | String | string} queue the Queue you wish to submit to, or the label of the queue
+       * @returns {DOMHighResTimeStamp | undefined} the last submission time for the queue
+      */
+      getLastSubmittedTime(queue)
+      {
+        if (typeof queue.toString() === 'string')
+        {
+          queue = this.find(queue);
+        }
+
+        const submissionQueue = this.submissionTimeQueue.get(queue);
+        return submissionQueue.shift();
+      }
+
+      /** 
+       * Get a queue from the registry by label. If a queue with the given label is not
+       * found, returns undefined.
+       *
+       * @function find
+       * @param {String} label
+       * @returns {GPUQueue}
+       */
+      find(label)
+      {
+        return this.queues.get(label);
+      }
+    }
+
+
+    /**
+     * @class GlobalTrackers
+     * @property {WebGPUPromiseRegistry} webGPUPromiseRegistry
+     * @property {WebGPUQueueRegistery} webGPUQueueRegistery
+     * @property {TimeThing} webGPUIntervals
+     * @property {TimeThing} cpuIntervals
+     * @property {TimeThing} webGLIntervals
+     * @property {TimeThing} wasmIntervals
+     * @function {getMetrics}
+     */
+    class GlobalTrackers
+    {
+
+      /**
+       * @constructor
+       * @returns {GlobalTrackers}
+       */
+      constructor()
+      {
+        this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
+        this.webGPUQueueRegistery = new WebGPUQueueRegistery();
+
+        /** @type {TimeThing} */
+        this.webGPUIntervals = new TimeThing();
+        
+        /** @type {TimeThing} */
+        this.cpuIntervals = new TimeThing();
+
+        // TODO: actually make them record stuff
+        /** @type {TimeThing} */
+        this.webGLIntervals = new TimeThing();
+
+        /** @type {TimeThing} */
+        this.wasmIntervals = new TimeThing();
+      }
+
+
+      // TODO: specifiy down the return type
+      /**
+       * Obtain the current metrics of our tracked resources, mostly about timings.
+       * @async
+       * @function {getMetrics}
+       */
+      async getMetrics()
+      {
+        // TODO: do a check to see all the two registries are empty
+     
+        if (
+               !this.webGPUIntervals.allSettled()
+            || !this.cpuIntervals.allSettled()
+            || !this.webGLIntervals.allSettled()
+            || !this.wasmIntervals.allSettled()
+           )
+        {
+          throw new Error('Not all intervals have settled');
+        }
+
+        // force all webGPU promises to run to completion
+        // TODO: maybe we want the results?
+        const _results = await this.webGPUPromiseRegistry.waitAll();
+
+        // TODO: Ryan said CPU should also include the WASM time
+        const webGPUTime = this.webGPUIntervals.duration();
+        const webGLTime = this.webGLIntervals.duration();
+        const wasmTime = this.wasmIntervals.duration();
+        const cpuTime = this.cpuIntervals.duration() + wasmTime;
+        const totalTime = webGPUTime + cpuTime + webGLTime;
+
+        return {
+          total: totalTime,
+          webGPU: webGPUTime,
+          cpu: cpuTime,
+          webGL: webGLTime,
+        };
+      }
+    }
+
+    protectedStorage.bigBrother = {
+      ...protectedStorage.bigBrother,
+      globalTrackers: new GlobalTrackers()
+    };
+
+    /** 
+     * //TODO: figure out how the result slot return interact with if the function throws an error 
+     * @class       FauxEvent
+     * @classdesc   Class that represents an event on the event loop
+     * @property {string} eventType - the type of event (timer, immediate, interval)
+     * @property {function} fn - the function to be executed
+     * @property {Array} args - the arguments to be passed to the function
+     * @property {number} when - the time at which the event should be executed
+     * @property {boolean} recur - whether the event should be executed repeatedly
+     * @property {number} serial - the serial number of the event
+     * @property {any} returnSlot - the result of application of fn(args) is stored here
+     * // TODO: figure out how it interact with thrown errors
+     * @property {function} callback - the callback to be executed when the event is complete, we only support closures
+     * that takes no arguments
+     */
+    class FauxEvent
+    {
+      constructor(eventType, fn, args, when, recur, serial, callback)
+      {
+        this.eventType = eventType;
+        this.fn = fn;
+        this.args = args;
+        this.when = when;
+        this.recur = recur;
+        this.serial = serial;
+        this.returnSlot = undefined;
+
+        // should we ensure the callback is actually a funciton and not something else?
+        // yes, we should, but JS is weekly typed and RTTI might not be cheap 
+        if (callback === undefined || callback === null)
+        {
+          // noop
+          this.callback = () => {};
+        }
+        else
+        {
+          this.callback = callback;
+        }
+      }
+    }
+
+    // TODO: hide this for the final few layers that should not be allowed to see it
+    const events = [];
+    protectedStorage.events = events;
+
+    protectedStorage.FauxEvent = FauxEvent;
     // TODO: create a nice intereface so we're not just pulling the guts out all the time
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     events.serial = 0;

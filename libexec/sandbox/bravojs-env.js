@@ -181,6 +181,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
     protectedStorage.clearAllTimers();
 
+    console.log({total, webGL, webGPUm, CPU});
     ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
   }
 
