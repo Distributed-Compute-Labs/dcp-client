@@ -13,9 +13,7 @@
  */
 "use strict"
 
-self.wrapScriptLoading(
-  { scriptName: "timed-promise" },
-  function globalTrackers$$fn(protectedStorage) {
+self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(protectedStorage) {
     const TimeInterval = protectedStorage.TimeInterval;
 
     /**
