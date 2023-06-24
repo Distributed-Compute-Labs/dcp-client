@@ -184,6 +184,15 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     'GPUQueue',
   ];
 
+  // currently, the only queue exposed is the default queue
+  const defaultQueue = await (async () => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    return device.queue;
+  })();
+
+  if (defaultQueue)
+    globalTrackers.webGPUQueueRegistery.add(defaultQueue);
 
   // ensure we can time all the webGPU functions that return promises
   const globalProperties = Object.getOwnPropertyNames(self);
@@ -191,9 +200,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
 
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototypePromises);
 
-  // TODO: not complete yet, webGPU comes with an default queue, need to wrap that also 
   GPUQueue.prototype.constructor = function ctor(...args) {
-    debugger;
     const queueConstructor = originalGPUQueue.bind(this);
     const queue = new queueConstructor(...args);
 
