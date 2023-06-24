@@ -105,7 +105,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
       'mapAsync',
       'getCompilationInfo',
       'onSubmittedWorkDone',
-      'lost',
+      // 'lost', // would not be fair to charge them for monitoring if the device got lost
       'popErrorScope',
       'requestAdapter',
     ];
