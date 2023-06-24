@@ -31,6 +31,8 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const wasmTimer = globalTrackers.wasmIntervals;
   const cpuTimer = globalTrackers.cpuIntervals;
   const webGPUTimer = globalTrackers.webGPUIntervals;
+  
+  const WebGPUOnComplete = protectedStorage.WebGPUOnComplete;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -94,32 +96,29 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
    */
   function liftWebGPUPrototypePromises(GPUClass)
   {
+    // the standard dictates these functions will return promises
+    const promiseReturningFunctions = [
+      'requestDevice',
+      'requestAdapterInfo',
+      'createComputePipelineAsync',
+      'createRenderPipelineAsync',
+      'mapAsync',
+      'getCompilationInfo',
+      'onSubmittedWorkDone',
+      'lost',
+      'popErrorScope',
+      'requestAdapter',
+    ];
+
     // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
     if (!self[GPUClass].prototype)
       return;
 
     for (let prop of Object.keys(self[GPUClass].prototype))
     {
-      let originalFn;
-      try
-      {
-        originalFn = self[GPUClass].prototype[prop];
-        if (originalFn instanceof Promise)
-        {
-          originalFn.catch(() => {/* accessing properties from class constructors can be dangerous in weird ways */})
-          continue;
-        }
-        if (typeof originalFn !== 'function')
-          continue;
-      }
-      catch(e)
-      {
-        // The property can't be invoked, so must be a property (like 'name'). Don't need to wrap it.
-        continue;
-      }
-
       // lift the function into our GPUTimingPromise monad
-      self[GPUClass].prototype[prop] = liftWebGPUFunction(originalFn);
+      if (prop in promiseReturningFunctions)
+        self[GPUClass].prototype[prop] = liftWebGPUFunction(prop);
     }
   }
 
@@ -194,6 +193,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
 
   // TODO: not complete yet, webGPU comes with an default queue, need to wrap that also 
   GPUQueue.prototype.constructor = function ctor(...args) {
+    debugger;
     const queueConstructor = originalGPUQueue.bind(this);
     const queue = new queueConstructor(...args);
 
@@ -218,10 +218,11 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
   GPUQueue.prototype.submit = function submit(...args)
   {
-    const queueLabel = this.label;
+    // TODO: find out what determines the identity of GPUQueues
+    const queue = this;
     // TODO: addSumbission also does the job of actually calling submit on the original queue, should it?
     return globalTrackers.webGPUQueueRegistery.addSubmission(
-      queueLabel,
+      queue,
       ...args
     );
   }

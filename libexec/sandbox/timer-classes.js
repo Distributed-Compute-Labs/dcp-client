@@ -189,5 +189,4 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
 
 
   protectedStorage.TimeThing = TimeThing;
-  debugger;
 });

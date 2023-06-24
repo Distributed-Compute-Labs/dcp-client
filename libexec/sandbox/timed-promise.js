@@ -22,13 +22,16 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
     class WebGPUOnComplete {
       /**
        * @constructor
-       * @param {String} queueLabel
+       * @param {GPUQueue} queue 
        * @returns {WebGPUOnComplete}
        */
-      constructor(queueLabel) {
-        this.queueLabel = queueLabel;
+      constructor(queue) {
+        this.queue = queue;
       }
     }
+    
+    protectedStorage.WebGPUOnComplete = WebGPUOnComplete;
+
 
     /** @typedef {import("./event-loop-virtualization.js").FauxEvent} FauxEvent */
 
@@ -58,7 +61,7 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
        */
       #recordTimeDelta(originTag) {
         if (originTag instanceof WebGPUOnComplete) {
-          const label = originTag.queueLabel;
+          const label = originTag.queue;
           const lastSubmittedTime =
             this.globalTracker.webGPUQueueRegistery.getLastSubmittedTime(label);
 
@@ -115,6 +118,7 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
 
         const that = this;
 
+        debugger;
         this.wrapped = promiseFn().then(
           (resovledValue) => {
             that.duration.stop();

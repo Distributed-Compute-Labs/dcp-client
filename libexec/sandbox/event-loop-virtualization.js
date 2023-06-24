@@ -61,6 +61,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     }
 
 
+    // TODO: hide this better
+    // TODO: perhaps we should grab it not via gloablThis
+    // stash a copy so we don't end up recursively calling with no base case
+    const realSubmit = globalThis.GPUQueue.prototype.submit;
     /**
      *
      * @class GPUQueueRegistery
@@ -88,6 +92,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       add(queue)
       {
         this.queues.set(queue.label, queue);
+        debugger;
         return queue;
       }
 
@@ -95,18 +100,18 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       /**
        * Add a submission to the registry.
        *
-       * @param {GPUQueue | String} queue the Queue you wish to submit to, or the label of the queue
+       * @param {GPUQueue} queue the Queue you wish to submit to
        * @param {GPUCommandBuffer[]} commandBuffers the command buffers you wish to submit
        * @returns {undefined}
        */
       addSubmission(queue, commandBuffers)
       {
-        // we assume the queue is always already in the registry, should be enforced by changing all the
-        // places where a queue can be created to use the registery
-        if (typeof queue === 'string')
-        {
-          queue = this.find(queue);
-        }
+        // // we assume the queue is always already in the registry, should be enforced by changing all the
+        // // places where a queue can be created to use the registery
+        // if (typeof queue === 'string')
+        // {
+        //   queue = this.find(queue);
+        // }
 
         if (!this.submissionTimeQueue.has(queue))
         {
@@ -117,7 +122,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         
         // submit returns undefined but just in case the user does something weird with the return value
         // we return it to it's a drop in replacement
-        return queue.submit(commandBuffers);
+        return realSubmit.call(queue, commandBuffers);
       }
 
 
@@ -314,6 +319,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       sortEvents();
       const event = events.shift();
+      // debugger;
       if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
       {
         serviceEvents.executingTimeout = realSetTimeout(() => {
