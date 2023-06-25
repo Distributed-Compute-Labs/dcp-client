@@ -20,7 +20,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 {
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
   {
+    /** @typedef {import("./timer-classes.js").TimeThing} TimeThing */
     const TimeThing = protectedStorage.TimeThing;
+    /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
     const TimeInterval = protectedStorage.TimeInterval;
 
     /**
