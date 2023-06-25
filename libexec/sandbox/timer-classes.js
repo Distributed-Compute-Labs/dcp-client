@@ -128,6 +128,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    * the overlapping time will be counted twice.  
    *
    * @function {TimeThing.duration}
+   * @todo think about what to do with unsettled timers
    */
   TimeThing.prototype.duration = function totalDuration()
   {

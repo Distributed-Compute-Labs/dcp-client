@@ -216,22 +216,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       async getMetrics()
       {
-        // TODO: do a check to see all the two registries are empty
-     
-        if (
-               !this.webGPUIntervals.allSettled()
-            || !this.cpuIntervals.allSettled()
-            || !this.webGLIntervals.allSettled()
-            || !this.wasmIntervals.allSettled()
-           )
-        {
-          throw new Error('Not all intervals have settled');
-        }
-
-        // force all webGPU promises to run to completion
-        // TODO: maybe we want the results?
-        const _results = await this.webGPUPromiseRegistry.waitAll();
-
         // TODO: Ryan said CPU should also include the WASM time
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();
