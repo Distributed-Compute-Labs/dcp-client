@@ -21,6 +21,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
   {
     const TimeThing = protectedStorage.TimeThing;
+    const TimeInterval = protectedStorage.TimeInterval;
 
     /**
      * All webGPU promises are to be placed in this global registry. So we can await them all.
@@ -65,6 +66,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: perhaps we should grab it not via gloablThis
     // stash a copy so we don't end up recursively calling with no base case
     const realSubmit = globalThis.GPUQueue.prototype.submit;
+    const realOnSubmittedWorkDone = globalThis.GPUQueue.prototype.onSubmittedWorkDone;
+
     /**
      *
      * @class GPUQueueRegistery
@@ -73,15 +76,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     {
       /**
        * @constructor
+       * @param {GlobalTrackers} globalTrackers
        * @returns {GPUQueueRegistery}
        */
-      constructor()
+      constructor(globalTrackers)
       {
-        /** @type Map<String, GPUQueue> */
-        this.queues = new Map();
+        /** @type Set<GPUQueue> */
+        this.queues = new Set();
 
         /** @type Map<GPUQueue, DOMHighResTimeStamp[]> */
         this.submissionTimeQueue = new Map();
+
+        /** @type GlobalTrackers */
+        this.globalTrackers = globalTrackers;
       }
 
       /**
@@ -91,8 +98,38 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       add(queue)
       {
-        this.queues.set(queue.label, queue);
-        debugger;
+        this.queues.add(queue);
+        
+        // record how long the last submitted commands took. Standards guarantees that `onSubmittedWorkDone` is always
+        // in FIFO order.
+        const that = this;
+        const recordTime = () => {
+          realOnSubmittedWorkDone
+            .call(queue)
+            .then(()=> {
+              // get when was the last series of commands submitted
+              const lastSubmittedAt = that.getLastSubmittedTime(queue);
+
+              // should be rare but I'm paranoid
+              if (!lastSubmittedAt)
+                return;
+
+              const duration = (()=> {
+                const currentTime = performance.now();
+                const interval = new TimeInterval();
+                interval.overrideInterval(lastSubmittedAt, currentTime);
+                return interval;
+              })();
+              that.globalTrackers.webGPUIntervals.push(duration);
+            })
+            // a little trick I learned with boost asio, this would *not* cause the stack to blow up. Since we only
+            // re-enter once the promise we chain our fate to is resolved, we are actually at most one level deep
+            .then(recordTime);
+        };
+
+        // mimics a background thread, we opt to use the micro task queue it gets serviced earlier, makes timing
+        // hopefully more accurate
+        recordTime();
         return queue;
       }
 
@@ -106,23 +143,14 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       addSubmission(queue, commandBuffers)
       {
-        // // we assume the queue is always already in the registry, should be enforced by changing all the
-        // // places where a queue can be created to use the registery
-        // if (typeof queue === 'string')
-        // {
-        //   queue = this.find(queue);
-        // }
-
+        // we assume the queue is always already in the registry, should be enforced by changing all the
+        // places where a queue can be created to use the registry
         if (!this.submissionTimeQueue.has(queue))
-        {
           this.submissionTimeQueue.set(queue, []);
-        }
 
         this.submissionTimeQueue.get(queue).push(performance.now());
         
-        // submit returns undefined but just in case the user does something weird with the return value
-        // we return it to it's a drop in replacement
-        return realSubmit.call(queue, commandBuffers);
+        realSubmit.call(queue, commandBuffers);
       }
 
 
@@ -137,26 +165,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       */
       getLastSubmittedTime(queue)
       {
-        if (typeof queue.toString() === 'string')
-        {
-          queue = this.find(queue);
-        }
-
         const submissionQueue = this.submissionTimeQueue.get(queue);
         return submissionQueue.shift();
-      }
-
-      /** 
-       * Get a queue from the registry by label. If a queue with the given label is not
-       * found, returns undefined.
-       *
-       * @function find
-       * @param {String} label
-       * @returns {GPUQueue}
-       */
-      find(label)
-      {
-        return this.queues.get(label);
       }
     }
 
