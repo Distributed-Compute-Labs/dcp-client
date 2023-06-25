@@ -16,22 +16,6 @@
 self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(protectedStorage) {
     const TimeInterval = protectedStorage.TimeInterval;
 
-    /**
-     * @class WebGPUOnComplete
-     */
-    class WebGPUOnComplete {
-      /**
-       * @constructor
-       * @param {GPUQueue} queue 
-       * @returns {WebGPUOnComplete}
-       */
-      constructor(queue) {
-        this.queue = queue;
-      }
-    }
-    
-    protectedStorage.WebGPUOnComplete = WebGPUOnComplete;
-
 
     /** @typedef {import("./event-loop-virtualization.js").FauxEvent} FauxEvent */
 
@@ -60,23 +44,6 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
        * @param {"WebGPU" | "WebGL" | "WASM" | WebGPUOnComplete | undefined} originTag - if set, indicates the origin of the promise, it will affect where
        */
       #recordTimeDelta(originTag) {
-        if (originTag instanceof WebGPUOnComplete) {
-          const label = originTag.queue;
-          const lastSubmittedTime =
-            this.globalTracker.webGPUQueueRegistery.getLastSubmittedTime(label);
-
-          if (lastSubmittedTime === undefined) {
-            throw new Error("Cannot find queue with label " + label);
-          }
-
-          // MAJOR CODE SMELL, SOMEONE PLEASE COME MAKE IT BETTER
-          this.duration.overrideInterval(lastSubmittedTime, this.duration.end);
-
-          this.globalTracker.webGPUIntervals.push(this.duration);
-          // console.log("WebGPU time delta: " + this.duration.length);
-          return;
-        }
-
         switch (originTag) {
           // undefined is CPU, this occurs when the promise is generated from async await
           case undefined: {
@@ -93,9 +60,10 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
             // console.log("WebGPU time delta: " + this.duration.lenght);
             break;
           }
+          case "ignore":
           default: {
-            // users should not have access to this, most likely an internal error
-            throw new Error("Unknown origin tag");
+            // ignore stuff we don't know about, sometimes we desire this because the timing might be measured in other
+            // ways
           }
         }
       }

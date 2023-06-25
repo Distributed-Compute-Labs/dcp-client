@@ -32,7 +32,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const cpuTimer = globalTrackers.cpuIntervals;
   const webGPUTimer = globalTrackers.webGPUIntervals;
   
-  const WebGPUOnComplete = protectedStorage.WebGPUOnComplete;
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -211,10 +210,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
     const fn = originalSubmitDone.bind(this);
-    const queueLabel = this.label;
-    const onSubmittedWorkDoneContext = new WebGPUOnComplete({ queueLabel });
-
-    return new TimedPromise(globalTrackers, () => fn(...args), onSubmittedWorkDoneContext);
+    return new TimedPromise(globalTrackers, () => fn(...args), 'ignore');
   }
 
 
