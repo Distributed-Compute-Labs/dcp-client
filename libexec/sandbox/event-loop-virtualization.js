@@ -81,11 +81,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       constructor(globalTrackers)
       {
-        /** @type Set<GPUQueue> */
-        this.queues = new Set();
+        /** @type Array<GPUQueue> */
+        this.queues = [];
 
-        /** @type Map<GPUQueue, DOMHighResTimeStamp[]> */
-        this.submissionTimeQueue = new Map();
+        /** @type Array<DOMHighResTimeStamp[]> */
+        this.submissionTimeQueue = [];
 
         /** @type GlobalTrackers */
         this.globalTrackers = globalTrackers;
@@ -98,7 +98,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       add(queue)
       {
-        this.queues.add(queue);
+        this.queues.push(queue);
         
         // record how long the last submitted commands took. Standards guarantees that `onSubmittedWorkDone` is always
         // in FIFO order.
@@ -145,10 +145,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       {
         // we assume the queue is always already in the registry, should be enforced by changing all the
         // places where a queue can be created to use the registry
-        if (!this.submissionTimeQueue.has(queue))
-          this.submissionTimeQueue.set(queue, []);
-
-        this.submissionTimeQueue.get(queue).push(performance.now());
+        const idx = this.queues.indexOf(queue);
+        this.submissionTimeQueue.at(idx).push(performance.now());
         
         realSubmit.call(queue, commandBuffers);
       }
@@ -165,7 +163,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       */
       getLastSubmittedTime(queue)
       {
-        const submissionQueue = this.submissionTimeQueue.get(queue);
+        const idx = this.queues.indexOf(queue);
+        if (idx === -1)
+          return;
+
+        const submissionQueue = this.submissionTimeQueue.at(idx);
         return submissionQueue?.shift();
       }
     }
