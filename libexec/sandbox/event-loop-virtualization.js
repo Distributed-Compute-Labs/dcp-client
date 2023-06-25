@@ -76,10 +76,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     {
       /**
        * @constructor
-       * @param {GlobalTrackers} globalTrackers
+       * @param {TimeThing} webGPUIntervals
        * @returns {GPUQueueRegistery}
        */
-      constructor(globalTrackers)
+      constructor(webGPUIntervals)
       {
         /** @type Array<GPUQueue> */
         this.queues = [];
@@ -87,8 +87,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type Array<DOMHighResTimeStamp[]> */
         this.submissionTimeQueue = [];
 
-        /** @type GlobalTrackers */
-        this.globalTrackers = globalTrackers;
+        /** @type TimeThing */
+        this.webGPUIntervals = webGPUIntervals;
       }
 
       /**
@@ -120,7 +120,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
                 interval.overrideInterval(lastSubmittedAt, currentTime);
                 return interval;
               })();
-              that.globalTrackers.webGPUIntervals.push(duration);
+              that.webGPUIntervals.push(duration);
             })
             // a little trick I learned with boost asio, this would *not* cause the stack to blow up. Since we only
             // re-enter once the promise we chain our fate to is resolved, we are actually at most one level deep
@@ -192,9 +192,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       constructor()
       {
-        this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
-        this.webGPUQueueRegistery = new WebGPUQueueRegistery();
-
         /** @type {TimeThing} */
         this.webGPUIntervals = new TimeThing();
         
@@ -207,6 +204,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         /** @type {TimeThing} */
         this.wasmIntervals = new TimeThing();
+
+        this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
+
+        // TODO: decouple this
+        this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
       }
 
 
