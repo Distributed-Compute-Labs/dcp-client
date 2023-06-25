@@ -194,10 +194,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   if (defaultQueue)
     globalTrackers.webGPUQueueRegistery.add(defaultQueue);
 
-  // ensure we can time all the webGPU functions that return promises
-  const globalProperties = Object.getOwnPropertyNames(self);
-  console.assert(requiredWrappingGPUClasses.every((className) => globalProperties.includes(className)));
-
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototypePromises);
 
   GPUQueue.prototype.constructor = function ctor(...args) {
