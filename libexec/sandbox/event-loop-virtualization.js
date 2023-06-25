@@ -166,7 +166,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       getLastSubmittedTime(queue)
       {
         const submissionQueue = this.submissionTimeQueue.get(queue);
-        return submissionQueue.shift();
+        return submissionQueue?.shift();
       }
     }
 
