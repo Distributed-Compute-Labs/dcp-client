@@ -48,8 +48,10 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   Object.defineProperty(TimeInterval.prototype, 'length', {
     get: function length()
     {
+      // TODO: it's normal that some timers will not be all stopped when we want to measure but we should think about
+      // this 
       if (!this.end)
-        throw new Error("Invalid length: interval hasn't been stopped");
+        this.end = performance.now();
       return this.end - this.start;
     }
   });
@@ -80,7 +82,7 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   TimeInterval.prototype.overrideInterval = function overrideInterval(start, end)
   {
     // since users shoully shouldn't touch this, if this fails, it's almost certainly our fault
-    console.assert(start && end && start < end, 'Invalid interval');
+    // console.assert(start && end && start < end, 'Invalid interval');
 
     this.start = start;
     this.end = end;

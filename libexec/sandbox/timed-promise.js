@@ -86,7 +86,7 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
 
         const that = this;
 
-        debugger;
+        // debugger;
         this.wrapped = promiseFn().then(
           (resovledValue) => {
             that.duration.stop();

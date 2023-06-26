@@ -178,10 +178,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   async function reportTimes ()
   {
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
-    const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
+    const { total, webGL, webGPU, cpu } = await globalTracker.getMetrics();
     protectedStorage.clearAllTimers();
 
-    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
+    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, cpu });
   }
 
   /* Report an error from the work function to the supervisor */
@@ -247,15 +247,20 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       rejection = error;
     }
 
+
     // flush any pending console events, especially in the case of a repeating message that hasn't been emitted yet 
     try { flushLastLog(); } catch(e) {};
     try
     {
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
-      await new Promise(r => protectedStorage.realSetTimeout(r)); // flush microtask queue
+      await new Promise(r => {
+        const bonaFideSetTimeout = protectedStorage.bonaFideSetTimeout;
+        bonaFideSetTimeout(r);
+      }); // flush microtask queue
     }
     catch(e) {}
 
+    debugger;
     if (rejection)
       errorCallback(rejection);
     else

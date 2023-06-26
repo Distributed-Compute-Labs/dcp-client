@@ -24,6 +24,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const TimeThing = protectedStorage.TimeThing;
     /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
     const TimeInterval = protectedStorage.TimeInterval;
+    /** @typedef {import("./condition-variable.js").ConditionVariable} ConditionVariable */
+    const ConditionVariable = protectedStorage.ConditionVariable;
 
     /**
      * All webGPU promises are to be placed in this global registry. So we can await them all.
@@ -89,6 +91,12 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type Array<DOMHighResTimeStamp[]> */
         this.submissionTimeQueue = [];
 
+        // /** @type Array<number> */
+        // this.outstandingCommands = [];
+
+        /** @type Array<ConditionVariable> */
+        this.outStandingCommandCondVars = [];
+
         /** @type TimeThing */
         this.webGPUIntervals = webGPUIntervals;
       }
@@ -100,17 +108,26 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       add(queue)
       {
+        const idx = this.queues.length;
         this.queues.push(queue);
-        
+        this.submissionTimeQueue.push([]);
+        // this.outstandingCommands.push(0);
+        this.outStandingCommandCondVars.push(new ConditionVariable());
+
         // record how long the last submitted commands took. Standards guarantees that `onSubmittedWorkDone` is always
         // in FIFO order.
         const that = this;
         const recordTime = () => {
-          realOnSubmittedWorkDone
-            .call(queue)
+          // this promise will also resolve immediately if they are no commands outstanding, so we need the condvar to
+          // avoid extra wakesups
+          const onLastSubmissionComplete = () => realOnSubmittedWorkDone.call(queue);
+          const waitUntilNewCommand = () => that.outStandingCommandCondVars.at(idx).wait();
+
+          waitUntilNewCommand()
+            .then(onLastSubmissionComplete)
             .then(()=> {
               // get when was the last series of commands submitted
-              const lastSubmittedAt = that.getLastSubmittedTime(queue);
+              const lastSubmittedAt = that.popLastSubmittedTime(queue);
 
               // should be rare but I'm paranoid
               if (!lastSubmittedAt)
@@ -148,9 +165,14 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         // we assume the queue is always already in the registry, should be enforced by changing all the
         // places where a queue can be created to use the registry
         const idx = this.queues.indexOf(queue);
-        this.submissionTimeQueue.at(idx).push(performance.now());
-        
+        const submissionTimes = this.submissionTimeQueue.at(idx);
+        submissionTimes.push(performance.now());
+
+        // actually submit on the underlying queue
         realSubmit.call(queue, commandBuffers);
+
+        // TODO: notifyOne should be enough right??
+        this.outStandingCommandCondVars.at(idx).notifyOne();
       }
 
 
@@ -163,7 +185,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        * @param {GPUQueue | String | string} queue the Queue you wish to submit to, or the label of the queue
        * @returns {DOMHighResTimeStamp | undefined} the last submission time for the queue
       */
-      getLastSubmittedTime(queue)
+      popLastSubmittedTime(queue)
       {
         const idx = this.queues.indexOf(queue);
         if (idx === -1)
