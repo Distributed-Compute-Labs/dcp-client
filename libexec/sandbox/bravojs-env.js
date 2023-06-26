@@ -179,10 +179,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
     // debugger;
-    const { total, webGL, webGPU, cpu } = await globalTracker.getMetrics();
+    const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
     protectedStorage.clearAllTimers();
 
-    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, cpu });
+    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
   }
 
   /* Report an error from the work function to the supervisor */

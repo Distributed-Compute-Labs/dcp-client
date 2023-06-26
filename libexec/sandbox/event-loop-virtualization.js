@@ -254,7 +254,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         return {
           total: totalTime,
           webGPU: webGPUTime,
-          cpu: cpuTime,
+          CPU: cpuTime,
           webGL: webGLTime,
         };
       }
