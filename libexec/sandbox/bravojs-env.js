@@ -178,6 +178,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   async function reportTimes ()
   {
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
+    // debugger;
     const { total, webGL, webGPU, cpu } = await globalTracker.getMetrics();
     protectedStorage.clearAllTimers();
 
@@ -260,7 +261,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     }
     catch(e) {}
 
-    debugger;
+    // debugger;
     if (rejection)
       errorCallback(rejection);
     else
