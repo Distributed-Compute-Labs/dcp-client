@@ -178,11 +178,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   async function reportTimes ()
   {
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
-    // debugger;
     const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
-    protectedStorage.clearAllTimers();
-
-    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
+    // protectedStorage.clearAllTimers();
+    // debugger;
+    ring3PostMessage({ request: 'measurement', data: { total, webGL, webGPU, CPU } });
   }
 
   /* Report an error from the work function to the supervisor */
@@ -217,8 +216,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function reportResult (result)
   {
     reportTimes().then(() => {
+      debugger;
       ring3PostMessage({ request: 'complete', result });
     }).catch((error) => {
+      debugger;
       ring3PostMessage({ request: 'sandboxError', error });
     });
   }
@@ -253,6 +254,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try { flushLastLog(); } catch(e) {};
     try
     {
+      // debugger;
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
       await new Promise(r => {
         const bonaFideSetTimeout = protectedStorage.bonaFideSetTimeout;

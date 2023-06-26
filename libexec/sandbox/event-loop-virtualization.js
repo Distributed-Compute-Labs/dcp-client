@@ -341,6 +341,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       sortEvents();
       const event = events.shift();
+
+      // todo: there is almost certainly a bug
+      if (!event)
+        return;
       // debugger;
       if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
       {
@@ -435,6 +439,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       {
         if (serviceEvents.nextTimeout > events[0].when) {
           realClearTimeout(serviceEvents.timeout);
+          debugger;
           realSetTimeout(serviceEvents, events[0].when - performance.now());
         }
       }
