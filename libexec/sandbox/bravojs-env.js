@@ -180,7 +180,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
     const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
     // protectedStorage.clearAllTimers();
-    // debugger;
     ring3PostMessage({ request: 'measurement', data: { total, webGL, webGPU, CPU } });
   }
 
@@ -216,10 +215,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function reportResult (result)
   {
     reportTimes().then(() => {
-      debugger;
       ring3PostMessage({ request: 'complete', result });
     }).catch((error) => {
-      debugger;
       ring3PostMessage({ request: 'sandboxError', error });
     });
   }
@@ -264,7 +261,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     }
     catch(e) {}
 
-    // debugger;
     if (rejection)
       errorCallback(rejection);
     else
