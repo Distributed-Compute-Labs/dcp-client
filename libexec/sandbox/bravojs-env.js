@@ -256,6 +256,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     {
       // debugger;
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
+      // TODO: think about which setTimeout to use, it seems if the user uses up resources on the machine, they should
+      // be charged, even for lingering microtasks. After all, most likely we didn't intentionally cause them.
       await new Promise(r => {
         const bonaFideSetTimeout = protectedStorage.bonaFideSetTimeout;
         bonaFideSetTimeout(r);
