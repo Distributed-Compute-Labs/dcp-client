@@ -27,44 +27,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     /** @typedef {import("./condition-variable.js").ConditionVariable} ConditionVariable */
     const ConditionVariable = protectedStorage.ConditionVariable;
 
-    /**
-     * All webGPU promises are to be placed in this global registry. So we can await them all.
-     * 
-     * @class WebGPUPromiseRegistry
-     */
-    class WebGPUPromiseRegistry
-    {
-      /**
-       * @constructor
-       * @returns {WebGPUPromiseRegistry}
-       */
-      constructor()
-      {
-        this.promises = [];
-      }
-
-      /**
-       * Add a promise to the registry, returns the newly registered promise.
-       *
-       * @param {Promise} promise
-       * @returns {Promise}
-       */
-      add(promise)
-      {
-        this.promises.push(promise);
-        return promise;
-      }
-
-      /**
-       * Wait for all promises in the registry to settle, returning the results.
-       * @returns {Promise}
-       */
-      async waitAll()
-      {
-        return await Promise.allSettled(this.promises);
-      }
-    }
-
 
     // TODO: hide this better
     // TODO: perhaps we should grab it not via gloablThis
@@ -228,8 +190,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         /** @type {TimeThing} */
         this.wasmIntervals = new TimeThing();
-
-        this.webGPUPromiseRegistry = new WebGPUPromiseRegistry();
 
         // TODO: decouple this
         this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
