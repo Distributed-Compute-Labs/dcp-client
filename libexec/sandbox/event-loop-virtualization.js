@@ -378,7 +378,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       // Can add handles for events to the event loop as needed (ie messages)
 
       // Measure the time on the event loop after everything has executed
-      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle, 1);
+      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle);
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
