@@ -299,7 +299,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const originalGPUQueue = GPUQueue;
   const originalSubmit = GPUQueue.prototype.submit;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
-  
+  const originalRequestDevice = GPUAdapter.prototype.requestDevice; 
 
   // some of them will get re-wrapped, that's fine, we always refer to the original function
   const requiredWrappingGPUClasses = [
@@ -320,18 +320,26 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     'GPUCanvasContext',
   ];
 
-  // TODO: do we know the queue always point to the same one?
-  // currently, the only queue exposed is the default queue
-  const defaultQueue = await (async () => {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-    return device.queue;
-  })();
-
-  if (defaultQueue)
-    globalTrackers.webGPUQueueRegistery.add(defaultQueue);
+  // // TODO: do we know the queue always point to the same one?
+  // // currently, the only queue exposed is the default queue
+  // const defaultQueue = await (async () => {
+  //   const adapter = await navigator.gpu.requestAdapter();
+  //   const device = await adapter.requestDevice();
+  //   return device.queue;
+  // })();
+  //
+  // if (defaultQueue)
+  //   globalTrackers.webGPUQueueRegistery.add(defaultQueue);
 
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
+
+  // currently, the only queue exposed is the default queue
+  GPUAdapter.prototype.requestDevice = async function(...args)
+  {
+    const device = await originalRequestDevice.call(this, ...args);
+    globalTrackers.webGPUQueueRegistery.add(device.queue);
+    return device;
+  }
 
   GPUQueue.prototype.constructor = function ctor(...args) {
     const queueConstructor = originalGPUQueue.bind(this);

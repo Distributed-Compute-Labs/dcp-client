@@ -64,12 +64,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
               title: 'DCP-evaluator',
               visible: false,
             });
-            
-            const adapter = await GPU.requestAdapter({ window: gpuWindow });
-            await adapter.requestDevice(adapter.extensions);
           } else {
-            const adapter = await navigator.gpu.requestAdapter();
-            await adapter.requestDevice();
           }
         } catch (err) {
           // if glfw fails or the symbols exist but webgpu hasn't been

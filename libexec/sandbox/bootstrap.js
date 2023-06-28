@@ -53,8 +53,6 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
 
         await protectedStorage.bigBrother.globalTrackers.reset();
         ring2PostMessage({ request: 'resetStateDone' });
-        /** @todo this is the place we want to reset our timers and resources */
-        // debugger;
         protectedStorage.console.debug("i made it here, somehow");
       }
     } catch (error) {

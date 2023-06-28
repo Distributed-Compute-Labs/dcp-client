@@ -53,25 +53,12 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type Array<GPUQueue> */
         this.queues = [];
 
-        /** @type Array<DOMHighResTimeStamp[]> */
-        this.submissionTimeQueue = [];
-
-        /** @type Array<number> */
-        this.outstandingCommands = [];
-
-        /** @type Array<ConditionVariable> */
-        this.outStandingCommandCondVars = [];
-
-        /** @type Array<ConditionVariable> */
-        /** @todo think of a better name */
-        this.commandLatches = [];
-
         /** @type TimeThing */
         this.webGPUIntervals = webGPUIntervals;
 
-        /** @type CancelationToken */
-        // stop "polling" on onSubmittedWorkDone once this is true
-        this.cancelationTokens = [];
+        // slaps roof, this thing can act as so many different concurrency primitives
+        /** @type Array<EventTarget> */
+        this.eventTargets = [];
       }
 
       /**
@@ -81,60 +68,31 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       add(queue)
       {
-        const idx = this.queues.length;
         this.queues.push(queue);
-        this.submissionTimeQueue.push([]);
-        this.outstandingCommands.push(0);
-        this.outStandingCommandCondVars.push(new ConditionVariable());
-        this.cancelationTokens.push(new CancelationToken());
 
-        // record how long the last submitted commands took. Standards guarantees that `onSubmittedWorkDone` is always
-        // in FIFO order.
-        const that = this;
-        const cancelToken = that.cancelationTokens.at(idx);
-        const recordTime = () => {
-          // this promise will also resolve immediately if they are no commands outstanding, so we need the condvar to
-          // avoid extra wakesups
-          const onLastSubmissionComplete = () => realOnSubmittedWorkDone.call(queue);
-          const waitUntilNewCommand = () => that.outStandingCommandCondVars.at(idx).wait();
-          const cancelOrWakeup = Promise.race(cancelToken, waitUntilNewCommand());
+        const eventTarget = new EventTarget();
+        eventTarget.addEventListener('submission', this.#recordCommandDuration);
+        this.eventTargets.push(eventTarget);
 
-          // this means someone wants to stop tracking for now, mostly likely because the queue is getting popped
-          if (cancelOrWakeup === CANCELED_TOKEN)
-            return;
-
-          onLastSubmissionComplete
-            .then(onLastSubmissionComplete)
-            .then(()=> {
-              // todo: explain rationale
-              that.outstandingCommands[idx] -= 1;
-
-              // get when was the last series of commands submitted
-              const lastSubmittedAt = that.popLastSubmittedTime(queue);
-
-              // should be rare but I'm paranoid
-              if (!lastSubmittedAt)
-                return;
-
-              const duration = (()=> {
-                const currentTime = performance.now();
-                const interval = new TimeInterval();
-                interval.overrideInterval(lastSubmittedAt, currentTime);
-                return interval;
-              })();
-              that.webGPUIntervals.push(duration);
-            })
-            // a little trick I learned with boost asio, this would *not* cause the stack to blow up. Since we only
-            // re-enter once the promise we chain our fate to is resolved, we are actually at most one level deep
-            .then(recordTime);
-        };
-
-        // mimics a background thread, we opt to use the micro task queue it gets serviced earlier, makes timing
-        // hopefully more accurate
-        recordTime();
         return queue;
       }
 
+      async #recordCommandDuration(customEvent)
+      {
+        const {submittedAt, gpuQueue, timeIntervals} = customEvent.detail;
+        // Since the standard guarantees this promise resolves in FIFO in line with submit, and we always queue up this
+        // promise immediately after someone submits, we are guaranteed to resolve to the promise corresponding to the
+        // commands they just submitted.
+        // When the user calls `onSubmittedWorkDone` from their work function, our promise will have already been
+        // resolved and theirs just resolves as soon as the event loop is free, they don't know anything had happened.
+        await realOnSubmittedWorkDone.call(gpuQueue);
+
+        const completedAt = performance.now();
+        const duration = new TimeInterval();
+        duration.overrideInterval(submittedAt, completedAt);
+
+        timeIntervals.push(duration);
+      }
 
       /**
        * Add a submission to the registry.
@@ -148,108 +106,62 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         // we assume the queue is always already in the registry, should be enforced by changing all the
         // places where a queue can be created to use the registry
         const idx = this.queues.indexOf(queue);
-        const submissionTimes = this.submissionTimeQueue.at(idx);
-        submissionTimes.push(performance.now());
+        const eventTarget = this.eventTargets.at(idx);
 
-        this.outstandingCommands[idx] += 1;
-
+        const submittedAt = performance.now();
         // actually submit on the underlying queue
         realSubmit.call(queue, commandBuffers);
 
-        // TODO: notifyOne should be enough right??
-        this.outStandingCommandCondVars.at(idx).notifyOne();
-      }
-
-
-      /**
-       * Get the last submission time for a queue in FIFO order. Our special GPUQueueTimingPromise can use
-       * this to determine an upperbournd for when the queue has finished executing the command buffers.
-       * 
-       * If the queue has not been submitted to, returns undefined.
-       * 
-       * @param {GPUQueue | String | string} queue the Queue you wish to submit to, or the label of the queue
-       * @returns {DOMHighResTimeStamp | undefined} the last submission time for the queue
-      */
-      popLastSubmittedTime(queue)
-      {
-        const idx = this.queues.indexOf(queue);
-        if (idx === -1)
-          return;
-
-        const submissionQueue = this.submissionTimeQueue.at(idx);
-        return submissionQueue?.shift();
+        // queues up a promise that calls `onSubmittedWorkDone` on the promise and record how long the command took
+        eventTarget.dispatchEvent(new CustomEvent('submission', {
+          detail: {
+            submittedAt: submittedAt,
+            gpuQueue: queue,
+            timeIntervals: this.webGPUIntervals,
+          }
+        }));
       }
 
       /** 
-       * Remove the queue, if exists, from our tracking, we will *flush all commands* by awaiting all of them to finish.
-       * Even if the work function might not explicitly need them, they are nevertheless taking up resources and hence
-       * they *will be tracked*.
-       *
-       * I'm inclined to say call this without await is almost always wrong
-       * @function popQueue
+       * *Immediately* removes the queue from metric tracking, it's *your* responsibility to ensure that there won't be
+       * any new commands submitted.
        */
-      async popQueue(queue)
+      unsafePopQueue(queue)
       {
         const idx = this.queues.indexOf(queue);
-
         /** @todo most likely a bug, consider logging */
         if (idx === -1)
           return;
 
-        // cancel the normal "thread" that is responsible for tracking
-        const token = this.cancelationTokens.at(idx);
-        token.cancel();
-
-        // now we try to flush the gpu commands
-        /** @todo *consider* (not acting immediately) refactoring the common parts out */
-        while (this.outstandingCommands[idx] !== 0)
-        {
-          await queue.onSubmittedWorkDone();
-          this.outstandingCommands[idx] -= 1;
-
-          // get when was the last series of commands submitted
-          const lastSubmittedAt = this.popLastSubmittedTime(queue);
-
-          // should be rare but I'm paranoid
-          if (!lastSubmittedAt)
-            return;
-
-          const duration = (() => {
-            const currentTime = performance.now();
-            const interval = new TimeInterval();
-            interval.overrideInterval(lastSubmittedAt, currentTime);
-            return interval;
-          })();
-          this.webGPUIntervals.push(duration);
-        }
-
-        // now that that all commands are flushed, we can safely remove it
+        // remove the listener and drop all references to the `EventTarget`, GC will clean it up
+        eventTarget.removeEventListener('submission', this.#recordCommandDuration);
         this.queues.splice(idx);
-        this.submissionTimeQueue.splice(idx);
-        this.outstandingCommands.splice(idx);
-        this.outStandingCommandCondVars.splice(idx);
-        this.commandLatches.splice(idx);
+        this.eventTargets.splice(idx);
 
         /** @todo it's really not great, we are calling reset() in both places, and they only don't crap themselves
          * because of the careful ordering, definitely need a better design
          */
-        this.webGPUIntervals.reset();
-        this.cancelationTokens.splice(idx);
+        /** @todo do we event want this????? */
+        // this.webGPUIntervals.reset();
       }
 
+      async waitAllCommandToFinish()
+      {
+        return await Promise.allSettled(this.queues.map((q) => q.onSubmittedWorkDone()));
+      }
 
-      async reset()
+      reset()
       {
         // why are we making a copy? Because popQueue modifies the queue and if you just do a naive raw loop you end
         // up with modification during iteration
         const queues = [...this.queues];
 
-        // no this cannot be done concurrently via Promise.all because each call rely on the idx being stable
         for (const queue in queues)
-          await this.popQueue(queue);
+          this.unsafePopQueue(queue);
       }
     }
 
+    const realGPUDeviceDestory = GPUDevice.prototype.detroy;
 
     /**
      * @class GlobalTrackers
@@ -285,20 +197,39 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         // TODO: decouple this
         this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
+
+        /** @type {Array<GPUDevice>} */
+        // Why is this a list?
+        // Because you can get more than one devices by requesting with different adapter options
+        // 
+        // Why do we need to keep track of it?
+        // So we can call `destroy` on it when we wish to reset our tracking state 
+        this.gpuDevices = [];
       }
 
 
       /**
        * Reset the all the tracked time intervals. Unfinished intervals are simply dropped without a concern why they
        * were not finished
+       *
+       * SAFETY:
+       * You must only call this *after* the work function has completed, because this will invalidate all gpu resources.
        * @function {reset}
        */
       async reset()
       {
-        // 1. very important that this is called before resetting the intervals themselves
-        // 2. very important that we must await this to completion before trying to reset the intervals
-        // the reason to both restrict above is basically race conditions, it's really not great
-        await this.webGPUQueueRegistery.reset();
+        // remove them first before clearing the commands
+        for (const device of this.gpuDevices)
+          realGPUDeviceDestory.call(device);
+
+        // flush all commands that were already enqueued, i.e. they could not be canceled via the destory() all
+        await this.webGPUQueueRegistery.waitAllCommandToFinish();
+        this.gpuDevices = [];
+
+        /** @todo not true anymore if we go with the new design, consider removing the comments */
+        // very important that this is called before resetting the intervals themselves since the registry hold
+        // references to the intervals below
+        this.webGPUQueueRegistery.reset();
 
         // it's *very* important that we delegate the work of resetting to the intervals rather than just assigning each
         // of them with new instances. These `TimeThing`s are being shared to different modules, if we just re-assign,
