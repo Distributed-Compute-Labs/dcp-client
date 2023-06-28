@@ -24,11 +24,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const TimeThing = protectedStorage.TimeThing;
     /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
     const TimeInterval = protectedStorage.TimeInterval;
-    /** @typedef {import("./condition-variable.js").ConditionVariable} ConditionVariable */
-    const ConditionVariable = protectedStorage.ConditionVariable;
-    /** @typedef {import("./cancelation-token.js").CancelationToken} CancelationToken */
-    const CancelationToken = protectedStorage.CancelationToken;
-    const CANCELED_TOKEN = protectedStorage.CANCELED_TOKEN;
 
 
     // TODO: hide this better
