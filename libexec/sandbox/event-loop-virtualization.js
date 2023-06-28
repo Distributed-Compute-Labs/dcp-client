@@ -343,7 +343,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = true;
-      serviceEvents.sliceIsFinished = false;
 
       serviceEvents.interval = new protectedStorage.TimeInterval();
       cpuTimer.push(serviceEvents.interval);
@@ -384,7 +383,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         serviceEvents.servicing = false;
         serviceEvents.interval.stop();
 
-        if (!serviceEvents.sliceIsFinished && events.length)
+        if (events.length)
         {
           serviceEvents.nextTimeout = events[0].when
           serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - performance.now());
@@ -557,7 +556,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = false;
-      serviceEvents.sliceIsFinished = false;
     }
 
     protectedStorage.clearAllTimers = clearAllTimers;
