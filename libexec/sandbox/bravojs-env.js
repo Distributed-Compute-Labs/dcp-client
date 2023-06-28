@@ -179,8 +179,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     const globalTracker = protectedStorage.bigBrother.globalTrackers;
     const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
-    // protectedStorage.clearAllTimers();
+    protectedStorage.console.info({ total, webGL, webGPU, CPU });
     ring3PostMessage({ request: 'measurement', data: { total, webGL, webGPU, CPU } });
+    await protectedStorage.bigBrother.globalTrackers.reset();
   }
 
   /* Report an error from the work function to the supervisor */
@@ -251,7 +252,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try { flushLastLog(); } catch(e) {};
     try
     {
+      // unfortunately, this cannot be call after locking the timers since our promise kick continuation to the next
+      // round of event 
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
+
       // TODO: think about which setTimeout to use, it seems if the user uses up resources on the machine, they should
       // be charged, even for lingering microtasks. After all, most likely we didn't intentionally cause them.
       await new Promise(r => {

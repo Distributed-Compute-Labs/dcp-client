@@ -51,7 +51,6 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         indeterminateProgress = true;
         flushedLastConsoleMessage = false;
 
-        await protectedStorage.bigBrother.globalTrackers.reset();
         ring2PostMessage({ request: 'resetStateDone' });
         protectedStorage.console.debug("i made it here, somehow");
       }

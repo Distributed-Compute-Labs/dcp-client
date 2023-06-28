@@ -203,6 +203,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
 
 
+      async flushGPUCommands()
+      {
+        
+      }
+
       /**
        * Reset the all the tracked time intervals. Unfinished intervals are simply dropped without a concern why they
        * were not finished
@@ -216,9 +221,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         // remove them first before clearing the commands
         for (const device of this.gpuDevices)
           realGPUDeviceDestory.call(device);
-
-        // flush all commands that were already enqueued, i.e. they could not be canceled via the destory() all
-        await this.webGPUQueueRegistery.waitAllCommandToFinish();
         this.gpuDevices = [];
 
         /** @todo not true anymore if we go with the new design, consider removing the comments */
@@ -244,6 +246,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       async getMetrics()
       {
+        // remove them first before clearing the commands
+        for (const device of this.gpuDevices)
+          realGPUDeviceDestory.call(device);
+
+        // flush all commands that were already enqueued
+        await this.webGPUQueueRegistery.waitAllCommandToFinish();
+
         // TODO: Ryan said CPU should also include the WASM time
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();
@@ -344,8 +353,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       // todo: there is almost certainly a bug
       if (!event)
+      {
+        // debugger;
         return;
-      // debugger;
+      }
       if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
       {
         serviceEvents.executingTimeout = realSetTimeout(() => {
@@ -384,6 +395,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: find a better way to export this
     protectedStorage.serviceEvents = serviceEvents;
 
+    // unsafe because it will drop you in the debugger if you didn't push a FauxEvent in the events array   
+    protectedStorage.unsafeServiceEvents = serviceEvents;
     /** Execute callback after at least timeout ms. 
      * 
      *  @param    callback          {function} Callback function to fire after a minimum callback time
