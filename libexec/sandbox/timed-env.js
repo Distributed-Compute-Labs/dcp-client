@@ -87,10 +87,17 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
-      return new TimedPromise.fromExistingPromiseFunction(fn.bind(this, ...args), (duration) =>
-      {
+      const duration = new TimeInterval();
+      const original = new TimedPromise((resolve) => {
+        resolve(fn.bind(this, ...args));
+      });
+
+      original.then(() => {
+        duration.stop();
         webGPUTimer.push(duration);
       });
+
+      return original;
     }
   }
 

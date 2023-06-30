@@ -313,7 +313,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       const timedCallback = () => {
         const duration = new TimeInterval();
         const ret = callback(...arg);
-        duration.end();
+        duration.stop();
         cpuTimer.push(duration);
         return ret;
       };
@@ -356,7 +356,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       const timedCallback = () => {
         const duration = new TimeInterval();
         const ret = callback(...arg);
-        duration.end();
+        duration.stop();
         cpuTimer.push(duration);
         return ret;
       };
@@ -395,7 +395,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       const timedCallback = () => {
         const duration = new TimeInterval();
         const ret = callback(...arg);
-        duration.end();
+        duration.stop();
         cpuTimer.push(duration);
         return ret;
       };
@@ -410,9 +410,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
     {
       const timedCallback = () => {
+        protectedStorage.console.debug("look ma! FIFO!");
         const duration = new TimeInterval();
         const ret = callback();
-        duration.end();
+        duration.stop();
         cpuTimer.push(duration);
         return ret;
       };

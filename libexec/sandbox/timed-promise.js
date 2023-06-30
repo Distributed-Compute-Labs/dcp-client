@@ -73,14 +73,14 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           try
           {
             const promise = promiseFn();
-            duration.end();
+            duration.stop();
 
             that.recordTime(duration);
             resolve(promise);
           }
           catch (error)
           {
-            duration.end();
+            duration.stop();
 
             that.recordTime(duration);
             reject(error);
