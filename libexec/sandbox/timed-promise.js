@@ -14,13 +14,31 @@
 
 self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(protectedStorage)
 {
+  /** @todo think about how to not use global variables */
   const TimeInterval = protectedStorage.TimeInterval;
-  const RealPromise = Promise.prototype.constructor;
   const cpuIntervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
+
+  const RealPromise = Promise.prototype.constructor;
   const realThen = Promise.prototype.then;
   const realCatch = Promise.prototype.catch;
   const realFinally = Promise.prototype.finally;
+  
+  const recordOnCPU = (duration) => {
+    cpuIntervals.push(duration);
+  };
 
+  function makeTimed(fn, recorder)
+  {
+    return function(...args)
+    {
+      const duration = new TimeInterval();
+      const ret = fn(...args);
+      duration.stop();
+      recorder(duration);
+
+      return ret;
+    }
+  }
   /**
    * TODO: actually think about how this is used and what are the implications
    *
@@ -107,21 +125,19 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
-          const duration = new TimeInterval();
-          const ret = onFulfilled(resolvedValue);
-          duration.stop();
-          cpuIntervals?.push(duration);
-
-          return ret;
+          const timed = makeTimed(
+            () => onFulfilled(resolvedValue),
+            recordOnCPU
+          );
+          return timed();
         }),
         (rejectedReason) =>
         {
-          const duration = new TimeInterval();
-          const ret = onRejected(rejectedReason);
-          duration.stop();
-          cpuIntervals?.push(duration);
-
-          return ret;
+          const timed = makeTimed(
+            () => onRejected(rejectedReason),
+            recordOnCPU
+          );
+          return timed();
         }
       );
     }
@@ -135,13 +151,11 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
      */
     catch(onRejected)
     {
-      return realThen.call(this.wrapped, (undefined, (rejectedReason) =>
+      return realCatch.call(this.wrapped, (rejectedReason) =>
       {
-        return new TimedPromise((_resolve, reject) =>
-        {
-          reject(onRejected(rejectedReason));
-        })
-      }));
+        const timed = makeTimed(() => onRejected(rejectedReason), recordOnCPU);
+        return timed();
+      });
     }
 
     /**
@@ -156,8 +170,10 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
      */
     finally(onFinally)
     {
-      // TODO: finally is some of the most stupid aspect of using exception as the general error handling mechanism
-      throw new Error('Not implemented (yet)');
+      realFinally.call(this.wrapped, () => {
+        const timed = makeTimed(onFinally, recordOnCPU);
+        return timed;
+      });
     }
   }
 
@@ -167,5 +183,4 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     ...protectedStorage.bigBrother,
     TimedPromise: TimedPromise,
   };
-}
-);
+});
