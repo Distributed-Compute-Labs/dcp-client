@@ -18,7 +18,7 @@
 
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
-  (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, protecedStorage)
+  (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate, realQueueMicrotask, protectedStorage)
   {
     /** @typedef {import("./timer-classes.js").TimeThing} TimeThing */
     const TimeThing = protectedStorage.TimeThing;
@@ -29,7 +29,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: hide this better
     // TODO: perhaps we should grab it not via gloablThis
     // stash a copy so we don't end up recursively calling with no base case
-    debugger;
     const realSubmit = globalThis.GPUQueue.prototype.submit;
     const realOnSubmittedWorkDone = globalThis.GPUQueue.prototype.onSubmittedWorkDone;
 
@@ -203,12 +202,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         this.gpuDevices = [];
       }
 
-
-      async flushGPUCommands()
-      {
-        
-      }
-
       /**
        * Reset the all the tracked time intervals. Unfinished intervals are simply dropped without a concern why they
        * were not finished
@@ -275,142 +268,27 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       globalTrackers: new GlobalTrackers()
     };
 
-    /** 
-     * //TODO: figure out how the result slot return interact with if the function throws an error 
-     * @class       FauxEvent
-     * @classdesc   Class that represents an event on the event loop
-     * @property {string} eventType - the type of event (timer, immediate, interval)
-     * @property {function} fn - the function to be executed
-     * @property {Array} args - the arguments to be passed to the function
-     * @property {number} when - the time at which the event should be executed
-     * @property {boolean} recur - whether the event should be executed repeatedly
-     * @property {number} serial - the serial number of the event
-     * @property {any} returnSlot - the result of application of fn(args) is stored here
-     * // TODO: figure out how it interact with thrown errors
-     * @property {function} callback - the callback to be executed when the event is complete, we only support closures
-     * that takes no arguments
-     */
-    class FauxEvent
-    {
-      constructor(eventType, fn, args, when, recur, serial, callback)
-      {
-        this.eventType = eventType;
-        this.fn = fn;
-        this.args = args;
-        this.when = when;
-        this.recur = recur;
-        this.serial = serial;
-        this.returnSlot = undefined;
-
-        // should we ensure the callback is actually a funciton and not something else?
-        // yes, we should, but JS is weekly typed and RTTI might not be cheap 
-        if (callback === undefined || callback === null)
-        {
-          // noop
-          this.callback = () => {};
-        }
-        else
-        {
-          this.callback = callback;
-        }
-      }
-    }
-
     // TODO: hide this for the final few layers that should not be allowed to see it
-    const events = [];
-    protectedStorage.events = events;
-
-    protectedStorage.FauxEvent = FauxEvent;
     // TODO: create a nice intereface so we're not just pulling the guts out all the time
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
-    events.serial = 0;
     let timersLocked = false;
 
     protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
     protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
 
-    function sortEvents()
-    {
-      events.sort(function(a, b) { return a.when - b.when; });
-    }
 
-    /*
-     * Assumption: serviceEvents must only be triggered if there is an event waiting to
-     * be run. If there are no pending events (or the last one is removed), the trigger 
-     * to call serviceEvents next should be removed.
-    */
-    function serviceEvents()
-    {
-      serviceEvents.nextServiceEventTask = null;
+    /** @todo think about a place to cancel all of them once the work function is finished */
 
-      // nextUserTimeout link to the next user requested timeout, never our internal `endOfRealEventCycle` task
-      serviceEvents.nextUserTimeout = null;
-      serviceEvents.servicing = true;
 
-      serviceEvents.interval = new protectedStorage.TimeInterval();
-      cpuTimer.push(serviceEvents.interval);
-
-      sortEvents();
-      const event = events.shift();
-
-      // todo: there is almost certainly a bug
-      if (!event)
-      {
-        // protectedStorage.console.warn("serviceEvents were called yet no FauxEvent were queued");
-        return;
-      }
-
-      if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
-      {
-        serviceEvents.executingTimeout = realSetTimeout(() => {
-          // TODO: someone prove the following interacts correctly with `this` value nonsense
-          // store the result of the function in the event so it can be accessed later
-          event.returnSlot = event.fn(...event.args);
-          if (event.callback)
-          {
-            event.callback();
-          }
-        }, 0);
-        if (event.recur)
-        {
-          event.when = performance.now() + event.recur;
-          events.push(event);
-          sortEvents();
-        }
-      }
-      // Can add handles for events to the event loop as needed (ie messages)
-
-      // Measure the time on the event loop after everything has executed
-      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle);
-      function endOfRealEventCycle()
-      {
-        serviceEvents.servicing = false;
-        serviceEvents.interval.stop();
-
-        if (events.length > 0)
-        {
-          serviceEvents.nextUserTimeout = events[0].when
-
-          // if there are more user events to be done, queue up another `serviceEvents`   
-          /** @todo why is this not just a setTimeout with 0? */
-          serviceEvents.nextServiceEventTask = realSetTimeout(serviceEvents, events[0].when - performance.now());
-        }
-      }
-    }
-
-    // TODO: find a better way to export this
-    protectedStorage.serviceEvents = serviceEvents;
-
-    // unsafe because it will drop you in the debugger if you didn't push a FauxEvent in the events array   
-    protectedStorage.unsafeServiceEvents = serviceEvents;
     /** Execute callback after at least timeout ms. 
      * 
+     *  @todo update doc
      *  @param    callback          {function} Callback function to fire after a minimum callback time
      *  @param    timeout           {int} integer containing the minimum time to fire callback in ms
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
-    setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg)
+    self.setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, ...arg)
     {
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
@@ -419,94 +297,32 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         return {};
       }
 
-      timeout = timeout || 0;
-      let timer, args;
-      if (typeof callback === 'string')
-      {
-        let code = callback;
-        callback = function eventLoop$$Worker$setTimeout$wrapper()
+      callback = (() => {
+        if (typeof callback === 'string')
         {
-          let indirectEval = eval;
-          return indirectEval(code);
+          const indirectEval = eval;
+          return () => indirectEval(callback);
         }
-      }
+        else
+        {
+          return callback;
+        }
+      })();
 
-      // if user supplies arguments, apply them to the callback function
-      if (arg)
-      {
-        args = Array.prototype.slice.call(arguments); // get a plain array from function arguments
-        args = args.slice(2);                         // slice the first two elements (callback & timeout), leaving an array of user arguments
-        let fn = callback;
-        callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
-      }
-      else
-      {
-        // TODO: else statement considered harmful, simplify
-        args = [];
-      }
+      /** @todo think about the stupid `this`  */
+      const timedCallback = () => {
+        const duration = new TimeInterval();
+        const ret = callback(...arg);
+        duration.end();
+        cpuTimer.push(duration);
+        return ret;
+      };
 
-      events.serial = Number(events.serial) + 1;
-      timer = new FauxEvent('timer', callback, args, performance.now() + (Number(timeout) || 0), false, events.serial);
-      events.push(timer);
-      sortEvents();
-      
-
-      if (serviceEvents.servicing) return timer;
-
-      // if the current call to request a timeout is will be the only task
-      if (serviceEvents.nextUserTimeout && serviceEvents.nextUserTimeout > events[0].when)
-        realClearTimeout(serviceEvents.nextServiceEventTask);
-
-      /** @todo why is this not just a setTimeout with 0? */
-      realSetTimeout(serviceEvents, events[0].when - performance.now());
-
-      return timer;
+      return realSetTimeout(timedCallback, timeout);
     }
 
     /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
     protectedStorage.setTimeout = setTimeout;
-
-    /** Remove a timeout from the list of pending timeouts, regardless of its current
-     *  status.
-     * 
-     *  @param    timeoutId         {object} The value, returned from setTimeout(), identifying the timer.
-     */
-    clearTimeout = function eventLoop$$Worker$clearTimeout(timeoutId)
-    {
-      // seems like this is just fixing some invariant??
-      function checkService()
-      {
-        if (!serviceEvents.servicing)
-        {
-          realClearTimeout(serviceEvents.nextServiceEventTask);
-          if (events.length)
-            /** @todo why is this not just a setTimeout with 0? */
-            realSetTimeout(serviceEvents, events[0].when - performance.now())
-        }
-      }
-
-      if (typeof timeoutId === 'object')
-      {
-        let i = events.indexOf(timeoutId);
-        if (i !== -1)
-          events.splice(i, 1);
-        if (i === 0)
-          checkService()
-      }
-      else if (typeof timeoutId === 'number')
-      { /* slow path - object has been reinterpreted in terms of valueOf() */
-        for (let i = 0; i < events.length; i++)
-        {
-          if (events[i].serial === timeoutId)
-          {
-            events.splice(i, 1);
-            if (i === 0)
-              checkService()
-            break;
-          }
-        }
-      }
-    }
 
     /** Execute callback after at least interval ms, regularly, at least interval ms apart.
      * 
@@ -515,11 +331,37 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearInterval()
      */
-    setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg)
+    self.setInterval = function eventLoop$$Worker$setInterval(callback, interval, ...arg)
     {
-      let timer = setTimeout(callback, Number(interval) || 0, arg);
-      timer.recur = interval;
-      return timer;
+      // Work function has resolved, Don't let client init any new timeouts.
+      if (timersLocked)
+      {
+        protectedStorage.console.warn("timeout request after the event loop is locked");
+        return {};
+      }
+
+      callback = (() => {
+        if (typeof callback === 'string')
+        {
+          const indirectEval = eval;
+          return () => indirectEval(callback);
+        }
+        else
+        {
+          return callback;
+        }
+      })();
+
+      /** @todo think about the stupid `this`  */
+      const timedCallback = () => {
+        const duration = new TimeInterval();
+        const ret = callback(...arg);
+        duration.end();
+        cpuTimer.push(duration);
+        return ret;
+      };
+
+      return realSetInterval(timedCallback, interval);
     }
     /** Execute callback after 0 ms, immediately when the event loop allows.
      * 
@@ -527,52 +369,59 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
      */
-    setImmediate = function eventLoop$$Worker$setImmediate(callback, arg)
+    self.setImmediate = function eventLoop$$Worker$setImmediate(callback, ...arg)
     {
-      let timer = setTimeout(callback, 0, arg);
-      return timer;
-    }
 
-    /** Remove an interval timer from the list of pending interval timers, regardless of its current
-     *  status. (Same as clearTimeout)
-     *
-     *  @param    intervalId         {object} The value, returned from setInterval(), identifying the timer.
-     */
-    clearInterval = clearTimeout;
-    clearImmediate = clearTimeout
+      // Work function has resolved, Don't let client init any new timeouts.
+      if (timersLocked)
+      {
+        protectedStorage.console.warn("timeout request after the event loop is locked");
+        return {};
+      }
+
+      callback = (() => {
+        if (typeof callback === 'string')
+        {
+          const indirectEval = eval;
+          return () => indirectEval(callback);
+        }
+        else
+        {
+          return callback;
+        }
+      })();
+
+      /** @todo think about the stupid `this`  */
+      const timedCallback = () => {
+        const duration = new TimeInterval();
+        const ret = callback(...arg);
+        duration.end();
+        cpuTimer.push(duration);
+        return ret;
+      };
+
+      return realSetImmediate(timedCallback);
+    }
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
      *  @param    callback          {function} Callback function to fire
      */
-    queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
+    self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
     {
-      Promise.resolve().then(callback);
-    }
+      const timedCallback = () => {
+        const duration = new TimeInterval();
+        const ret = callback();
+        duration.end();
+        cpuTimer.push(duration);
+        return ret;
+      };
 
-    function clearAllTimers()
-    {
-      events.length = 0;
-      realClearTimeout(serviceEvents.nextServiceEventTask);
-      realClearTimeout(serviceEvents.measurerTimeout);
-      realClearTimeout(serviceEvents.executingTimeout);
-      serviceEvents.nextServiceEventTask = null;
-      serviceEvents.nextUserTimeout = null;
-      serviceEvents.servicing = false;
+      return realQueueMicrotask(timedCallback);
     }
-
-    protectedStorage.clearAllTimers = clearAllTimers;
 
     // TODO: yes the name is very stupid
     protectedStorage.bonaFideSetTimeout = realSetTimeout;
-  })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, protectedStorage);
-
-  self.setTimeout = setTimeout;
-  self.setInterval = setInterval;
-  self.setImmediate = setImmediate;
-  self.clearTimeout = clearTimeout;
-  self.clearInterval = clearInterval;
-  self.clearImmediate = clearImmediate;
-
-  debugger;
+    protectedStorage.timedQueueMicrotask = queueMicrotask;
+  })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, self.queueMicrotask, protectedStorage);
 });

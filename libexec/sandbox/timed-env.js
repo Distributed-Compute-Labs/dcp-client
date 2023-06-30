@@ -32,7 +32,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const wasmTimer = globalTrackers.wasmIntervals;
   const cpuTimer = globalTrackers.cpuIntervals;
   const webGPUTimer = globalTrackers.webGPUIntervals;
-  
+
 
   protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
   {
@@ -44,10 +44,11 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   /**
    * @returns {boolean} 
    */
-  protectedStorage.hasWebglSupport = function webglSupport() {
+  protectedStorage.hasWebglSupport = function webglSupport()
+  {
     try
     {
-      const canvas = new OffscreenCanvas(1,1);
+      const canvas = new OffscreenCanvas(1, 1);
       return Boolean(canvas.getContext('webgl') || canvas.getContext('webgl2'));
     }
     catch
@@ -73,17 +74,23 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
     return function(...args)
     {
-      return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WASM');
+      return new TimedPromise.fromExistingPromiseFunction(fn.bind(this, ...args), (duration) =>
+      {
+        /** @todo add tracking */
+      });
     }
   }
-  
+
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUFunction(fn)
   {
     // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
-      return new TimedPromise(globalTrackers, fn.bind(this, ...args), 'WebGPU');
+      return new TimedPromise.fromExistingPromiseFunction(fn.bind(this, ...args), (duration) =>
+      {
+        webGPUTimer.push(duration);
+      });
     }
   }
 
@@ -98,7 +105,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
       const duration = new TimeInterval();
       const ret = fn.call(this, ...args);
       duration.stop();
- 
+
       webGPUIntervals.push(duration);
       return ret;
     }
@@ -221,16 +228,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     if (!self[GPUClass].prototype)
       return;
 
-    // const wrappedPromiseReturningFunctions = Object.keys(self[GPUClass].prototype)
-    //   .filter((prop) => promiseReturningFunctions.has(prop))
-    //   .map((prop) => self[GPUClass].prototype[prop])
-    //   .map((fn) => liftWebGPUFunction(fn));
-    //
-    // const wrappedBlockingFunctions = Object.keys(self[GPUClass].prototype)
-    //   .filter((prop) => blockingFunctions.has(prop))
-    //   .map((prop) => self[GPUClass].prototype[prop])
-    //   .map((fn) => wrapWebGPUFunction(fn));
-
     // self[GPUClass].prototype = { ...self[GPUClass].prototype, wrappedBlockingFunctions, wrappedPromiseReturningFunctions };
     for (let prop of Object.keys(self[GPUClass].prototype))
     {
@@ -248,7 +245,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     }
   }
 
-  if (self.OffscreenCanvas && new OffscreenCanvas(1,1))
+  if (self.OffscreenCanvas && new OffscreenCanvas(1, 1))
   {
     /**
      *  Wrap webGL function for a given context. The wrapper will add a time interval to the
@@ -260,7 +257,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     function timeWebGLFunction(context, prop)
     {
       const originalFn = context[prop].bind(context);
-      
+
       context[prop] = function wrappedWebGLFunction(...args)
       {
         let returnValue;
@@ -268,10 +265,10 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
         webGLTimer.push(interval);
         try
         {
-          returnValue =  originalFn(...args);
+          returnValue = originalFn(...args);
           interval.stop();
         }
-        catch(e)
+        catch (e)
         {
           interval.stop();
           throw e;
@@ -279,7 +276,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
         return returnValue;
       }
     }
-  
+
     /* Update all functions on the OffscreenCanvas getContext prototype to have timers */
     const oldGetContext = OffscreenCanvas.prototype.getContext;
     OffscreenCanvas.prototype.getContext = function(type, options)
@@ -299,7 +296,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const originalGPUQueue = GPUQueue;
   const originalSubmit = GPUQueue.prototype.submit;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
-  const originalRequestDevice = GPUAdapter.prototype.requestDevice; 
+  const originalRequestDevice = GPUAdapter.prototype.requestDevice;
 
   // some of them will get re-wrapped, that's fine, we always refer to the original function
   const requiredWrappingGPUClasses = [
@@ -320,17 +317,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     'GPUCanvasContext',
   ];
 
-  // // TODO: do we know the queue always point to the same one?
-  // // currently, the only queue exposed is the default queue
-  // const defaultQueue = await (async () => {
-  //   const adapter = await navigator.gpu.requestAdapter();
-  //   const device = await adapter.requestDevice();
-  //   return device.queue;
-  // })();
-  //
-  // if (defaultQueue)
-  //   globalTrackers.webGPUQueueRegistery.add(defaultQueue);
-
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
 
   // currently, the only queue exposed is the default queue
@@ -341,7 +327,8 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     return device;
   }
 
-  GPUQueue.prototype.constructor = function ctor(...args) {
+  GPUQueue.prototype.constructor = function ctor(...args)
+  {
     const queueConstructor = originalGPUQueue.bind(this);
     const queue = new queueConstructor(...args);
 
@@ -351,7 +338,7 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     return queue;
   }
 
- 
+
   // TODO: add doc
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
