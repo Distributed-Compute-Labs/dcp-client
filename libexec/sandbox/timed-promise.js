@@ -114,47 +114,18 @@ self.wrapScriptLoading( { scriptName: "timed-promise" }, function timedPromise(p
         return (
           this.wrapped.then.call(this.wrapped, (resolvedValue) => {
             // force the continuation to kick off another round of event loop
-            const continuation = (resolution) => onFulfilled(resolution);
-            events.serial = Number(events.serial) + 1;
-            const event = new FauxEvent(
-              "timed-promise-continuation",
-              continuation,
-              [resolvedValue],
-              performance.now(),
-              undefined,
-              events.serial
-            );
-            events.push(event);
-            // console.debug(event);
-
             // exploit the fact that if the continuation of a `then` returns a promise, we get a Promose<T> rather than
             // Promise<Promise<T>>, this is the part of Promise that make it technically not a monad
             return new Promise((resolve, _reject) => {
-              // yes this is very much a hack
-              event.callback = resolve;
-              bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
-            }).then(Promise.resolve(event.returnSlot));
+              protectedStorage.setTimeout(() => resolve(onFulfilled(resolvedValue))); 
+            })
           }),
           (rejectedReason) => {
             // force the continuation to kick off another round of event loop
-            const continuation = (reason) => onRejected(reason);
-            events.serial = Number(events.serial) + 1;
-            const event = new FauxEvent(
-              "timed-promise-continuation",
-              continuation,
-              [rejectedReason],
-              performance.now(),
-              undefined,
-              events.serial
-            );
-            events.push(event);
-            bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
-
             // TODO: does it actually work with stupid exceptions?
             return new Promise((_resolve, reject) => {
-              event.callback = reject;
-              bonaFideSetTimeout(protectedStorage.serviceEvents, 0);
-            }).then(Promise.reject(event.returnSlot));
+              protectedStorage.setTimeout(() => reject(onRejected(resolvedValue))); 
+            });
           }
         );
       }

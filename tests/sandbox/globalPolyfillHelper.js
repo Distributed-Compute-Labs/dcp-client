@@ -12,7 +12,6 @@
 
 
 const fs = require('fs');
-
 /**
  * Initializes the global scope by evaluating a list of files. Typically,
  * sandbox initialization files to setup necessary symbols to run test.
@@ -71,8 +70,7 @@ exports.init = function init(files, outputTesting)
         process.nextTick(() => cb.call(null, data));
   }
 
-  const indirectEval = eval
-  indirectEval(code)
+  eval(code);
   // At this point a very primitive version of the evaluator exists - all global symbols defined in
   // by the supplied evaluator scripts 'files' exist/are overwritten in the global scope.
   // Tests can now use such symbols, or event listeners that would be set up by the files to run tests over them.

@@ -29,6 +29,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: hide this better
     // TODO: perhaps we should grab it not via gloablThis
     // stash a copy so we don't end up recursively calling with no base case
+    debugger;
     const realSubmit = globalThis.GPUQueue.prototype.submit;
     const realOnSubmittedWorkDone = globalThis.GPUQueue.prototype.onSubmittedWorkDone;
 
@@ -340,8 +341,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     */
     function serviceEvents()
     {
-      serviceEvents.timeout = null;
-      serviceEvents.nextTimeout = null;
+      serviceEvents.nextServiceEventTask = null;
+
+      // nextUserTimeout link to the next user requested timeout, never our internal `endOfRealEventCycle` task
+      serviceEvents.nextUserTimeout = null;
       serviceEvents.servicing = true;
 
       serviceEvents.interval = new protectedStorage.TimeInterval();
@@ -353,9 +356,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       // todo: there is almost certainly a bug
       if (!event)
       {
-        // debugger;
+        // protectedStorage.console.warn("serviceEvents were called yet no FauxEvent were queued");
         return;
       }
+
       if (event.eventType === 'timer' || event.eventType === 'timed-promise-continuation')
       {
         serviceEvents.executingTimeout = realSetTimeout(() => {
@@ -383,10 +387,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         serviceEvents.servicing = false;
         serviceEvents.interval.stop();
 
-        if (events.length)
+        if (events.length > 0)
         {
-          serviceEvents.nextTimeout = events[0].when
-          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - performance.now());
+          serviceEvents.nextUserTimeout = events[0].when
+
+          // if there are more user events to be done, queue up another `serviceEvents`   
+          /** @todo why is this not just a setTimeout with 0? */
+          serviceEvents.nextServiceEventTask = realSetTimeout(serviceEvents, events[0].when - performance.now());
         }
       }
     }
@@ -407,7 +414,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     {
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
+      {
+        protectedStorage.console.warn("timeout request after the event loop is locked");
         return {};
+      }
 
       timeout = timeout || 0;
       let timer, args;
@@ -443,18 +453,12 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       if (serviceEvents.servicing) return timer;
 
-      if (!serviceEvents.nextTimeout)
-      {
-        realSetTimeout(serviceEvents, events[0].when - performance.now());
-      }
-      else
-      {
-        if (serviceEvents.nextTimeout > events[0].when) {
-          realClearTimeout(serviceEvents.timeout);
-          debugger;
-          realSetTimeout(serviceEvents, events[0].when - performance.now());
-        }
-      }
+      // if the current call to request a timeout is will be the only task
+      if (serviceEvents.nextUserTimeout && serviceEvents.nextUserTimeout > events[0].when)
+        realClearTimeout(serviceEvents.nextServiceEventTask);
+
+      /** @todo why is this not just a setTimeout with 0? */
+      realSetTimeout(serviceEvents, events[0].when - performance.now());
 
       return timer;
     }
@@ -469,19 +473,18 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     clearTimeout = function eventLoop$$Worker$clearTimeout(timeoutId)
     {
+      // seems like this is just fixing some invariant??
       function checkService()
       {
         if (!serviceEvents.servicing)
         {
+          realClearTimeout(serviceEvents.nextServiceEventTask);
           if (events.length)
-          {
-            realClearTimeout(serviceEvents.timeout);
+            /** @todo why is this not just a setTimeout with 0? */
             realSetTimeout(serviceEvents, events[0].when - performance.now())
-          }
-          else
-            realClearTimeout(serviceEvents.timeout);
         }
       }
+
       if (typeof timeoutId === 'object')
       {
         let i = events.indexOf(timeoutId);
@@ -550,11 +553,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     function clearAllTimers()
     {
       events.length = 0;
-      realClearTimeout(serviceEvents.timeout);
+      realClearTimeout(serviceEvents.nextServiceEventTask);
       realClearTimeout(serviceEvents.measurerTimeout);
       realClearTimeout(serviceEvents.executingTimeout);
-      serviceEvents.timeout = null;
-      serviceEvents.nextTimeout = null;
+      serviceEvents.nextServiceEventTask = null;
+      serviceEvents.nextUserTimeout = null;
       serviceEvents.servicing = false;
     }
 
@@ -570,4 +573,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   self.clearTimeout = clearTimeout;
   self.clearInterval = clearInterval;
   self.clearImmediate = clearImmediate;
+
+  debugger;
 });
