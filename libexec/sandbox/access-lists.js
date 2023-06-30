@@ -79,6 +79,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'propertyIsEnumerable',
     'Proxy',
     'pt0',
+    'queueMicrotask',
     'RangeError',
     'ReferenceError',
     'Reflect',
