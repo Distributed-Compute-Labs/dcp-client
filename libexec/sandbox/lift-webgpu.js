@@ -1,30 +1,4 @@
-/**
- *  @file       unique-timing.js
- *              Copyright (c) 2022, Distributive, Ltd.
- *              All Rights Reserved. Licensed under the terms of the MIT License.
- *
- *              This file adds wrappers various classes/functions that may have different requirements in order to accurately time them.
- *              Includes:
- *                - timer for webGL functions
- *                - timer for webGPU functions
- *                - wrapper to webGPU and WebAssembly functions that may cause the event loop to start from
- *                  a different thread (ie after WebAssembly compiling) to ensure our CPU timing can pick up
- *                  and continue proper measurement.
- *
- *  @author     Ryan Saweczko, ryansaweczko@kingsds.network
- *  @date       Aug 2022
- */
-
-/* global GPUQueue
- */
-
-
-/**
- * @typedef {import('./event-loop-virtualization').GlobalTracker} GlobalTracker
- */
-
-self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(protectedStorage, ring2PostMessage)
-{
+self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$fn(protectedStorage, ring0PostMessage) {
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
   const TimeInterval = protectedStorage.TimeInterval;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
@@ -32,54 +6,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   const wasmTimer = globalTrackers.wasmIntervals;
   const cpuTimer = globalTrackers.cpuIntervals;
   const webGPUTimer = globalTrackers.webGPUIntervals;
-
-
-  protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
-  {
-    const time = webGLTimer.length;
-    webGLTimer.reset();
-    return time;
-  }
-
-  /**
-   * @returns {boolean} 
-   */
-  protectedStorage.hasWebglSupport = function webglSupport()
-  {
-    try
-    {
-      const canvas = new OffscreenCanvas(1, 1);
-      return Boolean(canvas.getContext('webgl') || canvas.getContext('webgl2'));
-    }
-    catch
-    {
-      return false;
-    }
-  };
-
-  if (protectedStorage.hasWebglSupport())
-    protectedStorage.getAndResetWebGLTimer = function getAndResetWebGLTimer()
-    {
-      const time = webGLTimer.length;
-      webGLTimer.reset();
-      return time;
-    }
-
-
-
-  // lift WASM functions into our TimedPromise monad
-  // lift in the Haskell fmap/lift sense, mapping to a new category while preserving the structure (functionality)
-  function liftWASMFunction(fn)
-  {
-    // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWASMFunction expects a function that returns a promise');
-    return function(...args)
-    {
-      return new TimedPromise.fromExistingPromiseFunction(fn.bind(this, ...args), (duration) =>
-      {
-        /** @todo add tracking */
-      });
-    }
-  }
 
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUFunction(fn)
@@ -257,53 +183,6 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     }
   }
 
-  if (self.OffscreenCanvas && new OffscreenCanvas(1, 1))
-  {
-    /**
-     *  Wrap webGL function for a given context. The wrapper will add a time interval to the
-     *  webGLTimer that measures the execution time of the function run.
-     * 
-     * @param {obj} context - the OffscreenCanvas context for which a function needs to be wrapped
-     * @param {string} prop - property of the context to be wrapped 
-     */
-    function timeWebGLFunction(context, prop)
-    {
-      const originalFn = context[prop].bind(context);
-
-      context[prop] = function wrappedWebGLFunction(...args)
-      {
-        let returnValue;
-        const interval = new protectedStorage.TimeInterval();
-        webGLTimer.push(interval);
-        try
-        {
-          returnValue = originalFn(...args);
-          interval.stop();
-        }
-        catch (e)
-        {
-          interval.stop();
-          throw e;
-        }
-        return returnValue;
-      }
-    }
-
-    /* Update all functions on the OffscreenCanvas getContext prototype to have timers */
-    const oldGetContext = OffscreenCanvas.prototype.getContext;
-    OffscreenCanvas.prototype.getContext = function(type, options)
-    {
-      const context = oldGetContext.bind(this)(type, options);
-      for (const key of Object.getOwnPropertyNames(context.__proto__))
-        if (typeof context[key] === 'function')
-          timeWebGLFunction(context, key);
-      return context;
-    };
-  }
-
-  if (!navigator.gpu)
-    return;
-
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
   const originalGPUQueue = GPUQueue;
   const originalSubmit = GPUQueue.prototype.submit;
@@ -384,3 +263,4 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     );
   }
 });
+
