@@ -88,15 +88,20 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
     return function(...args)
     {
       const duration = new TimeInterval();
-      const original = new TimedPromise((resolve) => {
-        resolve(fn.bind(this, ...args));
-      });
+      const that = this;
 
-      original.then(() => {
+      const original = new TimedPromise((resolve) =>
+      {
+        const ret = fn.call(that, ...args);
+        resolve(ret);
+      });
+      
+      const recordTime = () => {
         duration.stop();
         webGPUTimer.push(duration);
-      });
+      };
 
+      original.then(recordTime, recordTime);
       return original;
     }
   }
@@ -349,8 +354,21 @@ self.wrapScriptLoading({ scriptName: 'timed-env' }, async function gpuTimers$fn(
   // TODO: add doc
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
-    const fn = originalSubmitDone.bind(this);
-    return new TimedPromise(globalTrackers, () => fn(...args), 'ignore');
+    const duration = new TimeInterval();
+    const that = this;
+
+    const original = new TimedPromise((resolve) => {
+      const ret = originalSubmitDone.call(that, ...args);
+      resolve(ret);
+    });
+
+    const recordTime = () => {
+      duration.stop();
+      webGPUTimer.push(duration);
+    };
+
+    original.then(recordTime, recordTime);
+    return original;
   }
 
 

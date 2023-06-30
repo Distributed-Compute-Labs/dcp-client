@@ -410,7 +410,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
     {
       const timedCallback = () => {
-        protectedStorage.console.debug("look ma! FIFO!");
         const duration = new TimeInterval();
         const ret = callback();
         duration.stop();

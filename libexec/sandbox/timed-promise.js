@@ -11,10 +11,12 @@
  *  @date       2023
  *
  */
+
 self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(protectedStorage)
 {
   const TimeInterval = protectedStorage.TimeInterval;
   const RealPromise = Promise.prototype.constructor;
+  const cpuIntervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
   const realThen = Promise.prototype.then;
   const realCatch = Promise.prototype.catch;
   const realFinally = Promise.prototype.finally;
@@ -105,29 +107,21 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
-          // force the continuation to kick off another microtask
-          // exploit the fact that if the continuation of a `then` returns a promise, we get a Promose<T> rather than
-          // Promise<Promise<T>>, this is the part of Promise that make it technically not a monad
-          return new Promise((resolve, _reject) =>
-          {
-            queueMicrotask(() =>
-            {
-              const ret = onFulfilled(resolvedValue);
-              resolve(ret);
-            });
-          })
+          const duration = new TimeInterval();
+          const ret = onFulfilled(resolvedValue);
+          duration.stop();
+          cpuIntervals?.push(duration);
+
+          return ret;
         }),
         (rejectedReason) =>
         {
-          // force the continuation to kick off another round of event loop
-          return new Promise((_resolve, reject) =>
-          {
-            queueMicrotask(() =>
-            {
-              const ret = onRejected(rejectedReason);
-              reject(ret);
-            });
-          })
+          const duration = new TimeInterval();
+          const ret = onRejected(rejectedReason);
+          duration.stop();
+          cpuIntervals?.push(duration);
+
+          return ret;
         }
       );
     }
@@ -143,13 +137,9 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     {
       return realThen.call(this.wrapped, (undefined, (rejectedReason) =>
       {
-        return new RealPromise((_resolve, reject) =>
+        return new TimedPromise((_resolve, reject) =>
         {
-          queueMicrotask(() =>
-          {
-            const ret = onRejected(rejectedReason);
-            reject(ret);
-          });
+          reject(onRejected(rejectedReason));
         })
       }));
     }
@@ -171,9 +161,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     }
   }
 
-  self.Promise.prototype.then = TimedPromise.then;
-  self.Promise.prototype.catch = TimedPromise.catch;
-  self.Promise.prototype.finally = TimedPromise.finally;
+  self.Promise.prototype.constructor = TimedPromise;
 
   protectedStorage.bigBrother = {
     ...protectedStorage.bigBrother,
