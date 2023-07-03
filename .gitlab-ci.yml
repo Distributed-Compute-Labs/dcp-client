@@ -10,16 +10,19 @@ default:
   tags:
     - dcp
     - linux
-  image: node:lts
+  cache: &default-cache
+    - key:
+        prefix: $CI_COMMIT_REF_SLUG
+        files:
+          - package-lock.json
+      paths:
+        - node_modules
 
-# This folder is cached between builds
-# http://docs.gitlab.com/ee/ci/yaml/README.html#cache
-cache:
-  key:
-    files:
-      - package.json
-  paths:
-    - node_modules
+variables:
+  # Can only cache files in the current build directory.
+  npm_config_cache: .cache/npm/
+  # Suppress funding messages that aren't useful when debugging CI.
+  npm_config_fund: 'false'
 
 before_script:
   ##
@@ -65,10 +68,24 @@ stages:
   - build
   - test
 
+# Installs `node_modules` dependencies to be used by later stages.
 build:
   stage: build
+  # Has an npm version w/ `lockfileVersion` 3.
+  image: node:20
+  cache:
+    # Prevent overriding the persistence of node_modules for jobs in later
+    # stages.
+    - *default-cache
+    # Make clean-install on the same branch faster.
+    - key:
+        prefix: $CI_COMMIT_REF_SLUG
+        files:
+          - package-lock.json
+      paths:
+        - $npm_config_cache
   script:
-    - npm install
+    - npm clean-install
 
 tidelift:
   stage: build
@@ -91,6 +108,14 @@ tidelift:
   cache: []
 
 test:
+  # Testing against multiple versions of node.
+  parallel:
+    matrix:
+      - NODE_IMAGE: 
+        - node:16
+        - node:18
+        - node:20
+  image: $NODE_IMAGE
   stage: test
   script:
     # Make test output verbose to help with debugging failing tests in CI
