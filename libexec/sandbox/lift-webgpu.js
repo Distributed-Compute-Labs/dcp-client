@@ -1,4 +1,8 @@
 self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$fn(protectedStorage, ring0PostMessage) {
+  /** @todo think of cleaner way to do detection */
+  if (!('gpu' in navigator))
+    return;
+
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
   const TimeInterval = protectedStorage.TimeInterval;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;

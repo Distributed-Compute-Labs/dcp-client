@@ -29,8 +29,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: hide this better
     // TODO: perhaps we should grab it not via gloablThis
     // stash a copy so we don't end up recursively calling with no base case
-    const realSubmit = globalThis.GPUQueue.prototype.submit;
-    const realOnSubmittedWorkDone = globalThis.GPUQueue.prototype.onSubmittedWorkDone;
+    /** @todo optional chaining used here to get around the issue of old platforms having such symbols defined, think of a cleaner way */
+    const realSubmit = globalThis.GPUQueue?.prototype?.submit;
+    const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
 
     /**
      *
@@ -156,7 +157,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
     }
 
-    const realGPUDeviceDestory = GPUDevice.prototype.detroy;
+    /** @todo optional chaining used here to get around the issue of old platforms having such symbols defined, think of a cleaner way */
+    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.detroy;
 
     /**
      * @class GlobalTrackers
@@ -213,6 +215,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       async reset()
       {
         // remove them first before clearing the commands
+        /** @todo this is safe when webGPU symbols are not defined, only because the queue will be empty, yuck! */
         for (const device of this.gpuDevices)
           realGPUDeviceDestory.call(device);
         this.gpuDevices = [];
@@ -252,6 +255,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         const webGLTime = this.webGLIntervals.duration();
         const wasmTime = this.wasmIntervals.duration();
         const cpuTime = this.cpuIntervals.duration() + wasmTime;
+
+        /** @todo total time is defined as the wall time, not the sum of "user times" */
         const totalTime = webGPUTime + cpuTime + webGLTime;
 
         return {
