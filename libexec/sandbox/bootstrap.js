@@ -52,7 +52,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         flushedLastConsoleMessage = false;
 
         ring2PostMessage({ request: 'resetStateDone' });
-        protectedStorage.console.debug("i made it here, somehow");
+        // protectedStorage.console.debug("i made it here, somehow");
       }
     } catch (error) {
       ring2PostMessage({

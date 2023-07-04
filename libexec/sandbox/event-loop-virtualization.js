@@ -256,11 +256,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         const wasmTime = this.wasmIntervals.duration();
         const cpuTime = this.cpuIntervals.duration() + wasmTime;
 
-        /** @todo total time is defined as the wall time, not the sum of "user times" */
-        const totalTime = webGPUTime + cpuTime + webGLTime;
-
         return {
-          total: totalTime,
           webGPU: webGPUTime,
           CPU: cpuTime,
           webGL: webGLTime,

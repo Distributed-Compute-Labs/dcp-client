@@ -14,7 +14,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   // This file starts at ring 2, but transitions to ring 3 partway through it.
   const ring2PostMessage = self.postMessage; 
   let ring3PostMessage;
-  let totalTime;
 
   bravojs.ww = {}
   bravojs.ww.allDeps = []
@@ -175,18 +174,16 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   };
 
   /* Report metrics to sandbox/supervisor */
-  async function reportTimes ()
+  /** @todo it's not async anymore */
+  async function reportTimes (metrics)
   {
-    const globalTracker = protectedStorage.bigBrother.globalTrackers;
-    const { total, webGL, webGPU, CPU } = await globalTracker.getMetrics();
-    debugger;
-    protectedStorage.console.info({ total, webGL, webGPU, CPU });
+    const { total, webGL, webGPU, CPU } = metrics;
+    protectedStorage.console.log({ total, webGL, webGPU, CPU });
     ring3PostMessage({ request: 'measurement', data: { total, webGL, webGPU, CPU } });
-    await protectedStorage.bigBrother.globalTrackers.reset();
   }
 
   /* Report an error from the work function to the supervisor */
-  function reportError (error)
+  function reportError (error, metrics)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
@@ -204,7 +201,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
+      reportTimes(metrics).then(() => ring3PostMessage({ request: 'workError', error: err }));
     }
     else
       ring3PostMessage({request: 'workError', error: err});
@@ -214,9 +211,9 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    * Report a result from work function and metrics to the supervisor.
    * @param     result  the value that the work function returned promise resolved to
    */
-  function reportResult (result)
+  function reportResult (result, metrics)
   {
-    reportTimes().then(() => {
+    reportTimes(metrics).then(() => {
       ring3PostMessage({ request: 'complete', result });
     }).catch((error) => {
       ring3PostMessage({ request: 'sandboxError', error });
@@ -235,9 +232,13 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   async function runWorkFunction_inner(datum, successCallback, errorCallback)
   {
+    /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
+    const TimeInterval = protectedStorage.TimeInterval;
     var rejection = false;
     var result;
-    
+    let metrics;
+    const wallDuration = new TimeInterval();
+
     try
     {
       /* module.main.job is the work function; left by assign message */ 
@@ -251,25 +252,27 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
     // flush any pending console events, especially in the case of a repeating message that hasn't been emitted yet 
     try { flushLastLog(); } catch(e) {};
-    try
-    {
-      // unfortunately, this cannot be call after locking the timers since our promise kick continuation to the next
-      // round of event 
+    try {
+      // reset the device states and flush all pending tasks
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
+      metrics = await protectedStorage.bigBrother.globalTrackers.getMetrics();
 
-      // TODO: think about which setTimeout to use, it seems if the user uses up resources on the machine, they should
-      // be charged, even for lingering microtasks. After all, most likely we didn't intentionally cause them.
-      await new Promise(r => {
-        const bonaFideSetTimeout = protectedStorage.bonaFideSetTimeout;
-        bonaFideSetTimeout(r);
-      }); // flush microtask queue
+      await protectedStorage.bigBrother.globalTrackers.reset();
+    } catch (e) {
+    } finally {
+      // due to the nature of the micro task queue, await, our `reset()` cancels all the things that could cause new
+      // tasks, and we wait for all pending task to finish in `reset()`, we are guaranteed to have an empty task queue
+      // now. Hence it's ok to stop the wall clock measurement now
+      wallDuration.stop();
+
+      // safety: wallDuration is always stopped, `length` will not throw
+      metrics = { ...metrics, total: wallDuration.length };
     }
-    catch(e) {}
 
     if (rejection)
-      errorCallback(rejection);
+      errorCallback(rejection, metrics);
     else
-      successCallback(result);
+      successCallback(result, metrics);
 
     /* CPU time measurement ends when this function's return value is resolved or rejected */
   }
@@ -282,14 +285,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   function runWorkFunction(datum)
   {
-    // Measure performance directly before and after the job to get as accurate total time as
-    totalTime = new protectedStorage.TimeInterval();
-
     protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(result), (rejection) => reportError(rejection)));
+    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result, metrics) => reportResult(result, metrics), (rejection, metrics) => reportError(rejection, metrics)));
   }
 }); /* end of fn */
