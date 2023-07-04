@@ -12,7 +12,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   const webGPUTimer = globalTrackers.webGPUIntervals;
 
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
-  function liftWebGPUFunction(fn)
+  function liftWebGPUAsyncFunction(fn)
   {
     // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
@@ -36,8 +36,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
     }
   }
 
-  // TODO: unify the two names
-  function wrapWebGPUFunction(fn)
+  function liftWebGPUSyncFunction(fn)
   {
     return function(...args)
     {
@@ -177,12 +176,12 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
       if (promiseReturningFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = liftWebGPUFunction(fn);
+        self[GPUClass].prototype[prop] = liftWebGPUAsyncFunction(fn);
       }
       else if (blockingFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = wrapWebGPUFunction(fn);
+        self[GPUClass].prototype[prop] = liftWebGPUSyncFunction(fn);
       }
     }
   }
