@@ -27,10 +27,11 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
 
     // stash a copy so we don't end up recursively calling with no base case
-    /** @todo optional chaining used here to get around the issue of old platforms having such symbols defined, think of a cleaner way */
+    // optional chaining used here to get around the issue of old platforms having such symbols defined, the end effect
+    // is all the operations performed on them become no-ops
     const realSubmit = globalThis.GPUQueue?.prototype?.submit;
     const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
-
+    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.detroy;
     /**
      *
      * @class GPUQueueRegistery
@@ -150,8 +151,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
     }
 
-    /** @todo optional chaining used here to get around the issue of old platforms having such symbols defined, think of a cleaner way */
-    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.detroy;
 
     /**
      * @class GlobalTrackers
@@ -185,7 +184,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type {TimeThing} */
         this.wasmIntervals = new TimeThing();
 
-        // TODO: decouple this
         this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
 
         /** @type {Array<GPUDevice>} */
@@ -208,7 +206,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       async reset()
       {
         // remove them first before clearing the commands
-        /** @todo this is safe when webGPU symbols are not defined, only because the queue will be empty, yuck! */
+        // this is safe when webGPU symbols are not defined, because the queue will be empty, so the body is never
+        // called, hence it's safe
         for (const device of this.gpuDevices)
           realGPUDeviceDestory.call(device);
         this.gpuDevices = [];
