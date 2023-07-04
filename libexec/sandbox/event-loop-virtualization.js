@@ -118,7 +118,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       /** 
        * *Immediately* removes the queue from metric tracking, it's *your* responsibility to ensure that there won't be
-       * any new commands submitted.
+       * any new commands submitted. It will *not* reset the webGPU time duration lists! It simply removes the `queue` 
+       * from tracking.
        */
       unsafePopQueue(queue)
       {
@@ -131,12 +132,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         eventTarget.removeEventListener('submission', this.#recordCommandDuration);
         this.queues.splice(idx);
         this.eventTargets.splice(idx);
-
-        /** @todo it's really not great, we are calling reset() in both places, and they only don't crap themselves
-         * because of the careful ordering, definitely need a better design
-         */
-        /** @todo do we event want this????? */
-        // this.webGPUIntervals.reset();
       }
 
       async waitAllCommandToFinish()
