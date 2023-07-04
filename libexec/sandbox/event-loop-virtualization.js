@@ -26,8 +26,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const TimeInterval = protectedStorage.TimeInterval;
 
 
-    // TODO: hide this better
-    // TODO: perhaps we should grab it not via gloablThis
     // stash a copy so we don't end up recursively calling with no base case
     /** @todo optional chaining used here to get around the issue of old platforms having such symbols defined, think of a cleaner way */
     const realSubmit = globalThis.GPUQueue?.prototype?.submit;
@@ -250,7 +248,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         // flush all commands that were already enqueued
         await this.webGPUQueueRegistery.waitAllCommandToFinish();
 
-        // TODO: Ryan said CPU should also include the WASM time
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();
         const wasmTime = this.wasmIntervals.duration();
