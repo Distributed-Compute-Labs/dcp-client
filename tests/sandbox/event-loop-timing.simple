@@ -65,7 +65,7 @@ realSetTimeout(() => {
       expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}, expected ${loopDelay * 2}±5%`;
 
     // If all of my expected outputs have been met, set the exit code to 0 since all was ok.
-    if (Object.values(expectedOutputs).every((ele) =>  ele))
+    if (Object.values(expectedOutputs).every((element) =>  element))
       process.exitCode = 0;
   })
 }, 2000);

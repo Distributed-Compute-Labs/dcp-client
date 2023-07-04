@@ -29,14 +29,14 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     const fn = WebAssembly[prop];
     WebAssembly[prop] = function timerWrapper(...args)
     {
-      var returnValue =  fn.bind(this)(...args);
-      if (returnValue instanceof Promise)
+      var unwrappedReturn =  fn.bind(this)(...args);
+      if (unwrappedReturn instanceof Promise)
         return new Promise((resolve, reject) => {
-          returnValue.then(
+          unwrappedReturn.then(
             (res) => setImmediate(() => resolve(res)),
             (rej) => setImmediate(() => reject(rej)));
         });
-      return returnValue;
+      return unwrappedReturn;
     }
   }
 
@@ -81,9 +81,9 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
         const returnValue =  fn(...args);
         if (returnValue instanceof Promise)
           return new Promise((resolve, reject) => {
-            returnValue.then(
-              (res) => setImmediate(() => resolve(res)),
-              (rej) => setImmediate(() => reject(rej)));
+            returnValue
+            .then((res) => setImmediate(() => resolve(res)))
+            .catch((rej) => setImmediate(() => reject(rej)));
           });
         return returnValue;
       }
@@ -110,7 +110,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
         webGLTimer.push(interval);
         try
         {
-          returnValue =  originalFn(...args);
+          returnValue = originalFn(...args);
           interval.stop();
         }
         catch(e)

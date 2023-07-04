@@ -1,5 +1,5 @@
 /**
- * @file    event-loop-timing.simple - Asserts that WebGPU relating timing
+ * @file    event-loop-timing.simple - Asserts that WebGPU related timing
  *          operations correctly handle overlapping time intervals when multiple
  *          'jobs' are submitted to the queue.
  *
