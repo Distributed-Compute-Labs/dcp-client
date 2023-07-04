@@ -272,6 +272,27 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     /** @todo think about a place to cancel all of them once the work function is finished */
 
+    const makeTimed = (callback) => {
+        return function(...arg) {
+          const duration = new TimeInterval();
+          const ret = callback(...arg);
+          duration.stop();
+          cpuTimer.push(duration);
+          return ret;
+        };
+    };
+  
+    const makeUniformCallback = (callback) => {
+        if (typeof callback === 'string')
+        {
+          const indirectEval = eval;
+          return function() {  return indirectEval(callback); };
+        }
+        else
+        {
+          return callback;
+        }
+    };
 
     /** Execute callback after at least timeout ms. 
      * 
@@ -290,28 +311,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         return {};
       }
 
-      callback = (() => {
-        if (typeof callback === 'string')
-        {
-          const indirectEval = eval;
-          return () => indirectEval(callback);
-        }
-        else
-        {
-          return callback;
-        }
-      })();
+      callback = makeUniformCallback(callback);
+      const timedCallback = makeTimed(callback);
 
-      /** @todo think about the stupid `this`  */
-      const timedCallback = () => {
-        const duration = new TimeInterval();
-        const ret = callback(...arg);
-        duration.stop();
-        cpuTimer.push(duration);
-        return ret;
-      };
-
-      return realSetTimeout(timedCallback, timeout);
+      return realSetTimeout(timedCallback, timeout, ...arg);
     }
 
     /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
@@ -333,28 +336,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         return {};
       }
 
-      callback = (() => {
-        if (typeof callback === 'string')
-        {
-          const indirectEval = eval;
-          return () => indirectEval(callback);
-        }
-        else
-        {
-          return callback;
-        }
-      })();
+      callback = makeUniformCallback(callback);
+      const timedCallback = makeTimed(callback);
 
-      /** @todo think about the stupid `this`  */
-      const timedCallback = () => {
-        const duration = new TimeInterval();
-        const ret = callback(...arg);
-        duration.stop();
-        cpuTimer.push(duration);
-        return ret;
-      };
-
-      return realSetInterval(timedCallback, interval);
+      return realSetInterval(timedCallback, interval, ...arg);
     }
     /** Execute callback after 0 ms, immediately when the event loop allows.
      * 
@@ -372,28 +357,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         return {};
       }
 
-      callback = (() => {
-        if (typeof callback === 'string')
-        {
-          const indirectEval = eval;
-          return () => indirectEval(callback);
-        }
-        else
-        {
-          return callback;
-        }
-      })();
+      callback = makeUniformCallback(callback);
+      const timedCallback = makeTimed(callback);
 
-      /** @todo think about the stupid `this`  */
-      const timedCallback = () => {
-        const duration = new TimeInterval();
-        const ret = callback(...arg);
-        duration.stop();
-        cpuTimer.push(duration);
-        return ret;
-      };
-
-      return realSetImmediate(timedCallback);
+      return realSetImmediate(timedCallback, ...arg);
     }
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
@@ -402,14 +369,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
     {
-      const timedCallback = () => {
-        const duration = new TimeInterval();
-        const ret = callback();
-        duration.stop();
-        cpuTimer.push(duration);
-        return ret;
-      };
-
+      // `queueMicrotask` is notable for only accepting function types and not strings that get `eval`ed
+      const timedCallback = makeTimed(callback);
       return realQueueMicrotask(timedCallback);
     }
 
