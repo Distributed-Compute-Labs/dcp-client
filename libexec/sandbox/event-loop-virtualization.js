@@ -356,29 +356,35 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       callback = makeUniformCallback(callback);
       const timedCallback = makeTimed(callback);
 
-      return realSetInterval(timedCallback, interval, ...arg);
-    }
+      const cancellationId = realSetInterval(timedCallback, interval, ...arg);
+      registeredTimeouts.push(cancellationId);
+      return cancellationId;
+    };
     /** Execute callback after 0 ms, immediately when the event loop allows.
      * 
      *  @param    callback          {function} Callback function to fire after a minimum callback time
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
      */
-    self.setImmediate = function eventLoop$$Worker$setImmediate(callback, ...arg)
-    {
+    // setImmediate is non standard, don't give them the illusion that it's defined if it's not available on the
+    // platform
+    self.setImmediate = realSetImmediate ?
+          function eventLoop$$Worker$setImmediate(callback, ...arg)
+          {
 
-      // Work function has resolved, Don't let client init any new timeouts.
-      if (timersLocked)
-      {
-        protectedStorage.console.warn("timeout request after the event loop is locked");
-        return {};
-      }
+            // Work function has resolved, Don't let client init any new timeouts.
+            if (timersLocked)
+            {
+              protectedStorage.console.warn("timeout request after the event loop is locked");
+              return {};
+            }
 
-      callback = makeUniformCallback(callback);
-      const timedCallback = makeTimed(callback);
+            callback = makeUniformCallback(callback);
+            const timedCallback = makeTimed(callback);
 
-      return realSetImmediate(timedCallback, ...arg);
-    }
+            /** @todo it's not added to the registeredTimeouts, should it? */
+            return realSetImmediate(timedCallback, ...arg);
+          } : undefined;
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
@@ -389,7 +395,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       // `queueMicrotask` is notable for only accepting function types and not strings that get `eval`ed
       const timedCallback = makeTimed(callback);
       return realQueueMicrotask(timedCallback);
-    }
+    };
 
     // TODO: yes the name is very stupid
     protectedStorage.bonaFideSetTimeout = realSetTimeout;
