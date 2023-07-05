@@ -282,12 +282,16 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // TODO: create a nice intereface so we're not just pulling the guts out all the time
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     let timersLocked = false;
+ 
+    // a list of ids of *all* the timeout and their friend ids, so we can cancel all of them when the work function is
+    // done
+    /** @todo should we have a system that allow for some timeout to be bypassed? Suppose if we need to use timeout to
+     * clean some other resource up in the future
+     */
+    let registeredTimeouts = [];
 
     protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
     protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
-
-
-    /** @todo think about a place to cancel all of them once the work function is finished */
 
     const makeTimed = (callback) => {
         return function(...arg) {
@@ -331,7 +335,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       callback = makeUniformCallback(callback);
       const timedCallback = makeTimed(callback);
 
-      return realSetTimeout(timedCallback, timeout, ...arg);
+      const cancellationId = realSetTimeout(timedCallback, timeout, ...arg);
+      registeredTimeouts.push(cancellationId);
+      return cancellationId;
     }
 
     /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
@@ -395,6 +401,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       // `queueMicrotask` is notable for only accepting function types and not strings that get `eval`ed
       const timedCallback = makeTimed(callback);
       return realQueueMicrotask(timedCallback);
+    };
+
+    /**
+     * Clear all pending timeouts, including those ones generated via setInterval
+     */
+    protectedStorage.clearAllTimeouts = () => {
+      // some of the elems actually represent timeouts that are already done, but it's ok.
+      // 1. canceling old timeouts is a no-op
+      // 2. setTimeout and their friends never reuse ids
+      for (const timeout of registeredTimeouts)
+        realClearTimeout(timeout);
+
+      registeredTimeouts = [];
     };
 
     // TODO: yes the name is very stupid

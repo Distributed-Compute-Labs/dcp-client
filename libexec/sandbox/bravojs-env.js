@@ -260,6 +260,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       await protectedStorage.bigBrother.globalTrackers.reset();
     } catch (e) {
     } finally {
+      protectedStorage.clearAllTimeouts();
       // due to the nature of the micro task queue, await, our `reset()` cancels all the things that could cause new
       // tasks, and we wait for all pending task to finish in `reset()`, we are guaranteed to have an empty task queue
       // now. Hence it's ok to stop the wall clock measurement now
