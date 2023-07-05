@@ -154,13 +154,13 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     /**
      * @class GlobalTrackers
-     * @property {WebGPUPromiseRegistry} webGPUPromiseRegistry
      * @property {WebGPUQueueRegistery} webGPUQueueRegistery
      * @property {TimeThing} webGPUIntervals
      * @property {TimeThing} cpuIntervals
      * @property {TimeThing} webGLIntervals
      * @property {TimeThing} wasmIntervals
-     * @function {getMetrics}
+     * @function getMetrics
+     * @function reset
      */
     class GlobalTrackers
     {
@@ -201,7 +201,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        *
        * SAFETY:
        * You must only call this *after* the work function has completed, because this will invalidate all gpu resources.
-       * @function {reset}
+       * @async
+       * @function reset
        */
       async reset()
       {
@@ -227,11 +228,18 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         this.wasmIntervals.reset();
       }
 
-      // TODO: specifiy down the return type
+
+      /** @typedef {Object} ResourceUsageMetric 
+       *  @property {number} webGPU - time spent in both device and queue timeline
+       *  @property {number} CPU - time spent in "user time" of the CPU
+       *  @property {number} webGL - time spent in webGL logic
+       */
+
       /**
        * Obtain the current metrics of our tracked resources, mostly about timings.
        * @async
-       * @function {getMetrics}
+       * @function getMetrics
+       * @returns {ResourceUsageMetric}
        */
       async getMetrics()
       {
