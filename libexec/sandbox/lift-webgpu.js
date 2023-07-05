@@ -6,9 +6,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
   const TimeInterval = protectedStorage.TimeInterval;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
-  const webGLTimer = globalTrackers.webGLIntervals;
-  const wasmTimer = globalTrackers.wasmIntervals;
-  const cpuTimer = globalTrackers.cpuIntervals;
   const webGPUTimer = globalTrackers.webGPUIntervals;
 
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
@@ -188,7 +185,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
   const originalGPUQueue = GPUQueue;
-  const originalSubmit = GPUQueue.prototype.submit;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
   const originalRequestDevice = GPUAdapter.prototype.requestDevice;
 
