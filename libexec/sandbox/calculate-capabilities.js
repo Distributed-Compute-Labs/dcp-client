@@ -48,30 +48,11 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         return arguments[0];
       });`
 
+      // doing anything more complicated will not tell you anything more useful 
       webgpu =
         typeof GPU !== 'undefined' ||
         (typeof navigator !== 'undefined' &&
           typeof navigator.gpu !== 'undefined');
-
-      if (webgpu) {
-        try {
-          // if we're in a standalone, we need to initialize a window before requesting adapter
-          // These symbols will have to be updated as the webGPU spec keeps updating and as we update our evaluator
-          if (typeof WebGPUWindow !== 'undefined') {
-            const gpuWindow = new WebGPUWindow({
-              width: 640,
-              height: 480,
-              title: 'DCP-evaluator',
-              visible: false,
-            });
-          } else {
-          }
-        } catch (err) {
-          // if glfw fails or the symbols exist but webgpu hasn't been
-          // properly enabled (mozilla)
-          webgpu = false;
-        }
-      }
 
       offscreenCanvas = !!(
         typeof OffscreenCanvas !== 'undefined' && new OffscreenCanvas(1, 1)
