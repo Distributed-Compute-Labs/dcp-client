@@ -253,11 +253,8 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
   GPUQueue.prototype.submit = function submit(...args)
   {
-    // TODO: find out what determines the identity of GPUQueues
-    const queue = this;
-    // TODO: addSumbission also does the job of actually calling submit on the original queue, should it?
     return globalTrackers.webGPUQueueRegistery.addSubmission(
-      queue,
+      this,
       ...args
     );
   }
