@@ -187,7 +187,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type {TimeThing} */
         this.cpuIntervals = new TimeThing();
 
-        // TODO: actually make them record stuff
         /** @type {TimeThing} */
         this.webGLIntervals = new TimeThing();
 
