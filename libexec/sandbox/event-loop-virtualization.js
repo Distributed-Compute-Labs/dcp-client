@@ -33,8 +33,18 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
     const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.detroy;
     /**
+     * @class WebGPUQueueRegistery
+     * @property {Array<GPUQueue>} queues - list of all tracked instances of `GPUQueue`
+     * @property {TimeThing} webGPUIntervals - collection of time slice for time spent on GPU
+     * @property {Array<EventTarget>} eventTargets - list of the event targets used to book keep the usage of GPU
+     * @function add
+     * @function addSubmission
+     * @function unsafePopQueue
+     * @function waitAllCommandToFinish
+     * @function reset
      *
-     * @class GPUQueueRegistery
+     * Each elem of queues with index `i` should have its corresponding EventTarget at eventTargets[i]. Entity component
+     * system style.
      */
     class WebGPUQueueRegistery
     {
