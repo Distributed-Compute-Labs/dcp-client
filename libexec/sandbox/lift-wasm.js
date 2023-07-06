@@ -1,4 +1,4 @@
-// lift WASM functions into our TimedPromise monad
+// lift WASM functions into our TimedPromise
 // lift in the Haskell fmap/lift sense, mapping to a new category while preserving the structure (functionality)
 self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(protectedStorage) {
   /** @typedef {import(./timer-classes.js).TimeInterval} TimeInterval*/

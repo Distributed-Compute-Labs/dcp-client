@@ -73,7 +73,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
   const webGPUTimer = globalTrackers.webGPUIntervals;
 
-  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
+  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise
   function liftWebGPUAsyncFunction(fn)
   {
     return function(...args)
