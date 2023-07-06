@@ -163,7 +163,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       unsafePopQueue(queue)
       {
         const idx = this.queues.indexOf(queue);
-        /** @todo most likely a bug, consider logging */
         if (idx === -1)
           return;
 
@@ -250,7 +249,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
           realGPUDeviceDestory.call(device);
         this.gpuDevices = [];
 
-        /** @todo not true anymore if we go with the new design, consider removing the comments */
         // very important that this is called before resetting the intervals themselves since the registry hold
         // references to the intervals below
         this.webGPUQueueRegistery.reset();
@@ -305,8 +303,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       globalTrackers: new GlobalTrackers()
     };
 
-    // TODO: hide this for the final few layers that should not be allowed to see it
-    // TODO: create a nice intereface so we're not just pulling the guts out all the time
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     let timersLocked = false;
  
@@ -344,7 +340,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     /** Execute callback after at least timeout ms. 
      * 
-     *  @todo update doc
      *  @param    callback          {function} Callback function to fire after a minimum callback time
      *  @param    timeout           {int} integer containing the minimum time to fire callback in ms
      *  @param    arg               array of arguments to be applied to the callback function
