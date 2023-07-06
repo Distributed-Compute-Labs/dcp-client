@@ -290,6 +290,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     totalTime = new protectedStorage.TimeInterval();
 
     // Guarantee CPU timers are cleared before the main work function runs.
+    // This is necessary because the GPU object has been wrapped to make setTimeout calls to
+    // allow for measurement. However, when these timeouts are invoked during capability
+    // calculations, they are erroneously measured as CPU time. This can cause CPU time > total time
+    // and CPUDensity > 1
     protectedStorage.timers.cpu.reset();
     protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
