@@ -125,7 +125,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
       'requestAdapterInfo',
       'createComputePipelineAsync',
       'createRenderPipelineAsync',
-      'mapAsync',
+      'mapAsync', // this would overestimate in some cases, a potential discussion
       'getCompilationInfo',
       'onSubmittedWorkDone',
       // 'lost', // would not be fair to charge them for monitoring if the device got lost
