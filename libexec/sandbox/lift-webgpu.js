@@ -10,7 +10,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise monad
   function liftWebGPUAsyncFunction(fn)
   {
-    // console.assert(typeof fn === 'function' && fn() instanceof Promise, 'liftWebGPUFunction expects a function that returns a promise');
     return function(...args)
     {
       const duration = new TimeInterval();
@@ -165,7 +164,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
     if (!self[GPUClass].prototype)
       return;
 
-    // self[GPUClass].prototype = { ...self[GPUClass].prototype, wrappedBlockingFunctions, wrappedPromiseReturningFunctions };
     for (let prop of Object.keys(self[GPUClass].prototype))
     {
       // lift the function into our GPUTimingPromise monad
