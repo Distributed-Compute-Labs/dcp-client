@@ -64,7 +64,7 @@
  *  @author     Liang Wang, liang@distributive.network
  *  @date       May 2023
  */
-self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$fn(protectedStorage, ring0PostMessage) {
+self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(protectedStorage, ring0PostMessage) {
   if (!('gpu' in navigator))
     return;
 
