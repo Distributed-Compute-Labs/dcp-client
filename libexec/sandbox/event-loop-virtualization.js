@@ -438,8 +438,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       registeredTimeouts = [];
     };
 
-    // TODO: yes the name is very stupid
-    protectedStorage.bonaFideSetTimeout = realSetTimeout;
     protectedStorage.timedQueueMicrotask = queueMicrotask;
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, self.queueMicrotask, protectedStorage);
 });
