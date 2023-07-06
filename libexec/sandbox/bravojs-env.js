@@ -240,15 +240,15 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   {
     /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
     const TimeInterval = protectedStorage.TimeInterval;
+    const TimedPromise = protectedStorage.bigBrother.TimedPromise;
     var rejection = false;
     var result;
     let metrics;
     const wallDuration = new TimeInterval();
-
     try
     {
       /* module.main.job is the work function; left by assign message */ 
-      result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
+      result = await new TimedPromise((resolve) => resolve(module.main.job.apply(null, [datum].concat(module.main.arguments))));
     }
     catch (error)
     {
