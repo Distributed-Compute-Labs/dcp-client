@@ -1,0 +1,56 @@
+#! /usr/bin/env node
+const { init } = require('./globalPolyfillHelper.js');
+const sandboxScripts = '../../libexec/sandbox/'
+
+
+const files = [
+  require.resolve(sandboxScripts + 'script-load-wrapper.js'),
+  require.resolve(sandboxScripts + 'timer-classes.js'),
+  require.resolve(sandboxScripts + 'event-loop-virtualization.js'),
+  require.resolve(sandboxScripts + 'timed-promise.js'),
+]
+
+const mustLoadScripts = {
+  'script-load-wrapper': false,
+  'timer-classes': false,
+  'event-loop-virtualization': false,
+  'timed-promise': false,
+}
+
+
+function onLoad(message)
+{
+  if (message.value.script in mustLoadScripts)
+    mustLoadScripts[message.value.script] = true;
+}
+
+init(files, onLoad);
+
+for (const script in mustLoadScripts)
+  if (!mustLoadScripts[script])
+    process.exit(1)
+
+// ensure out promise works like thennables and thus can be awaited
+async function workWithAwait(){
+  await new Promise((resolve) => {
+    const end = Date.now() + 30;
+    for ( ; Date.now() < end; )
+    {
+      // busy wait
+    }
+    resolve(42);
+  });
+}
+
+workWithAwait();
+
+setTimeout(() => {
+  self.wrapScriptLoading({ scriptName: 'test' }, function test(protectedStorage) {
+    const timeTaken = protectedStorage.bigBrother.globalTrackers.cpuIntervals.duration();
+    console.log(timeTaken)
+    if (timeTaken < 30) {
+      console.error('failed to inject the promise object');
+      process.exit(1);
+    }
+  })
+}, 300);
