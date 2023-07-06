@@ -10,8 +10,36 @@
  *  create a wrapper for each of the timeouts, with a virtual event loop
  *  to control code execution. 
  *
+ *
+ *  How does this guarantee the timing is correct?
+ *
+ *  After the first run of the work function. More javascripts can be run with only two kinds of events. A macro task
+ *  becomes ready or the stack is empty and a micro task is put onto the stack. If we time each function that executes
+ *  on the macro task and micro task queue, then we will know how much CPU resource they utilized. 
+ *
+ *  Timing macrotasks are easy, within the environment of web workers, the only macro tasks that occur are setTimeout
+ *  and their friends, we simply make every function time itself.
+ *
+ *  Timing microtasks would also be easy with one exception. A macrotask is created via call to the Promise constructor,
+ *  which we can just time that. A promise's that depend on the completion of another promise is either crated with the
+ *  call to the promise constructor---which we time, or via `then`. The callback of `then` is effectively what will get
+ *  put onto the stack when empty, this is guaranteed by the fact that promise crated `then` will be run asynchronously
+ *  even if the previous promise is already resolved when called. If we timed that, we will have tracked all CPU resource
+ *  usage.
+ *
+ *  `async` (not `await`, `await` is fine) presents a challenge, although you can await any thennable. The promise crated
+ *  via the async keyword will always be the native `Promise` class even if you erase `Promise` from `globalThis`. This 
+ *  could be solved via running babel on all work functions and convert them into using Promise and then instead of `async`.
+ *  This could be considered in the future but a more brute force strategy is used right now. We simply take the wall time
+ *  measurement, and put anything we can't explain into the CPU time.
+ *
+ *  Since no IO is allowed in work function as of May 2023, the only source of this error is Timeouts have no CPU workloads
+ *  at the same time, causing the JS thread to wait. Which means the error should be small. Once the IO is allowed, as long
+ *  as IO are tracked well, the error should remain small.
+ *
  *              Ryan Saweczko, ryansaweczko@kingsds.network
- *  @date       January 2022
+ *              Liang Wang, liang@distributive.network
+ *  @date       May 2023
  * 
  */
 /* globals self */
