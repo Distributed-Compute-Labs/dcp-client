@@ -1,23 +1,15 @@
 /**
- *  @file       unique-timing.js
+ *  @file       lift-webgl.js
  *              Copyright (c) 2022, Distributive, Ltd.
  *              All Rights Reserved. Licensed under the terms of the MIT License.
  *
  *              This file adds wrappers various classes/functions that may have different requirements in order to accurately time them.
  *              Includes:
  *                - timer for webGL functions
- *                - timer for webGPU functions
- *                - wrapper to webGPU and WebAssembly functions that may cause the event loop to start from
- *                  a different thread (ie after WebAssembly compiling) to ensure our CPU timing can pick up
- *                  and continue proper measurement.
  *
  *  @author     Ryan Saweczko, ryansaweczko@kingsds.network
  *  @date       Aug 2022
  */
-
-/* global GPUQueue
- */
-
 
 /**
  * @typedef {import('./event-loop-virtualization').GlobalTracker} GlobalTracker
