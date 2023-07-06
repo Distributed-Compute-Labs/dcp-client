@@ -289,6 +289,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // Measure performance directly before and after the job to get as accurate total time as
     totalTime = new protectedStorage.TimeInterval();
 
+    // Guarantee CPU timers are cleared before the main work function runs.
+    protectedStorage.timers.cpu.reset();
     protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
      * 1. shorten stack
