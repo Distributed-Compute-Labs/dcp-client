@@ -2,7 +2,7 @@
  *  @file       timer-classes.js
  *              This file creates classes that will be required for timing.
  * 
- * The 4 classes defined are:
+ * The 2 classes defined are:
  *  - TimeInterval: measure an interval of time.
  *  - TimeThing:    generic collection of TimeIntervals
  * 
@@ -48,8 +48,8 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   Object.defineProperty(TimeInterval.prototype, 'length', {
     get: function length()
     {
-      // TODO: it's normal that some timers will not be all stopped when we want to measure but we should think about
-      // this 
+      // it's normal that some timers will not be all stopped when we want to measure, such as any off thread tasks
+      // that isn't needed due to early return
       if (!this.end)
         this.end = performance.now();
       return this.end - this.start;
@@ -119,14 +119,13 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   }
 
   /**
-   * Get the total length of all intervals. If the intervals are overlapping,
-   * the overlapping time will be counted twice.  
+   * Get the total length of all intervals. Overlapping intervals will be merged
    *
    * @function {TimeThing.duration}
-   * @todo think about what to do with unsettled timers
    */
   TimeThing.prototype.duration = function totalDuration()
   {
+    // solution stolen from: https://leetcode.com/problems/merge-intervals/editorial/
     const merged = [];
     for (const interval of this.intervals)
     {
