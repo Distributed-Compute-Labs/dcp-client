@@ -19,10 +19,17 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
   const cpuIntervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
 
   const RealPromise = Promise.prototype.constructor;
+  const RealPromiseObject = Promise;
   const realThen = Promise.prototype.then;
   const realCatch = Promise.prototype.catch;
   const realFinally = Promise.prototype.finally;
-  
+  const realAll = Promise.all.bind(RealPromiseObject);
+  const realAllSettled = Promise.allSettled.bind(RealPromiseObject);
+  const realAny = Promise.any.bind(RealPromiseObject);
+  const realRace = Promise.race.bind(RealPromiseObject);
+  const realReject = Promise.reject.bind(RealPromiseObject);
+  const realResolve = Promise.resolve.bind(RealPromiseObject);
+
   const recordOnCPU = (duration) => {
     cpuIntervals.push(duration);
   };
@@ -175,9 +182,39 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
         return timed;
       });
     }
+
+    static all(...args)
+    {
+      return realAll(...args)
+    }
+
+    static allSettled(...args)
+    {
+      return realAllSettled(...args);
+    }
+
+    static any(...args)
+    {
+      return realAny(...args);
+    }
+
+    static race(...args)
+    {
+      return realRace(...args);
+    }
+
+    static reject(...args)
+    {
+      return realReject(...args);
+    }
+
+    static resolve(...args)
+    {
+      return realResolve(...args);
+    }
   }
 
-  self.Promise.prototype.constructor = TimedPromise;
+  self.Promise = TimedPromise;
 
   protectedStorage.bigBrother = {
     ...protectedStorage.bigBrother,
