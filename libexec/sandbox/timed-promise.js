@@ -227,6 +227,11 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     {
       return realResolve(...args);
     }
+
+    static get [Symbol.species]()
+    {
+      return this;
+    }
   }
 
   self.Promise = TimedPromise;
