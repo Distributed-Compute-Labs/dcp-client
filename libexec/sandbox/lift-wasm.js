@@ -7,7 +7,6 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
 
   const putToCPUInterval = (duration) => {
-    /** @todo revisit other similar looking functions */
     duration.stop();
     const intervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     intervals.push(duration);
