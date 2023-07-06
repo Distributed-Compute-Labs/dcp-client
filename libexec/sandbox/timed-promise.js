@@ -122,6 +122,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
      * off another round of event loop here to get our continuation timed.
      *
      *
+     * @todo update doc to support values instead of only functions
      * @function then
      * @param {Function} onFulfilled
      * @param {Function} onRejected
@@ -132,19 +133,33 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
-          const timed = makeTimed(
-            () => onFulfilled(resolvedValue),
-            recordOnCPU
-          );
-          return timed();
+          if (onFulfilled instanceof Function)
+          {
+            const timed = makeTimed(
+              () => onFulfilled(resolvedValue),
+              recordOnCPU
+            );
+            return timed();
+          }
+          else
+          {
+            return onFulfilled;
+          }
         }),
         (rejectedReason) =>
         {
-          const timed = makeTimed(
-            () => onRejected(rejectedReason),
-            recordOnCPU
-          );
-          return timed();
+          if (onRejected instanceof Function)
+          {
+            const timed = makeTimed(
+              () => onFulfilled(rejectedReason),
+              recordOnCPU
+            );
+            return timed();
+          }
+          else
+          {
+            return onFulfilled;
+          }
         }
       );
     }
