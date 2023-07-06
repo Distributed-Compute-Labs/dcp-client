@@ -48,10 +48,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   }
 
   /**
-   * @todo: update the doc, it's not true anymore
-   * Given a class, map all functions that return a promise into our TimerMonad, which still implements the
-   * thennable interface, meaning it looks like a promise, swims like a promise, and quacks like a promise but
-   * has the added benefit of timing the promise. 
+   * Wrap various webGPU functions such that their usage will be tracked
    *
    */
   function liftWebGPUPrototype(GPUClass)
@@ -166,7 +163,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
 
     for (let prop of Object.keys(self[GPUClass].prototype))
     {
-      // lift the function into our GPUTimingPromise monad
+      // lift the function into our TimedPromise
       if (promiseReturningFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
@@ -226,7 +223,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function nativeEventLoop$$
   }
 
 
-  // TODO: add doc
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
     const duration = new TimeInterval();
