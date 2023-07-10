@@ -295,6 +295,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // calculations, they are erroneously measured as CPU time. This can cause CPU time > total time
     // and CPUDensity > 1
     protectedStorage.timers.cpu.reset();
+    protectedStorage.timers.webGPU.reset(); // also reset other timers for saftey
+    protectedStorage.timers.webGL.reset();
     protectedStorage.unlockTimers();
     /* Use setTimeout trampoline to
      * 1. shorten stack
