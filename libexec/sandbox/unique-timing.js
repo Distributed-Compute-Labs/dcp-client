@@ -134,7 +134,7 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     };
   }
 
-  if (typeof navigator === 'undefined' || typeof navigator?.gpu !== 'undefined')
+  if (typeof navigator === 'undefined' || !navigator?.gpu)
     return;
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
