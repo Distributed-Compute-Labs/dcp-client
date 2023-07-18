@@ -19,7 +19,7 @@
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
-    const cpuTimer = protectedStorage.timers.cpu;
+    const cpuTimer = protectedStorage.timers?.cpu;
     const events = [];
     events.serial = 0;
     let timersLocked = false;
