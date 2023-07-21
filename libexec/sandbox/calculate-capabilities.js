@@ -64,8 +64,8 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
               title: 'DCP-evaluator',
               visible: false,
             });
-
-            const adapter = await GPU.requestAdapter({ gpuWindow });
+            
+            const adapter = await GPU.requestAdapter({ window: gpuWindow });
             await adapter.requestDevice(adapter.extensions);
           } else {
             const adapter = await navigator.gpu.requestAdapter();
@@ -102,6 +102,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
           //Any error in this using an extensions should likely result in specifications for that capability being set to false.
           offscreenCanvas = false;
         }
+        protectedStorage.timers.webGL.reset() // Testing for webGL != using webGL.
       }
 
       try {

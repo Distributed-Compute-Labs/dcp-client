@@ -649,11 +649,10 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   // Set values to true to disallow access to symbols
   const blockList = {
     OffscreenCanvas: false,
+    WebGPUWindow: false,
+    GPU: false,
   };
 
-  const blockListRequirements = {
-    OffscreenCanvas: "environment.offscreenCanvas"
-  };
   /**
    * Applies a allow list and a block list of properties to an object. After this function, if someone tries
    * to access non-allowed or blocked properties, a warning is logged and it will return undefined. The allow
@@ -663,10 +662,9 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
    * @param {object} obj - The object, which will have the allow list applied to its properties.
    * @param {Set} allowList - A set of properties to allow people to access.
    * @param {Set} blockList - An object of property names mapping to booleans to indicate whether access is allowed or not.
-   * @param {Set} blockListRequirements - An object of property names mapping requirement path strings, used to print useful warnings.
    * @param {Set} polyfills - An object of property names that have been polyfilled.
    */
-  function applyAccessLists(obj, allowList, blockList = {}, blockListRequirements = {}, polyfills = {}) {
+  function applyAccessLists(obj, allowList, blockList = {}, polyfills = {}) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
       if (Object.getOwnPropertyDescriptor(obj, prop).configurable) {
@@ -693,7 +691,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         } else if (prop in blockList) {
           let isSet = false;
           let blocked = blockList[prop];
-          let requirement = blockListRequirements[prop];
           let propValue = obj[prop];
           Object.defineProperty(obj, prop, {
             get: function () {
@@ -761,38 +758,32 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     // before we allow Object's properties
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
-    // Save them in scope because they'll get hidden by the allowList
-    let _allowList = allowList;
-    let _blockList = blockList;
-    let _polyfills = polyfills;
 
     // Ternary expression to avoid a ReferenceError on navigator
-    let _navigator = typeof navigator !== 'undefined' ? navigator : undefined;
     let _GPU       = ((typeof navigator !== 'undefined') && (typeof navigator.gpu !== 'undefined')) ? navigator.gpu : 
       (typeof GPU !== 'undefined'? GPU : undefined);
-    let _blockListRequirements = blockListRequirements;
-    let _applyAccessLists = applyAccessLists;
-    let _applyPolyfills = applyPolyfills;
 
     for (let g = global; g.__proto__ && (g.__proto__ !== Object); g = g.__proto__) {
-      applyAccessLists(g, allowList, blockList, blockListRequirements, polyfills);
+      applyAccessLists(g, allowList, blockList, polyfills);
     }
 
-    if (typeof _navigator === 'undefined') {
-      _navigator = navigator = {
+    if (typeof navigator === 'undefined')
+    {
+      navigator = {
         userAgent: 'not a browser',
-        gpu: _GPU, 
+        gpu: _GPU,
       };
-    } else {
+    }
+    else if (!protectedStorage.createdNewNavigator)
+    {
       // We also want to allowList certain parts of navigator, but not others.
-      
-      navAllowlist = new Set([
+      const navAllowlist = new Set([
         'userAgent',
         'gpu',
       ]);
       let navPolyfill = {
         userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
-        gpu: _GPU 
+        gpu: _GPU,
       };
       applyAccessLists(navigator.__proto__, navAllowlist, {}, {}, navPolyfill);
       applyPolyfills(navigator.__proto__, navPolyfill);
@@ -810,7 +801,21 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     global.requestAnimationFrame = callback => setTimeout(callback, 0);
   }
 
-  if (protectedStorage.hasWebglSupport()) {
+  function hasWebGLSupport()
+  {
+    try
+    {
+      const canvas = new OffscreenCanvas(1,1);
+      return Boolean(canvas.getContext('webgl') || canvas.getContext('webgl2'));
+    }
+    catch
+    {
+      return false;
+    }
+
+  }
+
+  if (hasWebGLSupport()) {
 
     // This deals with Firefox bug 1529995, which causes the tab to crash if fenceSync is called.
     if (navigator.userAgent.indexOf('Firefox') >= 0) {
@@ -840,6 +845,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         // Assume the scheduler gave us a nicely-shaped req object.
         const requirements = event.requirements;
         blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
+        blockList.WebGPUWindow = !requirements.environment.webgpu;
+        blockList.GPU = !requirements.environment.webgpu;
         applyAllAccessLists();
 
         ring1PostMessage({ request: 'applyRequirementsDone' });

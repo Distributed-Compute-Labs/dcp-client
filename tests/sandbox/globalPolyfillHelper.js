@@ -13,6 +13,16 @@
 
 const fs = require('fs');
 
+/**
+ * Initializes the global scope by evaluating a list of files. Typically,
+ * sandbox initialization files to setup necessary symbols to run test.
+ *
+ * Accepts a callback to make spying on post messages easier for test
+ * assertions.
+ *
+ * @param {string[]} files - A list of files to execute in the global scope.
+ * @param {(message: object) => void} [outputTesting] - Callback that receives post messages.
+ */
 exports.init = function init(files, outputTesting)
 {
   let code = ''
