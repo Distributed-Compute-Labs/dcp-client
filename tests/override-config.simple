@@ -22,4 +22,4 @@ async function main()
 dcpClient.init({/*dcpConfig*/}, {
   configName:  './etc/dcp-config',
   configScope: 'config-simple-test',
-}).then(main).catch(console.error);
+}).then(main);
