@@ -21,4 +21,4 @@ async function main()
 
 dcpClient.init({/*dcpConfig*/}, {
   configName:  './etc/dcp-config-2',
-}).then(main).catch(console.error);
+}).then(main);
