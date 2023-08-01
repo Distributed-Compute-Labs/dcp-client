@@ -59,7 +59,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     // is all the operations performed on them become no-ops
     const realSubmit = globalThis.GPUQueue?.prototype?.submit;
     const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
-    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.detroy;
+    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.destroy;
     /**
      * @class WebGPUQueueRegistery
      * @property {Array<GPUQueue>} queues - list of all tracked instances of `GPUQueue`
