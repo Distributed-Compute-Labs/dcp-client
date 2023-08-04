@@ -88,7 +88,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           {
             return onFulfilled;
           }
-        }),
+        },
         (rejectedReason) =>
         {
           if (onRejected instanceof Function)
@@ -104,7 +104,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
             return onFulfilled;
           }
         }
-      );
+      ));
     }
 
     /**
