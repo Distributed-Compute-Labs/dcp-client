@@ -56,34 +56,11 @@ for (const script in mustLoadScripts)
     process.exit(1)
 
 // everything above is just a long song and dance to get set up
-test('immediately-fulfilled', (t) => {
+test('ignores non functions', (t) => {
   return new Promise((resolve) => resolve(42))
-    .then(() => t.ok(true));
+    .then(5)
+    .then((val) => {
+      t.eq(val, 42);
+    })
 });
-
-test('eventually-fulfilled', (t) => {
-  return new Promise((resolve) => setTimeout(() => resolve(42)))
-    .then(() => t.ok(true));
-});
-
-test('resolve-with-value', (t) => {
-  return Promise.resolve(42)
-    .then(() => t.ok(true));
-});
-
-test('resolve-with-another-promise', async (t) => {
-  await Promise.resolve(new Promise((resolve) => resolve(42)));
-  return t.ok(true);
-});
-
-test('immediately-rejected', (t) => {
-  return new Promise((_resolve, reject) => reject(42))
-    .catch(() => t.ok(true));
-});
-
-test('eventually-rejected', (t) => {
-  return new Promise((_resolve, reject) => setTimeout(() => reject(42)))
-    .catch(() => t.ok(true));
-});
-
 

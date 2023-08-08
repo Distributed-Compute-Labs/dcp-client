@@ -66,10 +66,14 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
      * @function then
      * @param {Function | value} onFulfilled
      * @param {Function | value} onRejected
-     * @returns {Thennable} go read MDN about what is a thennable
+     * @returns {Thennable} go read MDN about what is a thennable, 
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
      */
     then(onFulfilled, onRejected)
     {
+      const identity = (x) => x;
+      const timedIdentity = makeTimed(identity, recordOnCPU);
+
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
@@ -83,7 +87,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           }
           else
           {
-            return onFulfilled;
+            return timedIdentity(resolvedValue);
           }
         },
         (rejectedReason) =>
@@ -98,7 +102,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           }
           else
           {
-            return onFulfilled;
+            return timedIdentity(rejectedReason);
           }
         }
       ));
