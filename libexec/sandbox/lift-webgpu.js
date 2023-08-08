@@ -291,7 +291,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
 
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
-    const duration = new TimeInterval();
     const that = this;
 
     const original = new TimedPromise((resolve) => {
@@ -299,12 +298,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
       resolve(ret);
     });
 
-    const recordTime = () => {
-      duration.stop();
-      webGPUTimer.push(duration);
-    };
-
-    original.then(recordTime, recordTime);
     return original;
   }
 
