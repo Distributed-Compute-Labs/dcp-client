@@ -71,9 +71,6 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
      */
     then(onFulfilled, onRejected)
     {
-      const identity = (x) => x;
-      const timedIdentity = makeTimed(identity, recordOnCPU);
-
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
@@ -87,7 +84,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           }
           else
           {
-            return timedIdentity(resolvedValue);
+            return resolvedValue;
           }
         },
         (rejectedReason) =>
@@ -102,7 +99,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           }
           else
           {
-            return timedIdentity(rejectedReason);
+            return rejectedReason;
           }
         }
       ));
