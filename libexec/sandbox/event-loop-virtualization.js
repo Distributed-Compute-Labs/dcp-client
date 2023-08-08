@@ -20,7 +20,7 @@
  *  Timing macrotasks are easy, within the environment of web workers, the only macro tasks that occur are setTimeout
  *  and their friends, we simply make every function time itself.
  *
- *  Timing microtasks would also be easy with one exception. A macrotask is created via call to the Promise constructor,
+ *  Timing microtasks would also be easy with one exception. A microtask is created via call to the Promise constructor,
  *  which we can just time that. A promise's that depend on the completion of another promise is either crated with the
  *  call to the promise constructor---which we time, or via `then`. The callback of `then` is effectively what will get
  *  put onto the stack when empty, this is guaranteed by the fact that promise crated `then` will be run asynchronously
