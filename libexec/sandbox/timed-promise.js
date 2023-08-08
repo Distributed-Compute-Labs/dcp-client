@@ -58,6 +58,8 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
         const timedConstruction = makeTimed(executor, recordOnCPU);
         timedConstruction(resolve, reject);
       });
+
+      Object.freeze(this);
     }
 
     /**
@@ -175,7 +177,9 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     }
   }
 
+  delete self.Promise;
   self.Promise = TimedPromise;
+  Object.freeze(self.Promise.prototype);
 
   protectedStorage.bigBrother = {
     ...protectedStorage.bigBrother,
