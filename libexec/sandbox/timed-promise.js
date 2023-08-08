@@ -55,11 +55,8 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     {
       this.wrapped = new RealPromise((resolve, reject) =>
       {
-        // our queueMicrotask know show to measure
-        queueMicrotask(() =>
-        {
-          executor(resolve, reject);
-        })
+        const timedConstruction = makeTimed(executor, recordOnCPU);
+        timedConstruction(resolve, reject);
       });
     }
 
