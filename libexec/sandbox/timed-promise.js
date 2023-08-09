@@ -65,6 +65,9 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     /**
      * Implements the thennable interface, so we can chain promises and await on them.
      *
+     * It has the same beviour has the then method on the standard promise. If the parameters are functions, then the 
+     * resolved value is passed in as the argument and called. If not, it's internally replaced with the identiy function.
+     *
      * @function then
      * @param {Function | value} onFulfilled
      * @param {Function | value} onRejected
@@ -177,6 +180,8 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
     }
   }
 
+  // prevent users from messing up our grand design of using promises to measure resource usage. They should not be
+  // allowed to mess with the standard Promise.prototype
   delete self.Promise;
   self.Promise = TimedPromise;
   Object.freeze(self.Promise.prototype);
