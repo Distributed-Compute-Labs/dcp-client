@@ -1,5 +1,15 @@
-// lift WASM functions into our TimedPromise
-// lift in the Haskell fmap/lift sense, mapping to a new category while preserving the structure (functionality)
+/**
+ *  @file       lift-wasm.js
+ *              Copyright (c) 2023, Distributive, Ltd.
+ *              All Rights Reserved. Licensed under the terms of the MIT License.
+ *
+ *              Makes WASM instantiation and parsing (which happens off the main thread) to be timed and recorded.
+ *              Technically the streaming variants is a combination of IO and CPU, but we can't achieve that level of
+ *              granularity, so they all get lumped into CPU time.
+ *
+ *  @author     Liang Wang, liang@distributive.network
+ *  @date       July 2023
+ */
 self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(protectedStorage) {
   /** @typedef {import(./timer-classes.js).TimeInterval} TimeInterval*/
   const TimeInterval = protectedStorage.TimeInterval;
