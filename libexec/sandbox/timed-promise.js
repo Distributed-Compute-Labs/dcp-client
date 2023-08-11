@@ -97,7 +97,7 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
           if (onRejected instanceof Function)
           {
             const timed = makeTimed(
-              () => onFulfilled(rejectedReason),
+              () => onRejected(rejectedReason),
               recordOnCPU
             );
             return timed();
