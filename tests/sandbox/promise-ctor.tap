@@ -88,7 +88,7 @@ test('eventually-rejected', (t) => {
 
 test('await with rejected promise converts to throw', async (t) => {
   try {
-    await new Promise((resolve, reject) => reject(3));
+    await new Promise((_resolve, reject) => reject(3));
     t.ok(false);
   } catch (e) {
     t.eq(e, 3);
