@@ -16,6 +16,6 @@ metadata:
     gitlab.com/project-id: '9874684'
     backstage.io/techdocs-ref: dir:./docs
 spec:
-  type: website
+  type: library
   lifecycle: production
   owner: core
