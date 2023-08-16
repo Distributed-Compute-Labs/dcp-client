@@ -128,16 +128,12 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
     const merged = [];
     for (const interval of this.intervals)
     {
-      // if the last interval in the merged list have no ovverlap with the current interval, just push it
       if (merged.length === 0 || merged.at(-1).end < interval.start)
-      {
+        // if the last interval in the merged list have no ovverlap with the current interval, just push it
         merged.push(interval);
-      }
       else
-      {
         // otherwise, there is overlap, so merge the current and last interval
         merged.at(-1).end = Math.max(merged.at(-1).end, interval.end);
-      }
     }
 
     this.intervals = merged;
