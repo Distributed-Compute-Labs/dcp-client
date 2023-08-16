@@ -70,7 +70,8 @@ exports.init = function init(files, outputTesting)
         process.nextTick(() => cb.call(null, data));
   }
 
-  eval(code);
+  const indirect = eval;
+  indirect(code);
   // At this point a very primitive version of the evaluator exists - all global symbols defined in
   // by the supplied evaluator scripts 'files' exist/are overwritten in the global scope.
   // Tests can now use such symbols, or event listeners that would be set up by the files to run tests over them.
