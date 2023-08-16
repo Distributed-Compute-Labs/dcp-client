@@ -185,7 +185,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // Since the total is wall time, no single component can exceed it.
     const revisedCPU = total - Math.max(webGL, webGPU, CPU) + CPU;
     protectedStorage.console.log({ total, webGL, webGPU, revisedCPU });
-    ring3PostMessage({ request: 'measurement', data: { total, webGL, webGPU, CPU: revisedCPU } });
+    ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU: revisedCPU });
   }
 
   /* Report an error from the work function to the supervisor */
