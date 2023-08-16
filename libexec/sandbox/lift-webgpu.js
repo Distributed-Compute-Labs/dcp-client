@@ -65,7 +65,7 @@
  *  @date       May 2023
  */
 self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(protectedStorage, ring0PostMessage) {
-  if (!('gpu' in navigator))
+  if ((typeof naviagor === 'undefined') || !('gpu' in navigator))
     return;
 
   const TimedPromise = protectedStorage.bigBrother.TimedPromise;
