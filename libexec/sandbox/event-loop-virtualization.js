@@ -264,6 +264,19 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
 
 
+      /**
+       * Only reset the recorded time intervals but do not remove any recources from tracking. This function pretty much
+       * only exists for resetting the time used for feature detection. Try not to abuse it, it's not a good API.
+       * @function resetRecordedTime
+       */
+      resetRecordedTime()
+      {
+        this.webGPUIntervals.reset();
+        this.cpuIntervals.reset();
+        this.webGLIntervals.reset();
+        this.wasmIntervals.reset();
+      }
+
       /** @typedef {Object} ResourceUsageMetric 
        *  @property {number} webGPU - time spent in both device and queue timeline
        *  @property {number} CPU - time spent in "user time" of the CPU

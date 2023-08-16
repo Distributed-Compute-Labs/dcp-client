@@ -293,6 +293,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function runWorkFunction(datum)
   {
     protectedStorage.unlockTimers();
+
+    // reset the time used for feature detection
+    protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
+
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
