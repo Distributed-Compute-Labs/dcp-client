@@ -23,6 +23,9 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
   };
 
   const makeWrapped = (fn) => {
+    if (arguments[0] == undefined)
+      return undefined;
+
     return (...args) => {
       const duration = new TimeInterval();
       const originalPromise = new TimedPromise((resolve, _reject) => {
@@ -37,12 +40,8 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
     };
   };
 
-  WebAssembly.instantiateStreaming
-    = WebAssembly.instantiateStreaming ? makeWrapped(WebAssembly.instantiateStreaming) : undefined;
-  WebAssembly.instantiate
-    = WebAssembly.instantiate ? makeWrapped(WebAssembly.instantiate) : undefined;
-  WebAssembly.compile
-    = WebAssembly.compile ? makeWrapped(WebAssembly.compile) : undefined;
-  WebAssembly.compileStreaming
-    = WebAssembly.compileStreaming ? makeWrapped(WebAssembly.compileStreaming) : undefined;
+  WebAssembly.instantiateStreaming = makeWrapped(WebAssembly.instantiateStreaming);
+  WebAssembly.instantiate = makeWrapped(WebAssembly.instantiate);
+  WebAssembly.compile = makeWrapped(WebAssembly.compile);
+  WebAssembly.compileStreaming = makeWrapped(WebAssembly.compileStreaming);
 });
