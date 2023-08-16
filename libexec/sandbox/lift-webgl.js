@@ -1,6 +1,6 @@
 /**
  *  @file       lift-webgl.js
- *              Copyright (c) 2022, Distributive, Ltd.
+ *              Copyright (c) 2022-2023, Distributive, Ltd.
  *              All Rights Reserved. Licensed under the terms of the MIT License.
  *
  *              This file adds wrappers various classes/functions that may have different requirements in order to accurately time them.
