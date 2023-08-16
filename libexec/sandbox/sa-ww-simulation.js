@@ -35,9 +35,26 @@
  * web workers which already have self defined. 
  */
 const self = this;
+var debug = false;
+delete self.console;
 
 try {
   (function privateScope(writeln, onreadln, die) {
+    /* Implement console.log which propagates messages to stdout. */
+    var console = {
+      log: function workerControl$$log () {
+        writeln('LOG:' + Array.prototype.slice.call(arguments).join(' ').replace(/\n/g,"\u2424"))
+      }
+    }
+
+    self._console = console
+    try {
+      self.console = console
+      console.debug = console.log
+      console.error = console.log
+      console.warn = console.log
+    } catch (e) {}
+
     var inMsg, outMsg
 
     var eventListeners = {}
