@@ -79,33 +79,17 @@ self.wrapScriptLoading({ scriptName: 'timed-promise' }, function timedPromise(pr
       return (
         realThen.call(this.wrapped, (resolvedValue) =>
         {
-          if (onFulfilled instanceof Function)
-          {
-            const timed = makeTimed(
-              () => onFulfilled(resolvedValue),
-              recordOnCPU
-            );
-            return timed();
-          }
-          else
-          {
+          if (!(onFulfilled instanceof Function))
             return resolvedValue;
-          }
+          else
+            return (makeTimed(() => onFulfilled(resolvedValue), recordOnCPU))();
         },
         (rejectedReason) =>
         {
-          if (onRejected instanceof Function)
-          {
-            const timed = makeTimed(
-              () => onRejected(rejectedReason),
-              recordOnCPU
-            );
-            return timed();
-          }
-          else
-          {
+          if (!(onRejected instanceof Function))
             return rejectedReason;
-          }
+          else
+            return (makeTimed(() => onRejected(rejectedReason), recordOnCPU))();
         }
       ));
     }
