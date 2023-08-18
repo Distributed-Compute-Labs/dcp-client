@@ -231,7 +231,7 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
 function injectModule(id, moduleExports, clobber) {
   if (!clobber && typeof moduleSystem._cache[id] !== 'undefined')
     throw new Error(`Module ${id} has already been injected`);
-  moduleSystem._cache[id] = new (moduleSystem.Module)
+  moduleSystem._cache[id] = new (moduleSystem)
   moduleSystem._cache[id].id = id
   moduleSystem._cache[id].parent = module
   moduleSystem._cache[id].exports = moduleExports
