@@ -261,8 +261,11 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       rejection = error;
     }
 
-    // flush any pending console events, especially in the case of a repeating message that hasn't been emitted yet 
-    try { flushLastLog(); } catch(e) {};
+    /* try to flush any pending tasks on the microtask queue, then flush any pending console events, 
+     * especially in the case of a repeating message that hasn't been emitted yet
+     */
+    try { await tryFlushMicroTaskQueue(); } catch(e) {};
+    try { protectedStorage.flushLastLog(); } catch(e) {};
     try
     {
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
