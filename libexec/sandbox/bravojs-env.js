@@ -174,8 +174,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   };
 
   /* Report metrics to sandbox/supervisor */
-  /** @todo it's not async anymore */
-  async function reportTimes (metrics)
+  function reportTimes (metrics)
   {
     const { total, webGL, webGPU, CPU } = metrics;
 
@@ -184,6 +183,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     // The current hammer is we just add that time back to the CPU and accept the might be overestimated.
     // Since the total is wall time, no single component can exceed it.
     const revisedCPU = total - Math.max(webGL, webGPU, CPU) + CPU;
+    /** @todo remove logging below when merging */
     protectedStorage.console.log({ total, webGL, webGPU, revisedCPU });
     ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU: revisedCPU });
   }
@@ -207,7 +207,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportTimes(metrics).then(() => ring3PostMessage({ request: 'workError', error: err }));
+      reportTimes(metrics);
+      ring3PostMessage({ request: 'workError', error: err });
     }
     else
       ring3PostMessage({request: 'workError', error: err});
@@ -219,11 +220,15 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   function reportResult (result, metrics)
   {
-    reportTimes(metrics).then(() => {
+    try
+    {
+      reportTimes(metrics);
       ring3PostMessage({ request: 'complete', result });
-    }).catch((error) => {
+    }
+    catch (error)
+    {
       ring3PostMessage({ request: 'sandboxError', error });
-    });
+    }
   }
   
   /**
