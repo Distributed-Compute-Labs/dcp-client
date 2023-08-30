@@ -64,7 +64,6 @@ realSetTimeout(() => {
       expectedOutputs.cpuTime = true;
     }
     else {
-      console.log("wtf");
       expectedOutputs.cpuTimeReason = `Bad value returned for CPU time: ${timeTaken}, expected ${loopDelay * 2}±5%`;
     }
 
