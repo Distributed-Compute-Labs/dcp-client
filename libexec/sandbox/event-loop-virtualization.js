@@ -198,6 +198,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      * @property {TimeThing} wasmIntervals
      * @function getMetrics
      * @function reset
+     * @function resetRecordedTime
      */
     class GlobalTrackers
     {
