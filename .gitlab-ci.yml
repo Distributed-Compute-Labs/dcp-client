@@ -89,7 +89,8 @@ build:
 
 tidelift:
   stage: build
-  when: never
+  rules:
+    - when: never
   # The Tidelift CLI requires `glibc`.
   image: frolvlad/alpine-glibc
   variables:
