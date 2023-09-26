@@ -83,9 +83,13 @@
         result: "success",
       });
 
-      if (options.finalScript)
+      if (options.finalScript) {
         delete self.wrapScriptLoading;
 
+        ring0PostMessage({
+          request: 'sandboxLoaded',
+        })
+      }
     } catch (e) {
       ring0PostMessage({
           request: 'scriptLoaded',
