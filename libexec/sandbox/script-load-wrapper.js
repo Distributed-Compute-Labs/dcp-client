@@ -86,9 +86,10 @@
       if (options.finalScript) {
         delete self.wrapScriptLoading;
 
-        // The 'sandboxLoaded' event is used by dcp-native; do not remove.
+        // The private '__sandboxLoaded' event is used by dcp-native; do not remove.
+	// Otherwise, do not use __sandboxLoaded.
         ring0PostMessage({
-          request: 'sandboxLoaded', // SAVE
+          request: '__sandboxLoaded', // SAVE
         })
       }
     } catch (e) {
