@@ -202,7 +202,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     }
   };
   // Ensure all console statements will be sent after a job completes
-  self.flushLastLog = function workerBootstrap$flushLastLog(){
+  protectedStorage.flushLastLog = function workerBootstrap$flushLastLog(){
     if(!flushedLastConsoleMessage){
         flushConsoleMessages(null); 
         flushedLastConsoleMessage = true;

@@ -134,8 +134,8 @@ self.wrapScriptLoading({ scriptName: 'gpu-timers' }, async function gpuTimers$fn
     };
   }
 
-  if (!navigator.gpu)
-    return
+  if (typeof navigator === 'undefined' || !navigator?.gpu)
+    return;
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
   const originalSubmit = GPUQueue.prototype.submit;
