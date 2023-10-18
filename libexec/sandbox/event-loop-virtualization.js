@@ -19,15 +19,24 @@
 self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eventLoopVirtualization$$fn(protectedStorage, ring0PostMessage)
 {
   (function privateScope(realSetTimeout, realSetInterval, realSetImmediate, realClearTimeout, realClearInterval, realClearImmediate) {
-    let totalCPUTime = 0;
-    let startTime;
+    const cpuTimer = protectedStorage.timers?.cpu;
     const events = [];
     events.serial = 0;
+    let timersLocked = false;
+
+    protectedStorage.lockTimers =   function lockTimers()   { timersLocked = true;  }
+    protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
+
 
     function sortEvents() {
       events.sort(function (a, b) { return a.when - b.when; });
     }
 
+    /*
+     * Assumption: serviceEvents must only be triggered if there is an event waiting to
+     * be run. If there are no pending events (or the last one is removed), the trigger 
+     * to call serviceEvents next should be removed.
+    */
     function serviceEvents()
     {
       serviceEvents.timeout = null;
@@ -35,55 +44,36 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.servicing = true;
       serviceEvents.sliceIsFinished = false;
 
-      startTime = performance.now();
-      let now = Date.now();
+      serviceEvents.interval = new protectedStorage.TimeInterval();
+      cpuTimer.push(serviceEvents.interval);
 
       sortEvents();
-      if (events[0].when <= now)
+      const event = events.shift();
+      if (event.eventType === 'timer')
       {
-        const event = events.shift();
-        if (event.eventType === 'timer')
+        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+        if (event.recur)
         {
-          serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
-          if (event.recur)
-          {
-            event.when = Date.now() + event.recur;
-            events.push(event);
-            sortEvents();
-          }
+          event.when = Date.now() + event.recur;
+          events.push(event);
+          sortEvents();
         }
-        // Can add handles for events to the event loop as needed (ie messages)
       }
+      // Can add handles for events to the event loop as needed (ie messages)
 
       // Measure the time on the event loop after everything has executed
       serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);
       function endOfRealEventCycle()
       {
         serviceEvents.servicing = false;
-        if (!serviceEvents.sliceIsFinished)
+        serviceEvents.interval.stop();
+
+        if (!serviceEvents.sliceIsFinished && events.length)
         {
-          const endTime = performance.now();
-          totalCPUTime += endTime - startTime;
-  
-          // Set timeout to rerun this function if there are events remaining that just can't be used yet
-          if (events.length > 0)
-          {
-            serviceEvents.nextTimeout = events[0].when
-            serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
-          }
+          serviceEvents.nextTimeout = events[0].when
+          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
         }
       }
-    }
-    protectedStorage.markCPUTimeAsDone = function markCPUTimeAsDone()
-    {
-      const endTime = performance.now();
-      totalCPUTime += endTime - startTime;
-      serviceEvents.sliceIsFinished = true;
-    }
-
-    protectedStorage.subtractWebGLTimeFromCPUTime = function subtractCPUTime(time)
-    {
-      totalCPUTime -= time;
     }
 
     /** Execute callback after at least timeout ms. 
@@ -94,6 +84,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
+      // Work function has resolved, Don't let client init any new timeouts.
+      if (timersLocked)
+        return {};
+
       timeout = timeout || 0;
       let timer, args;
       if (typeof callback === 'string') {
@@ -237,34 +231,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.sliceIsFinished = false;
     }
 
-    addEventListener('message', async (event) => {
-      try {
-        if (event.request === 'clearTimers') {
-          clearAllTimers();
-          ring0PostMessage({
-            request: 'clearTimersDone',
-          });
-        }
-        else if (event.request === 'resetAndGetCPUTime')
-        {
-          const cpuTime = totalCPUTime;
-          totalCPUTime = 0;
-          ring0PostMessage({
-            request: 'totalCPUTime',
-            CPU: cpuTime
-          })
-        }
-      } catch (error) {
-        ring0PostMessage({
-          request: 'error',
-          error: {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          },
-        });
-      }
-    });
+    protectedStorage.clearAllTimers = clearAllTimers;
+
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate);
 
   self.setTimeout = setTimeout;

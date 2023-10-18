@@ -168,7 +168,9 @@ function evalStringInSandbox(code, sandbox, filename = '(dcp-client$$evalStringI
   }
   catch(error)
   {
-    if (!/^Illegal return statement/.test(error.message))
+    const nodejsErrorMessage = /^Illegal return statement/;
+    const bunErrorMessage = /^Return statements are only valid inside functions./;
+    if (!nodejsErrorMessage.test(error.message) && !bunErrorMessage.test(error.message))
       throw error;
 
     code = `(() => {;${code}})()`; /* wrap in IIFE so conf can return objects */
@@ -229,7 +231,7 @@ moduleSystem._resolveFilename = function dcpClient$$injectModule$resolveFilename
 function injectModule(id, moduleExports, clobber) {
   if (!clobber && typeof moduleSystem._cache[id] !== 'undefined')
     throw new Error(`Module ${id} has already been injected`);
-  moduleSystem._cache[id] = new (moduleSystem.Module)
+  moduleSystem._cache[id] = new (moduleSystem)
   moduleSystem._cache[id].id = id
   moduleSystem._cache[id].parent = module
   moduleSystem._cache[id].exports = moduleExports

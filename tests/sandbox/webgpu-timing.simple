@@ -1,0 +1,72 @@
+/**
+ * @file    event-loop-timing.simple - Asserts that WebGPU related timing
+ *          operations correctly handle overlapping time intervals when multiple
+ *          'jobs' are submitted to the queue.
+ *
+ * @author  Ryan Saweczko <ryansaweczko@distributive.network>
+ * @author  Bryan Hoang <bryan@distributive.network>
+ * @date    January 2022, Apr. 2023
+ */
+
+const assert = require('assert').strict;
+
+process.exitCode = 1;
+
+const sandboxScripts = '../../libexec/sandbox/';
+
+const files = [
+  require.resolve(sandboxScripts + 'script-load-wrapper.js'),
+  require.resolve(sandboxScripts + 'timer-classes.js'),
+  require.resolve(sandboxScripts + 'event-loop-virtualization.js'),
+];
+
+require('./globalPolyfillHelper').init(files);
+
+self.wrapScriptLoading({ scriptName: 'test' }, async function test(protectedStorage) {
+  const webGPUTimer = protectedStorage.timers.webGPU;
+  const start = Date.now();
+
+  /**
+   * Simulate overlapping intervals from multiple submissions of WebGPU
+   * commands. e.g., timeline of what the test is trying to emulate:
+   * 1. |--|
+   * 2. |----|
+   * 3.    |---|
+   * O. |------|
+   * where `O` represents the overall time that should be measured.
+   */
+  const firstIntervalDurationMs = 100;
+  const secondIntervalDurationMs = 200;
+  const thirdIntervalDurationMs = 150;
+  const expectedDurationMs = 250;
+
+  const firstInterval = new protectedStorage.TimeInterval();
+  const secondInterval = new protectedStorage.TimeInterval();
+  webGPUTimer.push({ interval: firstInterval });
+  webGPUTimer.push({ interval: secondInterval });
+
+  while (Date.now() < start + firstIntervalDurationMs) {}
+
+  firstInterval.stop();
+  const thirdInterval = new protectedStorage.TimeInterval();
+  webGPUTimer.push({ interval: thirdInterval });
+
+  while (Date.now() < start + secondIntervalDurationMs) {}
+
+  secondInterval.stop();
+
+  while (Date.now() < start + firstIntervalDurationMs + thirdIntervalDurationMs) {}
+
+  thirdInterval.stop();
+
+  const actualDuration = await webGPUTimer.duration();
+
+  assert.ok(
+    // 5% buffer for timing inaccuracies from mocked scenario.
+    actualDuration > expectedDurationMs * 0.95
+      && actualDuration < expectedDurationMs * 1.05,
+    `WebGPU timing is incorrect. Actual: ${actualDuration}. Expected: ${expectedDurationMs}`,
+  );
+
+  process.exitCode = 0;
+});
