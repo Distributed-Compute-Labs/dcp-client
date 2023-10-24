@@ -8,7 +8,7 @@
 default:
   # Use in-house GitLab runners.
   tags:
-    - dcp
+    - dcp-core
     - linux
   cache: &default-cache
     - key:
@@ -90,6 +90,8 @@ build:
 
 tidelift:
   stage: build
+  rules:
+    - when: never
   # The Tidelift CLI requires `glibc`.
   image: frolvlad/alpine-glibc
   variables:
