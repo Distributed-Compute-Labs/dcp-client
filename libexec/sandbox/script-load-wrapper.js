@@ -90,7 +90,7 @@
 	// Otherwise, do not use __sandboxLoaded.
         ring0PostMessage({
           request: '__sandboxLoaded', // SAVE
-        })
+        });
       }
     } catch (e) {
       ring0PostMessage({
