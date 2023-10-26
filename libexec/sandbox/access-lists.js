@@ -753,7 +753,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
     for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
-      applyAccessLists(g, allowList, blockList, polyfills);
+      applyAccessLists(g, allowList, blockList);
 
     if (typeof navigator === 'undefined')
       navigator = { userAgent: 'not a browser', gpu: undefined };
