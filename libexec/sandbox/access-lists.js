@@ -756,13 +756,15 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       applyAccessLists(g, allowList, blockList);
 
     if (typeof navigator === 'undefined')
-      navigator = { userAgent: 'not a browser', gpu: undefined };
+      navigator = { userAgent: 'not a browser' };
     else
     {
-      navigator = {
+      const navPolyFill = {
         userAgent:  navigator.userAgent ? navigator.userAgent : 'not a browser', 
-        gpu: navigator.gpu
       };
+      if (navigator.gpu)
+        navPolyFill.gpu = navigator.gpu;
+      navigator = navPolyFill;
     }
   }
 
