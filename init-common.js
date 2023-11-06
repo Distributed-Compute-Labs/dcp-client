@@ -4,6 +4,8 @@
  *  @date       Aug 2019
  */
 
+'use strict';
+
 if (typeof module.declare === 'undefined') { /* cjs1 */
   module.declare = function moduleDeclarePolyfill(deps, factory) {
     if (!factory) {
@@ -27,19 +29,19 @@ module.declare([], function (require, exports, module) {
  * @note        Once successHandler and errorHandler have been consumed, the remaining arguments are passed to pinit().
  */
 exports.initcb = function (successHandler, errorHandler) {
-  arguments = Array.from(arguments)
+  const args = Array.from(arguments)
   if (typeof successHandler === 'function' || typeof errorHandler === 'function')
-    arguments.splice(0,1)
+    args.splice(0,1)
   else
     successHandler = false
 
   if (typeof errorHandler === 'function')
-    arguments.splice(0,1)
+    args.splice(0,1)
   else
     errorHandler = false
 
   let stack = new Error().stack
-  exports.init.apply(null, arguments).then(
+  exports.init.apply(null, args).then(
     function dcpClient$$init$then(){
       if (successHandler)
         successHandler()

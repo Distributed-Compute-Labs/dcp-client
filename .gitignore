@@ -3,3 +3,6 @@ node_modules
 *~
 .vscode
 test_report.xml
+
+# techdocs
+docs/site
