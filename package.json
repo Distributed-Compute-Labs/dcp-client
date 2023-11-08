@@ -56,7 +56,7 @@
     "peter": "^2.3.11"
   },
   "engines": {
-    "node": ">=16",
+    "node": ">=18",
     "npm": ">=7"
   },
   "overrides": {
