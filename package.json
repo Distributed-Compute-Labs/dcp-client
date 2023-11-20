@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.3.2",
+  "version": "4.3.3-webgpu.0",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -56,7 +56,7 @@
     "peter": "^2.3.11"
   },
   "engines": {
-    "node": ">=16",
+    "node": ">=18",
     "npm": ">=7"
   },
   "overrides": {

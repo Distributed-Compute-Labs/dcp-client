@@ -808,10 +808,9 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
    *
    * @param {object} obj - The object, which will have the allow list applied to its properties.
    * @param {Set} allowList - A set of properties to allow people to access.
-   * @param {Set} blockList - An object of property names mapping to booleans to indicate whether access is allowed or not.
-   * @param {Set} polyfills - An object of property names that have been polyfilled.
+   * @param {Object} blockList - An object of property names mapping to booleans to indicate whether access is allowed or not.
    */
-  function applyAccessLists(obj, allowList, blockList = {}, polyfills = {}) {
+  function applyAccessLists(obj, allowList, blockList = {}) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
       if (Object.getOwnPropertyDescriptor(obj, prop).configurable) {
@@ -819,17 +818,13 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
           let isSet = false;
           let propValue;
           Object.defineProperty(obj, prop, {
-            get: function () {
-              if (isSet) {
+            get: function getProtectedProperty() {
+              if (isSet)
                 return propValue;
-              } else {
-                if (prop in polyfills) {
-                  return polyfills[prop];
-                }
+              else 
                 return undefined;
-              }
             },
-            set: function (value) {
+            set: function setProtectedProperty(value) {
               propValue = value;
               isSet = true;
             },
@@ -861,16 +856,17 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
 
   /**
    * Applies a list of polyfills to symbols not present in the global object. Will apply
-   * this list through the objects entire prototype chain
+   * check the prototype chain for the symbol, and add it to the supplied 'obj' only if not
+   * present in the chain.
    * 
    * @param {Object} obj - The global object to add properties on
-   * @param {Set} polyfills - An object of property names to create/polyfill 
+   * @param {Object} polyfills - An object of property names to create/polyfill 
    */
-  function applyPolyfills(obj, polyfills = {}) {
+  function applyPolyfills(obj, polyfills){
     // Apply symbols from polyfill object
     for (let prop in polyfills) {
       let found = false;
-      for (let o = obj; o.__proto__ && (o.__proto__ !== Object); o = o.__proto__) {
+      for (let o = obj; Object.getPrototypeOf(o); o = Object.getPrototypeOf(o)) {
         if (o.hasOwnProperty(prop)) {
           found = true;
           break;
@@ -879,11 +875,11 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       if (found) { continue; }
       let propValue = polyfills[prop];
       Object.defineProperty(obj, prop, {
-        get: function () {
+        get: function getPolyfill() {
           return propValue;
 
         },
-        set: function (value) {
+        set: function setPolyfill(value) {
           propValue = value;
         },
         configurable: false
@@ -897,43 +893,27 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
    * so that the blockList is accessible to modify w/o adding it to the allowList.
    */
   function applyAllAccessLists() {
-    // We need to apply the access lists to global, global.__proto__, and global.__proto__.__proto__,
-    // because there's networking-accessing functions inside global.__proto__.__proto__, like fetch.
+    // We need to apply the access lists to global, and the entirety of global's prototype chain
+    // because there's networking-accessing functions inside the chain, like fetch.
     //
     // If we're in a robust environment (node, browser, WebWorker, basically anything but v8),
     // then we have to climb the prototype chain and apply the allowList there, but we have to stop
     // before we allow Object's properties
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
-
-    // Ternary expression to avoid a ReferenceError on navigator
-    let _GPU       = ((typeof navigator !== 'undefined') && (typeof navigator.gpu !== 'undefined')) ? navigator.gpu : 
-      (typeof GPU !== 'undefined'? GPU : undefined);
-
-    for (let g = global; g.__proto__ && (g.__proto__ !== Object); g = g.__proto__) {
-      applyAccessLists(g, allowList, blockList, polyfills);
-    }
+    for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
+      applyAccessLists(g, allowList, blockList);
 
     if (typeof navigator === 'undefined')
+      navigator = { userAgent: 'not a browser' };
+    else
     {
-      navigator = {
-        userAgent: 'not a browser',
-        gpu: _GPU,
+      const navPolyFill = {
+        userAgent:  navigator.userAgent ? navigator.userAgent : 'not a browser', 
       };
-    }
-    else if (!protectedStorage.createdNewNavigator)
-    {
-      // We also want to allowList certain parts of navigator, but not others.
-      const navAllowlist = new Set([
-        'userAgent',
-        'gpu',
-      ]);
-      let navPolyfill = {
-        userAgent: typeof navigator.userAgent !== 'undefined'? navigator.userAgent : 'not a browser',
-        gpu: _GPU,
-      };
-      applyAccessLists(navigator.__proto__, navAllowlist, {}, {}, navPolyfill);
-      applyPolyfills(navigator.__proto__, navPolyfill);
+      if (navigator.gpu)
+        navPolyFill.gpu = navigator.gpu;
+      navigator = navPolyFill;
     }
   }
 

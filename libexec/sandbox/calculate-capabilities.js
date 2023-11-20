@@ -48,11 +48,18 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         return arguments[0];
       });`
 
-      // doing anything more complicated will not tell you anything more useful 
-      webgpu =
-        typeof GPU !== 'undefined' ||
-        (typeof navigator !== 'undefined' &&
-          typeof navigator.gpu !== 'undefined');
+      webgpu = Boolean(globalThis.navigator?.gpu);
+
+      if (webgpu) {
+        try {
+          const adapter = await navigator.gpu.requestAdapter();
+          await adapter.requestDevice();
+        } catch (err) {
+          // if glfw fails or the symbols exist but webgpu hasn't been
+          // properly enabled (mozilla)
+          webgpu = false;
+        }
+      }
 
       offscreenCanvas = !!(
         typeof OffscreenCanvas !== 'undefined' && new OffscreenCanvas(1, 1)
@@ -94,7 +101,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
       }
 
       if(eval(testCode)(1) !== 1)
-        useStrict = false;      
+        useStrict = false;
 
       return {
         engine: {

@@ -17,7 +17,7 @@ require('..').init({configLocation: false}).then(main);
 
 function main()
 {
-  const KVIN = new (require('dcp/internal/kvin').KVIN)();
+  const KVIN = new (require('dcp/kvin').KVIN)();
   const o = KVIN.unmarshal(KVIN.marshal({}));
   const a = KVIN.unmarshal(KVIN.marshal([]));
   const u = KVIN.unmarshal(KVIN.marshal(new URL('https://google.com')));
