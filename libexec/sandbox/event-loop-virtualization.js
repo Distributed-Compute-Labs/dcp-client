@@ -315,14 +315,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const events = [];
     events.serial = 0;
     let timersLocked = false;
- 
-    // a list of ids of *all* the timeout and their friend ids, so we can cancel all of them when the work function is
-    // done
-    /** @todo should we have a system that allow for some timeout to be bypassed? Suppose if we need to use timeout to
-     * clean some other resource up in the future
-     */
-    let registeredTimeouts = [];
 
+    protectedStorage.realSetTimeout = realSetTimeout;
     protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
     protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
 
@@ -517,15 +511,17 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     /**
      * Clear all pending timeouts, including those ones generated via setInterval
      */
-    protectedStorage.clearAllTimeouts = () => {
-      // some of the elems actually represent timeouts that are already done, but it's ok.
-      // 1. canceling old timeouts is a no-op
-      // 2. setTimeout and their friends never reuse ids
-      for (const timeout of registeredTimeouts)
-        realClearTimeout(timeout);
-
-      registeredTimeouts = [];
-    };
+    function clearAllTimers() {
+      events.length = 0;
+      realClearTimeout(serviceEvents.timeout);
+      realClearTimeout(serviceEvents.measurerTimeout);
+      realClearTimeout(serviceEvents.executingTimeout);
+      serviceEvents.timeout = null;
+      serviceEvents.nextTimeout = null;
+      serviceEvents.servicing = false;
+      serviceEvents.sliceIsFinished = false;
+    }
+    protectedStorage.clearAllTimers = clearAllTimers;
 
     protectedStorage.timedQueueMicrotask = queueMicrotask;
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, self.queueMicrotask, protectedStorage);

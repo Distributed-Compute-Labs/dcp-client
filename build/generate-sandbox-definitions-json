@@ -23,7 +23,6 @@ var base = [
   'timer-classes',
   'wrap-event-listeners',
   'event-loop-virtualization',
-  'timed-promise',
   'lift-webgl',
   'lift-wasm',
   'lift-webgpu',
