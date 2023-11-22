@@ -68,12 +68,11 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   if ((typeof naviagor === 'undefined') || !('gpu' in navigator))
     return;
 
-  const TimedPromise = protectedStorage.bigBrother.TimedPromise;
   const TimeInterval = protectedStorage.TimeInterval;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
   const webGPUTimer = globalTrackers.webGPUIntervals;
 
-  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise into our TimedPromise
+  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise to be timed
   function liftWebGPUAsyncFunction(fn)
   {
     return function(...args)
@@ -81,11 +80,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
       const duration = new TimeInterval();
       const that = this;
 
-      const original = new TimedPromise((resolve) =>
-      {
-        const ret = fn.call(that, ...args);
-        resolve(ret);
-      });
+      const original = fn.call(that, ...args);
       
       const recordTime = () => {
         duration.stop();
@@ -228,7 +223,6 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
 
     for (let prop of Object.keys(self[GPUClass].prototype))
     {
-      // lift the function into our TimedPromise
       if (promiseReturningFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
@@ -291,12 +285,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
   {
     const that = this;
-
-    const original = new TimedPromise((resolve) => {
-      const ret = originalSubmitDone.call(that, ...args);
-      resolve(ret);
-    });
-
+    const original = originalSubmitDone.call(that, ...args);
     return original;
   }
 

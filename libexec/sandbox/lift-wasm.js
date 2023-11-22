@@ -13,8 +13,6 @@
 self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(protectedStorage) {
   /** @typedef {import(./timer-classes.js).TimeInterval} TimeInterval*/
   const TimeInterval = protectedStorage.TimeInterval;
-  /** @typedef {import(./timed-promise.js).TimedPromise} TimedPromise*/
-  const TimedPromise = protectedStorage.bigBrother.TimedPromise;
 
   const putToCPUInterval = (duration) => {
     duration.stop();
@@ -28,9 +26,7 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
 
     return (...args) => {
       const duration = new TimeInterval();
-      const originalPromise = new TimedPromise((resolve, _reject) => {
-        resolve(fn(...args));
-      });
+      const originalPromise = fn(...args);
 
       originalPromise.then(
         () => putToCPUInterval(duration),
