@@ -957,10 +957,9 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         // apply restrictions to the environment based on the requirements.
         // Assume the scheduler gave us a nicely-shaped req object.
         const requirements = event.requirements;
-        // TODO: figure what this actually does
-        // blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
-        // blockList.WebGPUWindow = !requirements.environment.webgpu;
-        // blockList.GPU = !requirements.environment.webgpu;
+        blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
+        blockList.WebGPUWindow = !requirements.environment.webgpu;
+        blockList.GPU = !requirements.environment.webgpu;
         applyAllAccessLists();
 
         ring1PostMessage({ request: 'applyRequirementsDone' });
