@@ -92,6 +92,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         // slaps roof, this thing can act as so many different concurrency primitives
         /** @type Array<EventTarget> */
         this.eventTargets = [];
+
+        // Lock to prevent webGPU work from occurring after the work function promise resolves
+        this.locked = false;
       }
 
       /**
@@ -136,6 +139,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       addSubmission(queue, commandBuffers)
       {
+        if (this.locked)
+          throw new Error('Attempted to submit webGPU queue after work function resolved');
         // we assume the queue is always already in the registry, should be enforced by changing all the
         // places where a queue can be created to use the registry
         const idx = this.queues.indexOf(queue);
@@ -185,6 +190,16 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         for (const queue in queues)
           this.unsafePopQueue(queue);
+      }
+
+      lock()
+      {
+        this.locked = true;
+      }
+
+      unlock()
+      {
+        this.locked = false;
       }
     }
 

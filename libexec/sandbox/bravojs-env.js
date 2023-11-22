@@ -265,6 +265,12 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try {
       // reset the device states and flush all pending tasks
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
+      protectedStorage.bigBrother.globalTrackers.webGPUQueueRegistery.lock();
+
+      // Let microtask queue finish before getting metrics. With all event-loop possibilities locked,
+      // only the microtask could trigger new code, so waiting for a setTimeout guarantees everything's done
+      await new Promise((r) => protectedStorage.realSetTimeout(r, 1));
+
       metrics = await protectedStorage.bigBrother.globalTrackers.getMetrics();
 
       await protectedStorage.bigBrother.globalTrackers.reset();
@@ -297,6 +303,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function runWorkFunction(datum)
   {
     protectedStorage.unlockTimers();
+    protectedStorage.bigBrother.globalTrackers.webGPUQueueRegistery.unlock();
 
     // reset the time used for feature detection
     protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
