@@ -195,7 +195,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      * @property {TimeThing} webGPUIntervals
      * @property {TimeThing} cpuIntervals
      * @property {TimeThing} webGLIntervals
-     * @property {TimeThing} wasmIntervals
      * @function getMetrics
      * @function reset
      * @function resetRecordedTime
@@ -218,8 +217,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         /** @type {TimeThing} */
         this.webGLIntervals = new TimeThing();
 
-        /** @type {TimeThing} */
-        this.wasmIntervals = new TimeThing();
 
         this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
 
@@ -261,7 +258,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         this.webGPUIntervals.reset();
         this.cpuIntervals.reset();
         this.webGLIntervals.reset();
-        this.wasmIntervals.reset();
       }
 
 
@@ -275,7 +271,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         this.webGPUIntervals.reset();
         this.cpuIntervals.reset();
         this.webGLIntervals.reset();
-        this.wasmIntervals.reset();
       }
 
       /** @typedef {Object} ResourceUsageMetric 
@@ -301,8 +296,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();
-        const wasmTime = this.wasmIntervals.duration();
-        const cpuTime = this.cpuIntervals.duration() + wasmTime;
+        const cpuTime = this.cpuIntervals.duration();
 
         return {
           webGPU: webGPUTime,
