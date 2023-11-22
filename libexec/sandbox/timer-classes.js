@@ -124,6 +124,9 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
    */
   TimeThing.prototype.duration = function totalDuration()
   {
+    // make sure intervals are sorted before merging them
+    this.intervals.sort((a, b) => a.start - b.start);
+
     // solution stolen from: https://leetcode.com/problems/merge-intervals/editorial/
     const merged = [];
     for (const interval of this.intervals)
