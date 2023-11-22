@@ -312,6 +312,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     };
 
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
+    const events = [];
+    events.serial = 0;
     let timersLocked = false;
  
     // a list of ids of *all* the timeout and their friend ids, so we can cancel all of them when the work function is
@@ -324,27 +326,53 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
     protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
 
-    const makeTimed = (callback) => {
-        return function(...arg) {
-          const duration = new TimeInterval();
-          const ret = callback(...arg);
-          duration.stop();
-          cpuTimer.push(duration);
-          return ret;
-        };
-    };
-  
-    const makeUniformCallback = (callback) => {
-        if (typeof callback === 'string')
+    function sortEvents() {
+      events.sort(function (a, b) { return a.when - b.when; });
+    }
+
+    /*
+     * Assumption: serviceEvents must only be triggered if there is an event waiting to
+     * be run. If there are no pending events (or the last one is removed), the trigger 
+     * to call serviceEvents next should be removed.
+    */
+    function serviceEvents()
+    {
+      serviceEvents.timeout = null;
+      serviceEvents.nextTimeout = null;
+      serviceEvents.servicing = true;
+      serviceEvents.sliceIsFinished = false;
+
+      serviceEvents.interval = new protectedStorage.TimeInterval();
+      cpuTimer.push(serviceEvents.interval);
+
+      sortEvents();
+      const event = events.shift();
+      if (event.eventType === 'timer')
+      {
+        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+        if (event.recur)
         {
-          const indirectEval = eval;
-          return function() {  return indirectEval(callback); };
+          event.when = Date.now() + event.recur;
+          events.push(event);
+          sortEvents();
         }
-        else
+      }
+      // Can add handles for events to the event loop as needed (ie messages)
+
+      // Measure the time on the event loop after everything has executed
+      serviceEvents.measurerTimeout = realSetTimeout(endOfRealEventCycle,1);
+      function endOfRealEventCycle()
+      {
+        serviceEvents.servicing = false;
+        serviceEvents.interval.stop();
+
+        if (!serviceEvents.sliceIsFinished && events.length)
         {
-          return callback;
+          serviceEvents.nextTimeout = events[0].when
+          serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
         }
-    };
+      }
+    }
 
     /** Execute callback after at least timeout ms. 
      * 
@@ -353,25 +381,104 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
-    self.setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, ...arg)
-    {
+    setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
       // Work function has resolved, Don't let client init any new timeouts.
       if (timersLocked)
-      {
-        protectedStorage.console.warn("timeout request after the event loop is locked");
         return {};
+
+      timeout = timeout || 0;
+      let timer, args;
+      if (typeof callback === 'string')
+      {
+        let code = callback;
+        callback = function eventLoop$$Worker$setTimeout$wrapper() {
+          let indirectEval = eval;
+          return indirectEval(code);
+        }
       }
 
-      callback = makeUniformCallback(callback);
-      const timedCallback = makeTimed(callback);
+      // if user supplies arguments, apply them to the callback function
+      if (arg)
+      {
+        args = Array.prototype.slice.call(arguments); // get a plain array from function arguments
+        args = args.slice(2);                         // slice the first two elements (callback & timeout), leaving an array of user arguments
+        let fn = callback;
+        callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
+      }
 
-      const cancellationId = realSetTimeout(timedCallback, timeout, ...arg);
-      registeredTimeouts.push(cancellationId);
-      return cancellationId;
+      events.serial = +events.serial + 1;
+      timer = {
+        eventType: 'timer',
+        fn: callback,
+        when: Date.now() + (+timeout || 0),
+        serial: events.serial,
+        valueOf: function () { return this.serial; }
+      }
+      events.push(timer);
+      sortEvents();
+      if (!serviceEvents.servicing)
+      {
+        if (!serviceEvents.nextTimeout)
+        {
+          realSetTimeout(serviceEvents, events[0].when - Date.now());
+        }
+        else
+        {
+          if (serviceEvents.nextTimeout > events[0].when)
+          {
+            realClearTimeout(serviceEvents.timeout);
+            realSetTimeout(serviceEvents, events[0].when - Date.now())
+          }
+        }
+      }
+      return timer;
     }
 
     /** Ensure our trampoline setTimeout in bravojs-env will have the proper setTimeout, don't allow clients to see or overwrite to prevent measuring time */
     protectedStorage.setTimeout = setTimeout;
+
+    /** Remove a timeout from the list of pending timeouts, regardless of its current
+     *  status.
+     * 
+     *  @param    timeoutId         {object} The value, returned from setTimeout(), identifying the timer.
+     */
+    clearTimeout = function eventLoop$$Worker$clearTimeout(timeoutId)
+    {
+      function checkService()
+      {
+        if (!serviceEvents.servicing)
+        {
+          if (events.length)
+          {
+            realClearTimeout(serviceEvents.timeout);
+            realSetTimeout(serviceEvents, events[0].when - Date.now())
+          }
+          else
+            realClearTimeout(serviceEvents.timeout);
+        }
+      }
+      if (typeof timeoutId === "object")
+      {
+        let i = events.indexOf(timeoutId);
+        if (i !== -1)
+          events.splice(i, 1);
+        if (i === 0)
+          checkService()
+      }
+      else if (typeof timeoutId === "number")
+      { /* slow path - object has been reinterpreted in terms of valueOf() */
+        for (let i = 0; i < events.length; i++)
+        {
+          if (events[i].serial === timeoutId)
+          {
+            events.splice(i, 1);
+            if (i === 0)
+              checkService()
+            break;
+          }
+        }
+      }
+    }
 
     /** Execute callback after at least interval ms, regularly, at least interval ms apart.
      * 
@@ -380,47 +487,23 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearInterval()
      */
-    self.setInterval = function eventLoop$$Worker$setInterval(callback, interval, ...arg)
+    setInterval = function eventLoop$$Worker$setInterval(callback, interval, arg)
     {
-      // Work function has resolved, Don't let client init any new timeouts.
-      if (timersLocked)
-      {
-        protectedStorage.console.warn("timeout request after the event loop is locked");
-        return {};
-      }
-
-      callback = makeUniformCallback(callback);
-      const timedCallback = makeTimed(callback);
-
-      const cancellationId = realSetInterval(timedCallback, interval, ...arg);
-      registeredTimeouts.push(cancellationId);
-      return cancellationId;
-    };
+      let timer = setTimeout(callback, +interval || 0, arg);
+      timer.recur = interval;
+      return timer;
+    }
     /** Execute callback after 0 ms, immediately when the event loop allows.
      * 
      *  @param    callback          {function} Callback function to fire after a minimum callback time
      *  @param    arg               array of arguments to be applied to the callback function
      *  @returns                    {object} A value which may be used as the intervalId paramter of clearImmediate()
      */
-    // setImmediate is non standard, don't give them the illusion that it's defined if it's not available on the
-    // platform
-    self.setImmediate = realSetImmediate ?
-          function eventLoop$$Worker$setImmediate(callback, ...arg)
-          {
-
-            // Work function has resolved, Don't let client init any new timeouts.
-            if (timersLocked)
-            {
-              protectedStorage.console.warn("timeout request after the event loop is locked");
-              return {};
-            }
-
-            callback = makeUniformCallback(callback);
-            const timedCallback = makeTimed(callback);
-
-            /** @todo it's not added to the registeredTimeouts, should it? */
-            return realSetImmediate(timedCallback, ...arg);
-          } : undefined;
+    setImmediate = function eventLoop$$Worker$setImmediate(callback, arg)
+    {
+      let timer = setTimeout(callback, 0, arg);
+      return timer;
+    }
 
     /** queues a microtask to be executed at a safe time prior to control returning to the event loop
      * 
@@ -428,9 +511,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      */
     self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
     {
-      // `queueMicrotask` is notable for only accepting function types and not strings that get `eval`ed
-      const timedCallback = makeTimed(callback);
-      return realQueueMicrotask(timedCallback);
+      Promise.resolve().then(callback);
     };
 
     /**
