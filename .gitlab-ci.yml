@@ -24,6 +24,12 @@ variables:
   # Suppress funding messages that aren't useful when debugging CI.
   npm_config_fund: 'false'
 
+# Control pipeline behaviour. e.g., when a pipeline is created.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 before_script:
   ##
   ## Install ssh-agent if not already installed, it is required by Docker.
