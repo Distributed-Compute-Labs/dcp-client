@@ -24,6 +24,12 @@ variables:
   # Suppress funding messages that aren't useful when debugging CI.
   npm_config_fund: 'false'
 
+# Control pipeline behaviour. e.g., when a pipeline is created.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 before_script:
   ##
   ## Install ssh-agent if not already installed, it is required by Docker.
@@ -115,7 +121,6 @@ test:
   parallel:
     matrix:
       - NODE_IMAGE: 
-        - node:16
         - node:18
         - node:20
   image: $NODE_IMAGE
@@ -150,9 +155,7 @@ publish_docs:
     ENTITY_NAMESPACE: 'default'
   stage: deploy
   needs: []
-  image: registry.gitlab.com/distributed-compute-protocol/docker/dcp-ci:2023-09-13
+  image: registry.gitlab.com/distributed-compute-protocol/backstage-ci-image:latest
   before_script: []
   script:
-    - npm clean-install
-    - python3 -m pip install mkdocs mkdocs-techdocs-core==1.* mkdocs-same-dir
     - bin/publish-docs.sh
