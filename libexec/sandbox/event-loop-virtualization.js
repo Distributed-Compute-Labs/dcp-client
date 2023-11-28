@@ -526,7 +526,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     /**
      * Clear all pending timeouts, including those ones generated via setInterval
      */
-    function clearAllTimers() {
+    function clearAllTimeouts() {
       events.length = 0;
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);
@@ -536,7 +536,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       serviceEvents.servicing = false;
       serviceEvents.sliceIsFinished = false;
     }
-    protectedStorage.clearAllTimers = clearAllTimers;
+    protectedStorage.clearAllTimeouts = clearAllTimeouts;
 
     protectedStorage.timedQueueMicrotask = queueMicrotask;
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, self.queueMicrotask, protectedStorage);
