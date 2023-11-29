@@ -269,7 +269,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
       // Let microtask queue finish before getting metrics. With all event-loop possibilities locked,
       // only the microtask could trigger new code, so waiting for a setTimeout guarantees everything's done
-      await new Promise((r) => protectedStorage.realSetTimeout(r, 1));
+      await new Promise((r) => protectedStorage.realSetTimeout.call(globalThis, r, 1));
 
       metrics = await protectedStorage.bigBrother.globalTrackers.getMetrics();
 
