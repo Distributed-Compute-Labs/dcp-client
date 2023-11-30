@@ -285,7 +285,7 @@ debug('dcp-client:modules')('Begin phase 1 module injection')  /* Just enough to
 injectNsMapModules(require('./ns-map'), loadBootstrapBundle(), 'bootstrap');
 injectModule('dcp/bootstrap-build', require('dcp/build'));
 
-KVIN = new (require('dcp/internal/kvin')).KVIN();
+KVIN = new (require('dcp/kvin')).KVIN();
 KVIN.userCtors.dcpUrl$$DcpURL  = require('dcp/dcp-url').DcpURL;
 KVIN.userCtors.dcpEth$$Address = require('dcp/wallet').Address;
 
