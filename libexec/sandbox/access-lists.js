@@ -15,6 +15,18 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
   const allowList = new Set([
     '__proto__',
+    
+    // properties guarnteed by polyfills
+    'globalThis',
+    'location',
+    'performance',
+    'importScripts',
+    'WorkerGlobalScope',
+    'btoa',
+    'atob',
+    'Blob',
+
+    // General allowed symbols
     'addEventListener',
     'applyAccesslist',
     'Array',
@@ -25,7 +37,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'BigInt64Array',
     'BigUint64Array',
     'Boolean',
-    'Blob',
     'bravojs',
     'clearInterval',
     'clearTimeout',
@@ -67,7 +78,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'onmessage',
     'parseFloat',
     'parseInt',
-    'performance',
     'postMessage',
     'Promise',
     'propertyIsEnumerable',
@@ -109,7 +119,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'WebAssembly',
     'WebGL2RenderingContext',
     'WebGLTexture',
-    'WorkerGlobalScope',
     // All webGPU symbols are allowed
     'WebGPUWindow',
     'GPU',
@@ -706,24 +715,14 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   }
 
   /**
-   * Applies a list of polyfills to symbols not present in the global object. Will apply
-   * check the prototype chain for the symbol, and add it to the supplied 'obj' only if not
-   * present in the chain.
+   * Assigns each property from some polyfill object to another object, inserting or replacing for each property
    * 
-   * @param {Object} obj - The global object to add properties on
-   * @param {Object} polyfills - An object of property names to create/polyfill 
+   * @param {Object} obj - The object to add properties on
+   * @param {Object} polyfills - An object of properties to create/polyfill 
    */
   function applyPolyfills(obj, polyfills) {
     // Apply symbols from polyfill object
     for (let prop in polyfills) {
-      let found = false;
-      for (let o = obj; Object.getPrototypeOf(o); o = Object.getPrototypeOf(o)) {
-        if (o.hasOwnProperty(prop)) {
-          found = true;
-          break;
-        }
-      }
-      if (found) { continue; }
       let propValue = polyfills[prop];
       Object.defineProperty(obj, prop, {
         get: function getPolyfill() {
