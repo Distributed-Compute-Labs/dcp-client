@@ -1,0 +1,24 @@
+#! /usr/bin/env node
+/**
+ * @file      ¬fetch.simple
+ *
+ *            Attempt to fetch using nodejs' global fetch. This
+ *            should have been blocked after access-lists was
+ *            applied.
+ *
+ * @author    Will Pringle <will@distributive.network>
+ * @date      December 2023
+ */
+const sandboxScripts = '../../libexec/sandbox/';
+
+const files = [
+  require.resolve(sandboxScripts + 'script-load-wrapper.js'),
+  require.resolve(sandboxScripts + 'access-lists.js'),
+];
+
+require('./globalPolyfillHelper').init(files, ()=>{});
+// we are now in an environment that has had the access-lists script applied to it
+
+// lets attempt to use nodejs' fetch to make a request to example.com
+fetch('https://example.com').then((res) => {});
+
