@@ -212,10 +212,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     }
 
     if (error === Symbol.for('workReject')) {
-      err['message'] = protectedStorage.workRejectReason;
-      err['name'] = 'EWORKREJECT';
-      err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
+      reportTimes().then(() => ring3PostMessage({ request: 'workReject', reason: protectedStorage.workRejectReason }));
     }
     else
     {
