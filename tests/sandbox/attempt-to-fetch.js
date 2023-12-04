@@ -1,10 +1,13 @@
 #! /usr/bin/env node
 /**
- * @file      ¬fetch.simple
+ * @file      attempt-to-fetch.js
  *
  *            Attempt to fetch using nodejs' global fetch. This
  *            should have been blocked after access-lists was
  *            applied.
+ *
+ *            This test must be called from a bash test so Peter is
+ *            able to run it properly despite changes to globalThis.
  *
  * @author    Will Pringle <will@distributive.network>
  * @date      December 2023
@@ -17,8 +20,10 @@ const files = [
 ];
 
 require('./globalPolyfillHelper').init(files, ()=>{});
-// we are now in an environment that has had the access-lists script applied to it
+emitEvent('message', {request: 'applyRequirements', requirements: {environment: {}}});
 
-// lets attempt to use nodejs' fetch to make a request to example.com
-fetch('https://example.com').then((res) => {});
+setTimeout(() => {
+  // let's attempt to use nodejs' fetch to make a request to example.com
+  fetch('https://example.com').then(console.log);
+})
 
