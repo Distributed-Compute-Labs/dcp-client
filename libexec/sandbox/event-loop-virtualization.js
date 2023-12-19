@@ -61,7 +61,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
     const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.destroy;
     /**
-     * @class WebGPUQueueRegistery
+     * @class WebGPUQueueRegistry
      * @property {Array<GPUQueue>} queues - list of all tracked instances of `GPUQueue`
      * @property {TimeThing} webGPUIntervals - collection of time slice for time spent on GPU
      * @property {Array<EventTarget>} eventTargets - list of the event targets used to book keep the usage of GPU
@@ -74,7 +74,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      * Each elem of queues with index `i` should have its corresponding EventTarget at eventTargets[i]. Entity component
      * system style.
      */
-    class WebGPUQueueRegistery
+    class WebGPUQueueRegistry
     {
       /**
        * @constructor
@@ -206,7 +206,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
     /**
      * @class GlobalTrackers
-     * @property {WebGPUQueueRegistery} webGPUQueueRegistery
+     * @property {WebGPUQueueRegistry} webGPUQueueRegistry
      * @property {TimeThing} webGPUIntervals
      * @property {TimeThing} cpuIntervals
      * @property {TimeThing} webGLIntervals
@@ -223,17 +223,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       constructor()
       {
-        /** @type {TimeThing} */
         this.webGPUIntervals = new TimeThing();
-        
-        /** @type {TimeThing} */
-        this.cpuIntervals = new TimeThing();
-
-        /** @type {TimeThing} */
-        this.webGLIntervals = new TimeThing();
-
-
-        this.webGPUQueueRegistery = new WebGPUQueueRegistery(this.webGPUIntervals);
+        this.cpuIntervals    = new TimeThing();
+        this.webGLIntervals  = new TimeThing();
+        this.webGPUQueueRegistry = new WebGPUQueueRegistry(this.webGPUIntervals);
 
         /** @type {Array<GPUDevice>} */
         // Why is this a list?
@@ -245,7 +238,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       }
 
       /**
-       * Reset the all the tracked time intervals. Unfinished intervals are simply dropped without a concern why they
+       * Reset all the tracked time intervals. Unfinished intervals are simply dropped without a concern why they
        * were not finished
        *
        * SAFETY:
@@ -264,7 +257,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
         // very important that this is called before resetting the intervals themselves since the registry hold
         // references to the intervals below
-        this.webGPUQueueRegistery.reset();
+        this.webGPUQueueRegistry.reset();
 
         // it's *very* important that we delegate the work of resetting to the intervals rather than just assigning each
         // of them with new instances. These `TimeThing`s are being shared to different modules, if we just re-assign,
@@ -307,7 +300,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
           realGPUDeviceDestory.call(device);
 
         // flush all commands that were already enqueued
-        await this.webGPUQueueRegistery.waitAllCommandToFinish();
+        await this.webGPUQueueRegistry.waitAllCommandToFinish();
 
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();
@@ -518,15 +511,15 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      * 
      *  @param    callback          {function} Callback function to fire
      */
-    self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback)
-    {
+    self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback) {
       Promise.resolve().then(callback);
     };
 
     /**
      * Clear all pending timeouts, including those ones generated via setInterval
      */
-    function clearAllTimeouts() {
+    function clearAllTimeouts()
+    {
       events.length = 0;
       realClearTimeout(serviceEvents.timeout);
       realClearTimeout(serviceEvents.measurerTimeout);

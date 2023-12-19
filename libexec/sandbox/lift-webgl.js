@@ -31,7 +31,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgl' }, async function gpuTimers$fn
   /**
    * @returns {boolean} 
    */
-  protectedStorage.hasWebglSupport = function webglSupport()
+  protectedStorage.hasWebglSupport = function hasWebglSupport()
   {
     try
     {
@@ -76,10 +76,10 @@ self.wrapScriptLoading({ scriptName: 'lift-webgl' }, async function gpuTimers$fn
           returnValue = originalFn(...args);
           interval.stop();
         }
-        catch (e)
+        catch (error)
         {
           interval.stop();
-          throw e;
+          throw error;
         }
         return returnValue;
       }

@@ -18,7 +18,7 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
     duration.stop();
     const intervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     intervals.push(duration);
-  };
+  }
 
   const makeWrapped = (fn) => {
     if (arguments[0] == undefined)

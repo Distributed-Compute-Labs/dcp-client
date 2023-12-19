@@ -65,7 +65,7 @@
  *  @date       May 2023
  */
 self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(protectedStorage, ring0PostMessage) {
-  if ((typeof naviagor === 'undefined') || !('gpu' in navigator))
+  if ((typeof navigator === 'undefined') || !('gpu' in navigator))
     return;
 
   const TimeInterval = protectedStorage.TimeInterval;
@@ -127,11 +127,11 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
       'requestAdapter',
     ]);
 
-    // TODO: consider what to do with 'destory'
+    // TODO: consider what to do with 'destroy'
     // while they appear to be blocking, the meat of the work happens on the gpu driver thread
     const blockingFunctions = new Set([
       // GPU
-      'getPrefferedCanvasFormat',
+      'getPreferedCanvasFormat',
 
       // GPUDevice
       'createBuffer',
