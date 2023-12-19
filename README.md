@@ -6,7 +6,7 @@ This is the official client library for DCP, the Distributed Compute Protocol.  
 
 ### Supported Platforms
 The DCP-Client code can be made to run in nearly any JavaScript environment which supports ES5 and XMLHttpRequest.  Our officially-supported platforms are
-- Node.js version 14 (LTS)
+- Node.js version 18+ (LTS)
 - BravoJS, latest version
 - Vanilla Web - no module system at all
 
