@@ -177,14 +177,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   function reportTimes (metrics)
   {
     const { total, webGL, webGPU, CPU } = metrics;
-
-    // Due to how using the async keyword will result in a native promise being generated and we cannot intercept what
-    // type of Promise is used. We lose track of what functions are put onto the stack after the first await point. 
-    // The current hammer is we just add that time back to the CPU and accept the might be overestimated.
-    // Since the total is wall time, no single component can exceed it.
-    const revisedCPU = total - Math.max(webGL, webGPU, CPU) + CPU;
-    /** @todo remove logging below when merging */
-    protectedStorage.console.log({ total, webGL, webGPU, CPU });
     ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
   }
 

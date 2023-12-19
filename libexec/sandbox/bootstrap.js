@@ -50,9 +50,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         throttledProgress = 0;
         indeterminateProgress = true;
         flushedLastConsoleMessage = false;
-
         ring2PostMessage({ request: 'resetStateDone' });
-        // protectedStorage.console.debug("i made it here, somehow");
       }
     } catch (error) {
       ring2PostMessage({
