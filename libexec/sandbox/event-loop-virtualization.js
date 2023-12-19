@@ -172,6 +172,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
           return;
 
         // remove the listener and drop all references to the `EventTarget`, GC will clean it up
+        const eventTarget = this.eventTargets.at(idx);
         eventTarget.removeEventListener('submission', this.#recordCommandDuration);
         this.queues.splice(idx);
         this.eventTargets.splice(idx);
@@ -184,12 +185,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
 
       reset()
       {
-        // why are we making a copy? Because popQueue modifies the queue and if you just do a naive raw loop you end
-        // up with modification during iteration
-        const queues = [...this.queues];
-
-        for (const queue in queues)
-          this.unsafePopQueue(queue);
+        while (this.queues.length)
+          this.unsafePopQueue(this.queues[0]);
       }
 
       lock()

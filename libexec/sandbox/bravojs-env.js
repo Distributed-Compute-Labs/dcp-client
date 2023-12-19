@@ -267,6 +267,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
       await protectedStorage.bigBrother.globalTrackers.reset();
     } catch (e) {
+      ring3PostMessage({ request: 'sandboxError', error: e });
     } finally {
       protectedStorage.clearAllTimeouts();
       // due to the nature of the micro task queue, await, our `reset()` cancels all the things that could cause new
