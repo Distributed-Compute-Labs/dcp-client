@@ -14,30 +14,33 @@ self.wrapScriptLoading( { scriptName: 'lift-wasm' }, function wrapWasm$$fn(prote
   /** @typedef {import(./timer-classes.js).TimeInterval} TimeInterval*/
   const TimeInterval = protectedStorage.TimeInterval;
 
-  const putToCPUInterval = (duration) => {
+  /**
+   * Add an interval to the CPU time measurement.
+   * wasm instantiation happens off-thread, but is CPU bound, so we need to measure the time it takes
+   * independently of our normal CPU time measurement
+   */
+  function addCPUInterval (duration)
+  {
     duration.stop();
     const intervals = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     intervals.push(duration);
   }
 
-  const makeWrapped = (fn) => {
+  const timingWrapperFactory = function timingWrapperFactory (fn) {
     if (arguments[0] == undefined)
       return undefined;
 
-    return (...args) => {
+    return function liftWasm$$makeWrapped (...args) {
       const duration = new TimeInterval();
       const originalPromise = fn(...args);
 
-      originalPromise.then(
-        () => putToCPUInterval(duration),
-        () => putToCPUInterval(duration)
-      );
+      originalPromise.finally(() => addCPUInterval(duration));
       return originalPromise;
     };
   };
 
-  WebAssembly.instantiateStreaming = makeWrapped(WebAssembly.instantiateStreaming);
-  WebAssembly.instantiate = makeWrapped(WebAssembly.instantiate);
-  WebAssembly.compile = makeWrapped(WebAssembly.compile);
-  WebAssembly.compileStreaming = makeWrapped(WebAssembly.compileStreaming);
+  WebAssembly.instantiateStreaming = timingWrapperFactory(WebAssembly.instantiateStreaming);
+  WebAssembly.instantiate = timingWrapperFactory(WebAssembly.instantiate);
+  WebAssembly.compile = timingWrapperFactory(WebAssembly.compile);
+  WebAssembly.compileStreaming = timingWrapperFactory(WebAssembly.compileStreaming);
 });

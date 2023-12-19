@@ -7,8 +7,6 @@
  *              the runtime directly *and* without using `timestamp-query` feature as most implementation do not support
  *              such feature.
  *
- *
- *
  *              WebGPU standard defines three timelines, content, queue, and device. Each of them can be thought of as
  *              one mode of operation. They require different strategies for timing.
  *
@@ -72,38 +70,28 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
   const webGPUTimer = globalTrackers.webGPUIntervals;
 
-  // lift WebGPU functions except for submit and onSubmittedWorkDone that returns a promise to be timed
-  function liftWebGPUAsyncFunction(fn)
+  /**
+   * Factories to create wrappers for all webGPU function (except submit & onSubmittedWorkDone) to time them when they
+   * are run, recording the duration of the function calls on the webGPU timer.
+   */
+  function webGPUAsyncTimingFactory(fn)
   {
-    return function(...args)
+    return function promiseWebGPUWrapper(...args)
     {
       const duration = new TimeInterval();
-      const that = this;
-
-      const original = fn.call(that, ...args);
-      
-      const recordTime = () => {
-        duration.stop();
-        webGPUTimer.push(duration);
-      };
-
-      original.then(recordTime, recordTime);
+      const original = fn.apply(this, args);
+      original.finally(() => webGPUTimer.push(duration.stop()));
       return original;
     }
   }
 
-  function liftWebGPUSyncFunction(fn)
+  function webGPUSyncTimingFactory(fn)
   {
-    return function(...args)
+    return function syncWebGPUWrapper(...args)
     {
-      // TODO: improve TimeInterval API
-      const webGPUIntervals = webGPUTimer;
-
       const duration = new TimeInterval();
-      const ret = fn.call(this, ...args);
-      duration.stop();
-
-      webGPUIntervals.push(duration);
+      const ret = fn.apply(this, args);
+      webGPUTimer.push(duration.stop());
       return ret;
     }
   }
@@ -226,12 +214,12 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
       if (promiseReturningFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = liftWebGPUAsyncFunction(fn);
+        self[GPUClass].prototype[prop] = webGPUAsyncTimingFactory(fn);
       }
       else if (blockingFunctions.has(prop))
       {
         const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = liftWebGPUSyncFunction(fn);
+        self[GPUClass].prototype[prop] = webGPUSyncTimingFactory(fn);
       }
     }
   }
@@ -263,20 +251,20 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
 
   // currently, the only queue exposed is the default queue
-  GPUAdapter.prototype.requestDevice = async function(...args)
+  GPUAdapter.prototype.requestDevice = async function requestDevice(...args)
   {
     const device = await originalRequestDevice.call(this, ...args);
-    globalTrackers.webGPUQueueRegistery.add(device.queue);
+    globalTrackers.webGPUQueueRegistry.add(device.queue);
     return device;
   }
 
-  GPUQueue.prototype.constructor = function ctor(...args)
+  GPUQueue.prototype.constructor = function GPUQueue$$constructor(...args)
   {
     const queueConstructor = originalGPUQueue.bind(this);
     const queue = new queueConstructor(...args);
 
     // always register the queue with the global tracker
-    globalTrackers.webGPUQueueRegistery.add(queue);
+    globalTrackers.webGPUQueueRegistry.add(queue);
 
     return queue;
   }
@@ -293,7 +281,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
   GPUQueue.prototype.submit = function submit(...args)
   {
-    return globalTrackers.webGPUQueueRegistery.addSubmission(
+    return globalTrackers.webGPUQueueRegistry.addSubmission(
       this,
       ...args
     );

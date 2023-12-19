@@ -64,9 +64,9 @@ self.wrapScriptLoading({ scriptName: 'timer-classes' }, function timerClasses$$f
   TimeInterval.prototype.stop = function stop()
   {
     if (this.end)
-      return false
+      return this;
     this.end = performance.now();
-    return true;
+    return this;
   }
 
   /**
