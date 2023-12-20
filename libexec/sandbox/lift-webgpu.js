@@ -226,6 +226,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
 
   // Want to use the wrapped versions of these after all gpu functions are wrapped.
   const originalGPUQueue = GPUQueue;
+  const originalGPUQueueProto = GPUQueue.prototype;
   const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
   const originalRequestDevice = GPUAdapter.prototype.requestDevice;
 
@@ -258,16 +259,20 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
     return device;
   }
 
-  GPUQueue.prototype.constructor = function GPUQueue$$constructor(...args)
+  /**
+   * Redefine GPUQueue constructor in order to add the queue to our webGPUQueueRegistry.
+   * Need to redefine the `GPUQueue` function for instanceof checks to work with the changed constructor,
+   * then add the original prototype to the new object. 
+   */
+  GPUQueue = function GPUQueue$$constructor(...args)
   {
-    const queueConstructor = originalGPUQueue.bind(this);
-    const queue = new queueConstructor(...args);
-
+    const queue = new originalGPUQueue(...args);
     // always register the queue with the global tracker
     globalTrackers.webGPUQueueRegistry.add(queue);
-
     return queue;
   }
+  GPUQueue.prototype = originalGPUQueueProto;
+  GPUQueue.prototype.constructor = GPUQueue;
 
 
   GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
