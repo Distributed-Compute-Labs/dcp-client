@@ -68,7 +68,12 @@ exports.init = function init(files, outputTesting)
   {
     if (eventsListening[event])
       for (let cb of eventsListening[event])
-        process.nextTick(() => cb.call(null, data));
+        cb.call(null, data);
+  }
+  global.removeEventListener = (event, listener) =>
+  {
+    const listenerIdx = eventsListening[event].indexOf(listener);
+    eventsListening[event].splice(listenerIdx, 1);
   }
 
   const indirectEval = eval
