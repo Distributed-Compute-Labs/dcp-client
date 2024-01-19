@@ -106,7 +106,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'toString',
     'TypeError',
     'URIError',
-    'URL',
     'Uint16Array',
     'Uint32Array',
     'Uint8Array',
