@@ -352,14 +352,28 @@ function magicView(node, seen)
 
   for (let prop in node)
   {
-    if (node.hasOwnProperty(prop) && typeof node[prop] === 'object' && node[prop].constructor === {}.constructor)
+    if (node.hasOwnProperty(prop) && typeof node[prop] === 'object' && (node[prop].constructor === {}.constructor || Array.isArray(node[prop])))
     {
-      if (node[prop] === node)
+      if (prop === 'worktimes')
+        debugger;
+      if (node[prop] === node) {
         edgeNode[prop] = edgeNode;
-      else
+      }
+      else if (Array.isArray(node[prop]) && prop != 'transports')
+      {
+        edgeNode[prop] = []
+        for (const elem of node[prop]) {
+          if (node[prop].constructor === {}.constructor) {
+            edgeNode[prop].push( magicView(elem, seen) )
+          } else {
+            edgeNode[prop].push(elem)
+          }
+        }
+      } else {
         edgeNode[prop] = magicView(node[prop], seen);
+      }
       seen.set(node[prop], edgeNode[prop]);
-    }
+    } 
   }
 
   return edgeNode;
@@ -758,8 +772,10 @@ function initTail(configFrags, options, finalBundleCode, finalBundleURL)
   for (let protectedKey of protectedDcpConfigKeys) /* never accept modifications to these keys from scheduler */
     delete remoteConfig[protectedKey];
 
+
   addConfig(workingDcpConfig, configFrags.internalConfig);
   addConfig(workingDcpConfig, remoteConfig);
+  debugger;
   addConfig(workingDcpConfig, configFrags.localConfig);
   addConfig(workingDcpConfig, originalDcpConfig);
 
@@ -941,6 +957,7 @@ exports.init = async function dcpClient$$init() {
       throw error;
     }
   }
+  debugger;
 
   return initTail(configFrags, options, finalBundleCode, finalBundleURL);
 }

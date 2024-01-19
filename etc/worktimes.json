@@ -1,0 +1,11 @@
+{
+  "worktimes": [
+    {
+      "name": "map-basic",
+      "versions": ["1.0.0"]
+    }, {
+      "name": "pyodide",
+      "versions": [ "0.23.2" ]
+    }
+  ]
+}

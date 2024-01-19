@@ -130,9 +130,17 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
       };
     }
 
+    self.worktimes = [
+      { name: 'map-basic', version: '1.0.0' }
+    ];
+    async function getWorktimes() {
+      return self.worktimes;
+    };
+
     addEventListener('message', async (event) => {
       try {
         if (event.request === 'describe') {
+          const worktimes = await getWorktimes();
           const capabilities = await getCapabilities();
           ring2PostMessage({
             capabilities,
