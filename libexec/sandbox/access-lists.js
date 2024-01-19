@@ -174,7 +174,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     // Assumption that if performance exists, performance.now must exist
     performance: typeof performance !== 'undefined' ? performance : { 
       now: ()=>{ 
-        res = new Date().getTime() - pt0;
+        const res = new Date().getTime() - pt0;
         return res;
       } 
     },
