@@ -57,7 +57,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Float32Array',
     'Float64Array',
     'Function',
-    'Headers',
     'Infinity',
     'Int16Array',
     'Int32Array',
