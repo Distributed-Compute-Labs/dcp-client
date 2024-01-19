@@ -52,8 +52,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'escape',
     'eval',
     'EvalError',
-    'File',
-    'FileReader',
     'Float32Array',
     'Float64Array',
     'Function',
