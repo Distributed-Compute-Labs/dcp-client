@@ -12,35 +12,17 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   const ring1PostMessage = self.postMessage;
   const global = typeof globalThis === 'undefined' ? self : globalThis;
 
-  // aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
   const allowList = new Set([
-    '__proto__',
-    
-    // properties guarnteed by polyfills
-    'globalThis',
-    'location',
-    'performance',
-    'importScripts',
-    'WorkerGlobalScope',
-    'btoa',
-    'atob',
-    'Blob',
-
-    // General allowed symbols
-    'addEventListener',
-    'applyAccesslist',
+    // global objects, aggregated from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects#Reflection
+    'AggregateError',
     'Array',
     'ArrayBuffer',
-    'AsyncFunction',
     'Atomics',
     'BigInt',
     'BigInt64Array',
     'BigUint64Array',
     'Boolean',
-    'bravojs',
-    'clearInterval',
-    'clearTimeout',
-    'console',
+
     'constructor',
     'DataView',
     'Date',
@@ -55,6 +37,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Float32Array',
     'Float64Array',
     'Function',
+    'globalThis',
     'Infinity',
     'Int16Array',
     'Int32Array',
@@ -66,7 +49,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Math',
     'module',
     'NaN',
-    'navigator',
     'null',
     'Number',
     'Object',
@@ -79,21 +61,14 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Promise',
     'propertyIsEnumerable',
     'Proxy',
-    'pt0',
     'RangeError',
     'ReferenceError',
     'Reflect',
     'RegExp',
-    'removeEventListener',
-    'requestAnimationFrame',
     'require',
     'Response',
-    'self',
     'Set',
-    'setInterval',
-    'setTimeout',
-    'setImmediate',
-    'sleep',
+    'SharedArrayBuffer',
     'String',
     'Symbol',
     'SyntaxError',
@@ -112,10 +87,43 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'valueOf',
     'WeakMap',
     'WeakSet',
+    'WeakRef',
+    '__proto__',
+
+    // WorkerGlobalScope symbols, aggregated from https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
+    // 'caches',
+    'crossOriginIsolated',
+    'crypto',
+    'fonts',
+    // 'indexedDB',
+    'isSecureContext',
+    'location',
+    'navigator',
+    'origin',
+    'performance',
+    // 'scheduler',
+    'self',
+    'console',
+    'atob',
+    'btoa',
+    'clearInterval',
+    'clearTimeout',
+    // 'fetch',
+    // 'importScripts',
+    'queueMicrotask',
+    'setInterval',
+    'setTimeout',
+    'structuredClone',
+    'reportError',
+
+    // WebAssembly symbols
     'WebAssembly',
+
+    // WebGL symbols
     'WebGL2RenderingContext',
     'WebGLTexture',
-    // All webGPU symbols are allowed
+
+    // WebGPU symbols
     'WebGPUWindow',
     'GPU',
     'GPUAdapter',
@@ -157,9 +165,15 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'GPUTextureView',
     'GPUUncapturedErrorEvent',
     'GPUValidationError',
-    // Our own symbols
+
+    // DCP symbols / chosen web API additions 
     'progress',
     'work',
+    'bravojs',
+    'setImmediate',
+    'Blob',
+    'addEventListener',
+    'removeEventListener',
   ]);
 
   // Origin time for performance polyfill
@@ -181,7 +195,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     importScripts: function () {
       throw new Error('importScripts is not supported on DCP');
     },
-    WorkerGlobalScope: typeof globalThis === 'undefined' ? self : globalThis,
     globalThis: typeof globalThis === 'undefined' ? self : globalThis,
     // For browsers/SA-workers that don't support btoa/atob, modified from https://github.com/MaxArt2501/base64-js/blob/master/base64.js
     btoa: function (string) {
