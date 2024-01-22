@@ -818,6 +818,12 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     };
   }
 
+  protectedStorage.allowWorktimeSymbols = function allowWorktimeSymbols(symbols)
+  {
+    for (let symbol of symbols)
+      allowList.add(symbol);
+  }
+
   addEventListener('message', async (event) => {
     try {
       if (event.request === 'applyRequirements') {
