@@ -28,8 +28,9 @@ var base = [
   'bravojs-init',
   'bravojs/bravo.js',
   'bravojs-env',
-  'calculate-capabilities',
+  'worktimes',
   'pyodide-core',
+  'calculate-capabilities',
 ];
 
 o.browser = [].concat(base);
