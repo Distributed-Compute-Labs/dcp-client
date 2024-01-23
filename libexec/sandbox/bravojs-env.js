@@ -74,7 +74,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
-          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {
+          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), async function mainModule(require, exports, module) {
             try {
               if (exports.hasOwnProperty('job'))
                 throw new Error("Tried to assign sandbox when it was already assigned"); /* Should be impossible - might happen if throw during assign? */
@@ -83,11 +83,22 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
               message.job.requirePath.map(p => require.paths.push(p));
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
+              exports.worktime = message.job.worktime;
 
-              if (message.job.useStrict)
-                exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
-              else
-                exports.job = indirectEval(`(${message.job.workFunction})`);
+              switch (message.job.worktime.name)
+              {
+                case 'map-basic':
+                  if (message.job.useStrict)
+                    exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
+                  else
+                    exports.job = indirectEval(`(${message.job.workFunction})`);
+                  break;
+                case 'pyodide':
+                  exports.job = await generatePyodideFunction(message.job);
+                  break;
+                default:
+                  throw new Error(`Unsupported worktime: ${message.job.worktime.name}`);
+              }
             } catch(e) {
               reportError(e);
               return;
@@ -124,6 +135,86 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
         break;
     }
   })
+
+  async function generatePyodideFunction(job)
+  {
+    let workFunction = () => { progress(); return 'xbox720'; };
+
+    const pyodide = await pyodideInit();
+    const sys = pyodide.pyimport('sys');
+
+    // refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
+    // part of the DCP Worktimes spec.
+    function parsePyodideArguments(args)
+    {
+      var index = 1;
+      const numArgs = args[0];
+      const images = [];
+      const environmentVariables = {};
+      const sysArgv = args.slice(numArgs);
+
+      while (index < numArgs)
+      {
+        switch (args[index])
+        {
+          case 'gzImage':
+            const image = args[index+1];
+            images.push(image);
+            index+=2;
+            break;
+          case 'env':
+            const env = args[index+1].split(/=(.*)/s);
+            index+=2;
+            environmentVariables[env[0]] = env[1];
+            break;
+          default:
+            throw new Error(`Invalid argument ${args[index]}`);
+        }
+      }
+
+      return { sysArgv, images, environmentVariables };
+    }
+    const parsedArguments = parsePyodideArguments(job.arguments);
+
+    const prepPyodide = pyodide.runPython(`
+import tarfile, io
+import os, sys
+
+def prepPyodide(args):
+  for image in args['images']:
+    image = bytes(image)
+    imageFile = io.BytesIO(image)
+    tar = tarfile.open(mode='r', fileobj=imageFile)
+    tar.extractall()
+
+  for item, value in args['environmentVariables'].items():
+    os.environ[item] = value
+
+  sys.argv.extend(args['sysArgv'])
+
+  return
+
+prepPyodide`);
+
+    prepPyodide(pyodide.toPy(parsedArguments));
+
+    // register dcp
+    if (!sys.modules.get('dcp'))
+    {
+      const create_proxy = pyodide.runPython('import pyodide;pyodide.ffi.create_proxy');
+
+      pyodide.registerJsModule('dcp', {
+        set_slice_handler: function(func) {
+          workFunction = create_proxy(func);
+        },
+        progress,
+      });
+    }
+    pyodide.runPython( job.workFunction );
+
+    return workFunction;
+
+  }
 
   /** A module.declare suitable for running when processing modules arriving as part
   * of a  module group or other in-memory cache.
@@ -254,7 +345,10 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     try
     {
       /* module.main.job is the work function; left by assign message */ 
-      result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
+      if (module.main.worktime.name == 'pyodide')
+        result = await module.main.job.apply(null, [datum])
+      else
+        result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
     }
     catch (error)
     {
