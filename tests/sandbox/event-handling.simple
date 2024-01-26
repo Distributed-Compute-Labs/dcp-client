@@ -77,6 +77,7 @@ function main()
   // 6: Immutability of data. When the unmarshaling of the data object occurs, it should remain immutable to prevent event listeners
   // from interfering with one another's operation.
   handler = (data) => { data.param = 2; assert(data.param === 1, 'Data not immutable'); };
+  otherHandler = (data) => { assert(data.param === 1, 'Data not immutable'); };
   addEventListener('message', handler);
   addEventListener('message', otherHandler);
   emitEvent('message', { data: KVIN.marshal({ param: 1 })});
