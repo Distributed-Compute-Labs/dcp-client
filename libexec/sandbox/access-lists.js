@@ -126,7 +126,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'WebAssembly',
     'WebGL2RenderingContext',
     'WebGLTexture',
-
     // All webGPU symbols are allowed
     // some of these are actually just type aliases but inclusion shouldn't hurt
     'GPU',
@@ -870,14 +869,13 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
    * @param {Object} obj - The object to add properties on
    * @param {Object} polyfills - An object of properties to create/polyfill 
    */
-  function applyPolyfills(obj, polyfills){
+  function applyPolyfills(obj, polyfills) {
     // Apply symbols from polyfill object
     for (let prop in polyfills) {
       let propValue = polyfills[prop];
       Object.defineProperty(obj, prop, {
         get: function getPolyfill() {
           return propValue;
-
         },
         set: function setPolyfill(value) {
           propValue = value;
@@ -895,10 +893,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   function applyAllAccessLists() {
     // We need to apply the access lists to global, and the entirety of global's prototype chain
     // because there's networking-accessing functions inside the chain, like fetch.
-    //
-    // If we're in a robust environment (node, browser, WebWorker, basically anything but v8),
-    // then we have to climb the prototype chain and apply the allowList there, but we have to stop
-    // before we allow Object's properties
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
     for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
@@ -909,7 +903,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     else
     {
       const navPolyFill = {
-        userAgent:  navigator.userAgent ? navigator.userAgent : 'not a browser', 
+        userAgent:  navigator.userAgent || 'not a browser', 
       };
       if (navigator.gpu)
         navPolyFill.gpu = navigator.gpu;

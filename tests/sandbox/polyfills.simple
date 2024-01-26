@@ -1,0 +1,31 @@
+#! /usr/bin/env node
+/**
+ * @file      polyfills.simple
+ *
+ *            Smoke test that the polyfills are defined as global properties.
+ *
+ * @author    Will Pringle <will@distributive.network>
+ * @date      December 2023
+ */
+const sandboxScripts = '../../libexec/sandbox/';
+
+const files = [
+  require.resolve(sandboxScripts + 'script-load-wrapper.js'),
+  require.resolve(sandboxScripts + 'access-lists.js'),
+];
+
+require('./globalPolyfillHelper').init(files, ()=>{});
+// we are now in an environment that has had the access-lists script applied to it
+
+// check if globalThis is defined 
+if (typeof globalThis === 'undefined')
+  throw new Error('globalThis is undefined');
+
+// check if all the polyfills are present as properties of globalThis
+const polyfills = ['globalThis', 'location', 'performance', 'importScripts', 'WorkerGlobalScope', 'btoa', 'atob', 'Blob'];
+for (const property of polyfills)
+{
+  if (typeof globalThis[property] === 'undefined')
+    throw new Error(`globalThis.${property} is undefined`);
+}
+
