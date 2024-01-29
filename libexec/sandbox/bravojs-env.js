@@ -143,6 +143,8 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     const pyodide = await pyodideInit();
     const sys = pyodide.pyimport('sys');
 
+    const findImports = pyodide.runPython('import pyodide; pyodide.code.find_imports');
+
     // refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
     // part of the DCP Worktimes spec.
     function parsePyodideArguments(args)
@@ -210,6 +212,17 @@ prepPyodide`);
         progress,
       });
     }
+
+
+    let workFunctionPythonImports = findImports(job.workFunction).toJs();
+    workFunctionPythonImports = workFunctionPythonImports.filter(x=>(x!=='dcp' && x!=='os'));
+    if (workFunctionPythonImports.length > 0)
+    {
+      await pyodideLoadPackage(workFunctionPythonImports);
+      await pyodide.loadPackage(workFunctionPythonImports);
+    }
+
+    pyodide.runPython( 'import dcp' );
     pyodide.runPython( job.workFunction );
 
     return workFunction;
@@ -346,7 +359,10 @@ prepPyodide`);
     {
       /* module.main.job is the work function; left by assign message */ 
       if (module.main.worktime.name == 'pyodide')
-        result = await module.main.job.apply(null, [datum])
+      {
+        const pyodide = await pyodideInit();
+        result = await module.main.job.apply(null, [pyodide.toPy(datum)]) 
+      }
       else
         result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
     }
