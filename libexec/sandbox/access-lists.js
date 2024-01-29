@@ -818,7 +818,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     };
   }
 
-  protectedStorage.allowWorktimeSymbols = function allowWorktimeSymbols(symbols)
+  function allowWorktimeSymbols(symbols)
   {
     for (let symbol of symbols)
       allowList.add(symbol);
@@ -834,6 +834,10 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
         blockList.WebGPUWindow = !requirements.environment.webgpu;
         blockList.GPU = !requirements.environment.webgpu;
+
+        if (events.worktime && protectedStorage.worktimeGlobals[events.worktime])
+          allowWorktimeSymbols(protectedStorage.worktimeGlobals[events.worktime]);
+
         applyAllAccessLists();
 
         ring1PostMessage({ request: 'applyRequirementsDone' });

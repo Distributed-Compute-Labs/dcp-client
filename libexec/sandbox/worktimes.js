@@ -1,87 +1,55 @@
-//self.wrapScriptLoading({ scriptName: 'worktimes' }, function worktimes$$fn(protectedStorage, _ring2PostMessage) {
-//// 
+/**
+ * @file      worktimes.js
+ *            Specify available worktimes, allow registering custom worktimes
+ * 
+ * @author    Will Pringle, will@distributive.network
+ *            Hamada Gasmallah, hamada@distributive.network
+ */
+'use strict';
+
 function worktimes$$fn(protectedStorage, _ring2PostMessage)
 {
 
+// when preparing a worktime, add it's globals to this object.
+// only if the job assigned to the evaluator uses that worktime, they will
+// be added to the allow-list
+protectedStorage.worktimeGlobals = {};
+protectedStorage.legacyArrayWorktimeFormat = legacyArrayWorktimeFormat;
 
-
-//const global = typeof globalThis === 'undefined' ? self : globalThis;
-const global = globalThis;
-
-global.WORKTIMES_JS_LOADED = true;
-
-const worktimes = [
-  {
-    name: 'map-basic',
-    versions: ['1.0.0']
-  },
-  {
-    name: 'pyodide',
-    versions: ['0.23.2']
-  }
-];
-
-/*
-const ring2PostMessage = self.postMessage
-
-function print(str)
+function legacyArrayWorktimeFormat(worktimes)
 {
-ring2PostMessage({
-  data: str,
-  request: 'willpringle',
-});
+  const arrayTimes = [];
+  for (const wt of Object.keys(worktimes))
+    arrayTimes.push({ name: wt, versions: worktimes[wt].versions });
+  return arrayTimes;
 }
-*/
-function print(str) {};
 
-print('inside the thing =- the whatever, worktimes.js' + worktimes);
-
+const worktimes = {
+  'map-basic': { versions: ['1.0.0'] },
+  'pyodide': { versions: ['0.23.2'] },
+};
 
 function registerWorktime(name, version)
 {
-  print(name + '  ' + version);
-  for (const worktime of global.worktimes)
-  {
-    if (worktime.name.toLowerCase() === name.toLowerCase())
-    {
-      if (!worktime.versions.includes(version))
-      {
-        worktime.versions.push(version);
-        print("COuldn't find worktime --- \nsevern, we never get here...");
-      }
-      else
-      {
-        //worktime.versions = [ ...worktime.versions ];
-        print("FOUND THE WORKTIME (: ");
-      }
-      return;
-    }
-  }
-
-  //global.worktimes.push({ name, versions: [ version ] });
+  if (!globalThis.worktimes[name])
+    globalThis.worktimes[name] = { versions: [] };
+  globalThis.worktimes[name].versions.push(version);
 }
-
 
 // nodejs-like environment
 if (typeof module.exports === 'object')
-{
-  exports.worktimes        = worktimes;
-  exports.registerWorktime = registerWorktime;
-}
-// inside the sandbox
-else
+  exports.worktimes        = legacyArrayWorktimeFormat(worktimes);
+else // inside the sandbox
 {
   global.worktimes        = worktimes;
   global.registerWorktime = registerWorktime;
 }
 
 }
-////
-//});
 
 // nodejs-like environment
 if (typeof module.exports === 'object')
-  worktimes$$fn();
+  worktimes$$fn({});
 // inside the sandbox
 else
   self.wrapScriptLoading({ scriptName: 'worktimes' }, worktimes$$fn);
