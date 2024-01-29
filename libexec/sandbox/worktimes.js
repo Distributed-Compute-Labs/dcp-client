@@ -37,18 +37,18 @@ function registerWorktime(name, version)
 }
 
 // nodejs-like environment
-if (typeof module.exports === 'object')
+if (typeof module?.exports === 'object')
   exports.worktimes        = legacyArrayWorktimeFormat(worktimes);
 else // inside the sandbox
 {
-  global.worktimes        = worktimes;
-  global.registerWorktime = registerWorktime;
+  globalThis.worktimes        = worktimes;
+  globalThis.registerWorktime = registerWorktime;
 }
 
 }
 
 // nodejs-like environment
-if (typeof module.exports === 'object')
+if (typeof module?.exports === 'object')
   worktimes$$fn({});
 // inside the sandbox
 else

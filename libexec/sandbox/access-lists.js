@@ -835,8 +835,8 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         blockList.WebGPUWindow = !requirements.environment.webgpu;
         blockList.GPU = !requirements.environment.webgpu;
 
-        if (events.worktime && protectedStorage.worktimeGlobals[events.worktime])
-          allowWorktimeSymbols(protectedStorage.worktimeGlobals[events.worktime]);
+        if (event.worktime && protectedStorage.worktimeGlobals[event.worktime])
+          allowWorktimeSymbols(protectedStorage.worktimeGlobals[event.worktime]);
 
         applyAllAccessLists();
 
