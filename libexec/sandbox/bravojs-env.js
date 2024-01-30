@@ -136,17 +136,87 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
     }
   })
 
+  /**
+   * Factory function which generates a "map-basic"-like workFunction
+   * out of a Pyodide Worktime job (Python code, files, env variables).
+   *
+   * It takes any "images" passed in the workFunction "arguments" and
+   * writes them to the in memory filesystem provided by Emscripten.
+   * It adds any environment variables specified in the workFunction
+   * "arguments" to the pseudo-"process" for use.
+   * It globally imports a dcp module with function "set_slice_handler"
+   * which takes a python function as input. The python function passed
+   * to that slice handler is invoked by the function which this
+   * factory function returns.
+   *
+   * @param {Object} job The job data associated with the message
+   * @returns {Function} function pyodideWorkFn(slice) -> result
+   */
   async function generatePyodideFunction(job)
   {
-    let workFunction = () => { progress(); return 'xbox720'; };
+    var workFunction;
 
     const pyodide = await pyodideInit();
     const sys = pyodide.pyimport('sys');
 
     const findImports = pyodide.runPython('import pyodide; pyodide.code.find_imports');
+    const findPythonModuleLoader = pyodide.runPython('import importlib; importlib.find_loader');
 
-    // refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
-    // part of the DCP Worktimes spec.
+    const parsedArguments = parsePyodideArguments(job.arguments);
+
+    // write images to file and set environment variables
+    const prepPyodide = pyodide.runPython(`
+import tarfile, io
+import os, sys
+
+def prepPyodide(args):
+  for image in args['images']:
+    image = bytes(image)
+    imageFile = io.BytesIO(image)
+    tar = tarfile.open(mode='r', fileobj=imageFile)
+    tar.extractall()
+
+  for item, value in args['environmentVariables'].items():
+    os.environ[item] = value
+
+  sys.argv.extend(args['sysArgv'])
+
+  return
+
+prepPyodide`);
+
+    prepPyodide(pyodide.toPy(parsedArguments));
+
+    // register the dcp Python module 
+    if (!sys.modules.get('dcp'))
+    {
+      const create_proxy = pyodide.runPython('import pyodide;pyodide.ffi.create_proxy');
+
+      pyodide.registerJsModule('dcp', {
+        set_slice_handler: function pyodide$$dcp$$setSliceHandler(func) {
+          workFunction = create_proxy(func);
+        },
+        progress,
+      });
+    }
+    pyodide.runPython( 'import dcp' );
+
+    // attempt to import packages from the package manager (if they're not already loaded)
+    const workFunctionPythonImports = findImports(job.workFunction).toJs();
+    const packageManagerImports = workFunctionPythonImports.filter(x=>!findPythonModuleLoader(x));
+    if (packageManagerImports.length > 0)
+    {
+      await pyodideLoadPackage(packageManagerImports);
+      await pyodide.loadPackage(packageManagerImports);
+    }
+
+    pyodide.runPython( job.workFunction );
+    return workFunction;
+
+    /*
+     * Refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
+     * part of the DCP Worktimes spec.
+     */
     function parsePyodideArguments(args)
     {
       var index = 1;
@@ -176,57 +246,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
 
       return { sysArgv, images, environmentVariables };
     }
-    const parsedArguments = parsePyodideArguments(job.arguments);
-
-    const prepPyodide = pyodide.runPython(`
-import tarfile, io
-import os, sys
-
-def prepPyodide(args):
-  for image in args['images']:
-    image = bytes(image)
-    imageFile = io.BytesIO(image)
-    tar = tarfile.open(mode='r', fileobj=imageFile)
-    tar.extractall()
-
-  for item, value in args['environmentVariables'].items():
-    os.environ[item] = value
-
-  sys.argv.extend(args['sysArgv'])
-
-  return
-
-prepPyodide`);
-
-    prepPyodide(pyodide.toPy(parsedArguments));
-
-    // register dcp
-    if (!sys.modules.get('dcp'))
-    {
-      const create_proxy = pyodide.runPython('import pyodide;pyodide.ffi.create_proxy');
-
-      pyodide.registerJsModule('dcp', {
-        set_slice_handler: function(func) {
-          workFunction = create_proxy(func);
-        },
-        progress,
-      });
-    }
-
-
-    let workFunctionPythonImports = findImports(job.workFunction).toJs();
-    workFunctionPythonImports = workFunctionPythonImports.filter(x=>(x!=='dcp' && x!=='os'));
-    if (workFunctionPythonImports.length > 0)
-    {
-      await pyodideLoadPackage(workFunctionPythonImports);
-      await pyodide.loadPackage(workFunctionPythonImports);
-    }
-
-    pyodide.runPython( 'import dcp' );
-    pyodide.runPython( job.workFunction );
-
-    return workFunction;
-
   }
 
   /** A module.declare suitable for running when processing modules arriving as part
