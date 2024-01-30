@@ -115,6 +115,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'setTimeout',
     'structuredClone',
     'reportError',
+    'WorkerGlobalScope',
 
     // WebAssembly symbols
     'WebAssembly',
@@ -196,6 +197,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       throw new Error('importScripts is not supported on DCP');
     },
     globalThis: typeof globalThis === 'undefined' ? self : globalThis,
+    WorkerGlobalScope: typeof globalThis === 'undefined' ? self : globalThis, 
     // For browsers/SA-workers that don't support btoa/atob, modified from https://github.com/MaxArt2501/base64-js/blob/master/base64.js
     btoa: function (string) {
       var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
