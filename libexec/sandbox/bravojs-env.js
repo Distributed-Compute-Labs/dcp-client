@@ -206,7 +206,7 @@ prepPyodide`);
     const packageManagerImports = workFunctionPythonImports.filter(x=>!findPythonModuleLoader(x));
     if (packageManagerImports.length > 0)
     {
-      await pyodideLoadPackage(packageManagerImports);
+      await fetchAndInitPyodidePackages(packageManagerImports);
       await pyodide.loadPackage(packageManagerImports);
     }
 
