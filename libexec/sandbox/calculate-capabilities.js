@@ -137,7 +137,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
           const capabilities = await getCapabilities();
           ring2PostMessage({
             capabilities,
-            worktimes: protectedStorage.legacyArrayWorktimeFormat(worktimes),
+            worktimes,
             request: 'describe',
           });
         }

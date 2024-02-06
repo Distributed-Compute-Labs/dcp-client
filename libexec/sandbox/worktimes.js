@@ -15,31 +15,26 @@ function worktimes$$fn(protectedStorage, _ring2PostMessage)
   // only if the job assigned to the evaluator uses that worktime, they will
   // be added to the allow-list
   protectedStorage.worktimeGlobals = {};
-  protectedStorage.legacyArrayWorktimeFormat = legacyArrayWorktimeFormat;
 
-  function legacyArrayWorktimeFormat(worktimes)
-  {
-    const arrayTimes = [];
-    for (const wt of Object.keys(worktimes))
-    arrayTimes.push({ name: wt, versions: worktimes[wt].versions });
-    return arrayTimes;
-  }
-
-  const worktimes = {
-    'map-basic': { versions: ['1.0.0'] },
-    'pyodide': { versions: ['0.23.2'] },
-  };
+  const worktimes = [
+    { name: 'map-basic', versions: ['1.0.0'] },
+    { name: 'pyodide',   versions: ['0.23.2'] },
+  ];
 
   function registerWorktime(name, version)
   {
-    if (!globalThis.worktimes[name])
-      globalThis.worktimes[name] = { versions: [] };
-  globalThis.worktimes[name].versions.push(version);
+    const foundWorktime = globalThis.worktimes.find(wt => wt.name === name);
+    // if we found a worktime and the version isn't already added, add it
+    if (foundWorktime && !foundWorktime.versions.includes(version))
+      foundWorktime.versions.push(version);
+    // if this is a new worktime, add it
+    else if (!foundWorktime)
+      globalThis.worktimes.push({ name, versions: [version]});
   }
 
   // nodejs-like environment
   if (typeof module?.exports === 'object')
-    exports.worktimes        = legacyArrayWorktimeFormat(worktimes);
+    exports.worktimes = worktimes;
   else // inside the sandbox
   {
     globalThis.worktimes        = worktimes;
