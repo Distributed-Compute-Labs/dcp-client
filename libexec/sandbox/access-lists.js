@@ -92,14 +92,14 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
 
     // WorkerGlobalScope symbols, aggregated from https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
     // 'caches',
-    'crossOriginIsolated',
+    //'crossOriginIsolated',
     'crypto',
-    'fonts',
+    //'fonts',
     // 'indexedDB',
     'isSecureContext',
     'location',
     'navigator',
-    'origin',
+    //'origin',
     'performance',
     // 'scheduler',
     'self',
