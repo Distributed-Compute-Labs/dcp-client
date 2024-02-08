@@ -380,7 +380,9 @@ prepPyodide`);
       if (module.main.worktime.name == 'pyodide')
       {
         const pyodide = await pyodideInit(); // returns the same promise when called multiple times
-        result = (await module.main.job.apply(null, [pyodide.toPy(datum)])).toJs();
+        result = await module.main.job.apply(null, [pyodide.toPy(datum)]);
+        if(result.toJs)
+          result = result?.toJs();
       }
       else
         result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
