@@ -36,7 +36,6 @@ module.declare([], function $$nsMap(require, exports, module) {
     'protocol',
     'protocol-v4',
     'client-modal',
-    'bank-util',
     'dcp-assert',
     'dcp-xhr',
     'dcp-env',

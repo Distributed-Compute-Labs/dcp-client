@@ -48,9 +48,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         return arguments[0];
       });`
 
-      webgpu =
-        (typeof navigator !== 'undefined' &&
-          typeof navigator.gpu !== 'undefined');
+      webgpu = Boolean(globalThis.navigator?.gpu);
 
       if (webgpu) {
         try {
