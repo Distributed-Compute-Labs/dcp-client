@@ -154,7 +154,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
    */
   async function generatePyodideFunction(job)
   {
-    var workFunction;
+    var pythonSliceHandler;
 
     const pyodide = await pyodideInit();
     const sys = pyodide.pyimport('sys');
@@ -194,7 +194,7 @@ prepPyodide`);
 
       pyodide.registerJsModule('dcp', {
         set_slice_handler: function pyodide$$dcp$$setSliceHandler(func) {
-          workFunction = create_proxy(func);
+          pythonSliceHandler = create_proxy(func);
         },
         progress,
       });
@@ -210,8 +210,38 @@ prepPyodide`);
       await pyodide.loadPackage(packageManagerImports);
     }
 
-    pyodide.runPython( job.workFunction );
-    return workFunction;
+    return workFunctionWrapper;
+
+    /**
+     * Evaluates the Python WorkFunction string and then executes the slice
+     * handler Python function. If no call to `dcp.set_slice_handler` is passed
+     * or a non function is passed to it.
+     * This function specifically only takes one parameter since Pyodide Slice
+     * Handlers only accept one parameter.
+     */
+    async function workFunctionWrapper(datum)
+    {
+      const pyodide = await pyodideInit(); // returns the same promise when called multiple times
+
+      // load and execute the Python Workfunction, this populates the pythonSliceHandler variable
+      await pyodide.runPython(job.workFunction);
+
+      // failure to specify a slice handler is considered an error
+      if (!pythonSliceHandler)
+        throw new Error('ENOSLICEHANDLER: Must specify the slice handler using `dcp.set_slice_handler(fn)`');
+
+      // setting the slice handler to a non function or lambda is not supported
+      else if (typeof pythonSliceHandler !== 'function')
+        throw new Error('ENOSLICEHANDLER: Slice Handler must be a function');
+
+      const sliceHandlerResult = await pythonSliceHandler(datum);
+
+      // if it is a PyProxy, convert its value to JavaScript
+      if (sliceHandlerResult.toJs)
+        return sliceHandlerResult.toJs();
+
+      return sliceHandlerResult;
+    }
 
     /*
      * Refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
@@ -377,15 +407,7 @@ prepPyodide`);
     try
     {
       /* module.main.job is the work function; left by assign message */ 
-      if (module.main.worktime.name == 'pyodide')
-      {
-        const pyodide = await pyodideInit(); // returns the same promise when called multiple times
-        result = await module.main.job.apply(null, [pyodide.toPy(datum)]);
-        if(result.toJs)
-          result = result?.toJs();
-      }
-      else
-        result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
+      result = await module.main.job.apply(null, [datum].concat(module.main.arguments));
     }
     catch (error)
     {
