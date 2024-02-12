@@ -44,7 +44,22 @@ function worktimes$$fn(protectedStorage, _ring2PostMessage)
 
 // nodejs-like environment
 if (typeof module?.exports === 'object')
+{
   worktimes$$fn({});
+  // sort the worktime versions from lowest to greatest
+  const semver = require('semver');
+  for (const wt of exports.worktimes)
+  {
+    wt.versions.sort((left, right) => {
+      if (semver.lt(left, right))
+        return 1;
+      else if (semver.eq(left, right))
+        return 0;
+      else
+        return -1;
+    });
+  }
+}
 // inside the sandbox
 else
   self.wrapScriptLoading({ scriptName: 'worktimes' }, worktimes$$fn);
