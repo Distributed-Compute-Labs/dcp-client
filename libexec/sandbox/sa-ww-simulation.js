@@ -35,7 +35,6 @@
  * web workers which already have self defined. 
  */
 const self = this;
-var debug = false;
 delete self.console;
 
 try {
