@@ -133,9 +133,11 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
     addEventListener('message', async (event) => {
       try {
         if (event.request === 'describe') {
+          const worktimes = globalThis.worktimes;
           const capabilities = await getCapabilities();
           ring2PostMessage({
             capabilities,
+            worktimes,
             request: 'describe',
           });
         }
