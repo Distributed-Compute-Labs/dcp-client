@@ -178,6 +178,24 @@ Jobs (job handles) are generally created with the `compute.for` function, which 
 
 An input set can be described with arguments to `compute.for()` with `RangeObject` notation or passed directly as an enumerable object (such as an array or function* generator).
 
+
+### Worktimes
+
+### Examples
+run Work on the whole numbers between 1 and 10:
+```javascript
+job = compute.for(1, 10, Work)
+```
+run Work on the numbers 6, 9, 12, 15:
+```javascript
+job = compute.for(6, 16, 3, Work)
+```
+
+run Work on the colors red, green, and blue:
+```javascript
+job = compute.for(["red", "green" "blue"], Work)
+```
+
 ### Examples
 run Work on the whole numbers between 1 and 10:
 ```javascript
