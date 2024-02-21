@@ -74,7 +74,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
-          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), function mainModule(require, exports, module) {
+          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), async function mainModule(require, exports, module) {
             try {
               if (exports.hasOwnProperty('job'))
                 throw new Error("Tried to assign sandbox when it was already assigned"); /* Should be impossible - might happen if throw during assign? */
@@ -83,11 +83,22 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
               message.job.requirePath.map(p => require.paths.push(p));
               message.job.modulePath.map(p => module.paths.push(p));
               exports.arguments = message.job.arguments;
+              exports.worktime = message.job.worktime;
 
-              if (message.job.useStrict)
-                exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
-              else
-                exports.job = indirectEval(`(${message.job.workFunction})`);
+              switch (message.job.worktime.name)
+              {
+                case 'map-basic':
+                  if (message.job.useStrict)
+                    exports.job = indirectEval(`"use strict"; (${message.job.workFunction})`);
+                  else
+                    exports.job = indirectEval(`(${message.job.workFunction})`);
+                  break;
+                case 'pyodide':
+                  exports.job = await generatePyodideFunction(message.job);
+                  break;
+                default:
+                  throw new Error(`Unsupported worktime: ${message.job.worktime.name}`);
+              }
             } catch(e) {
               reportError(e);
               return;
@@ -124,6 +135,148 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
         break;
     }
   })
+
+  /**
+   * Factory function which generates a "map-basic"-like workFunction
+   * out of a Pyodide Worktime job (Python code, files, env variables).
+   *
+   * It takes any "images" passed in the workFunction "arguments" and
+   * writes them to the in memory filesystem provided by Emscripten.
+   * It adds any environment variables specified in the workFunction
+   * "arguments" to the pseudo-"process" for use.
+   * It globally imports a dcp module with function "set_slice_handler"
+   * which takes a python function as input. The python function passed
+   * to that slice handler is invoked by the function which this
+   * factory function returns.
+   *
+   * @param {Object} job The job data associated with the message
+   * @returns {Function} function pyodideWorkFn(slice) -> result
+   */
+  async function generatePyodideFunction(job)
+  {
+    var pythonSliceHandler;
+
+    const pyodide = await pyodideInit();
+    const sys = pyodide.pyimport('sys');
+
+    const findImports = pyodide.runPython('import pyodide; pyodide.code.find_imports');
+    const findPythonModuleLoader = pyodide.runPython('import importlib; importlib.find_loader');
+
+    const parsedArguments = parsePyodideArguments(job.arguments);
+
+    // write images to file and set environment variables
+    const prepPyodide = pyodide.runPython(`
+import tarfile, io
+import os, sys
+
+def prepPyodide(args):
+  for image in args['images']:
+    image = bytes(image)
+    imageFile = io.BytesIO(image)
+    tar = tarfile.open(mode='r', fileobj=imageFile)
+    tar.extractall()
+
+  for item, value in args['environmentVariables'].items():
+    os.environ[item] = value
+
+  sys.argv.extend(args['sysArgv'])
+
+  return
+
+prepPyodide`);
+
+    prepPyodide(pyodide.toPy(parsedArguments));
+
+    // register the dcp Python module 
+    if (!sys.modules.get('dcp'))
+    {
+      const create_proxy = pyodide.runPython('import pyodide;pyodide.ffi.create_proxy');
+
+      pyodide.registerJsModule('dcp', {
+        set_slice_handler: function pyodide$$dcp$$setSliceHandler(func) {
+          pythonSliceHandler = create_proxy(func);
+        },
+        progress,
+      });
+    }
+    pyodide.runPython( 'import dcp' );
+
+    // attempt to import packages from the package manager (if they're not already loaded)
+    const workFunctionPythonImports = findImports(job.workFunction).toJs();
+    const packageManagerImports = workFunctionPythonImports.filter(x=>!findPythonModuleLoader(x));
+    if (packageManagerImports.length > 0)
+    {
+      await fetchAndInitPyodidePackages(packageManagerImports);
+      await pyodide.loadPackage(packageManagerImports);
+    }
+
+    return workFunctionWrapper;
+
+    /**
+     * Evaluates the Python WorkFunction string and then executes the slice
+     * handler Python function. If no call to `dcp.set_slice_handler` is passed
+     * or a non function is passed to it.
+     * This function specifically only takes one parameter since Pyodide Slice
+     * Handlers only accept one parameter.
+     */
+    async function workFunctionWrapper(datum)
+    {
+      const pyodide = await pyodideInit(); // returns the same promise when called multiple times
+
+      // load and execute the Python Workfunction, this populates the pythonSliceHandler variable
+      await pyodide.runPython(job.workFunction);
+
+      // failure to specify a slice handler is considered an error
+      if (!pythonSliceHandler)
+        throw new Error('ENOSLICEHANDLER: Must specify the slice handler using `dcp.set_slice_handler(fn)`');
+
+      // setting the slice handler to a non function or lambda is not supported
+      else if (typeof pythonSliceHandler !== 'function')
+        throw new Error('ENOSLICEHANDLER: Slice Handler must be a function');
+
+      const sliceHandlerResult = await pythonSliceHandler(datum);
+
+      // if it is a PyProxy, convert its value to JavaScript
+      if (sliceHandlerResult.toJs)
+        return sliceHandlerResult.toJs();
+
+      return sliceHandlerResult;
+    }
+
+    /*
+     * Refer to the "The Pyodide Worktime"."Work Function (JS)"."Arguments"."Commands"
+     * part of the DCP Worktimes spec.
+     */
+    function parsePyodideArguments(args)
+    {
+      var index = 1;
+      const numArgs = args[0];
+      const images = [];
+      const environmentVariables = {};
+      const sysArgv = args.slice(numArgs);
+
+      while (index < numArgs)
+      {
+        switch (args[index])
+        {
+          case 'gzImage':
+            const image = args[index+1];
+            images.push(image);
+            index+=2;
+            break;
+          case 'env':
+            const env = args[index+1].split(/=(.*)/s);
+            index+=2;
+            environmentVariables[env[0]] = env[1];
+            break;
+          default:
+            throw new Error(`Invalid argument ${args[index]}`);
+        }
+      }
+
+      return { sysArgv, images, environmentVariables };
+    }
+  }
 
   /** A module.declare suitable for running when processing modules arriving as part
   * of a  module group or other in-memory cache.

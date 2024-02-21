@@ -1,0 +1,85 @@
+#! /usr/bin/env node
+/**
+ *  @file       event-handling.simple
+ *
+ *  Test that wrapping event handlers works as expected.
+ *
+ *  @author     Severn Lortie <severn@distributive.network>
+ *  @date       Dec 2023
+ */
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const globalPolyfillHelper = require('./globalPolyfillHelper');
+
+function main()
+{
+  const scriptsDirectory = '../../libexec/sandbox';
+  const scriptFiles = [ require.resolve(`${scriptsDirectory}/script-load-wrapper.js`),
+                        require.resolve(`${scriptsDirectory}/wrap-event-listeners.js`) ];
+  globalPolyfillHelper.init(scriptFiles);
+  var passed, handler, otherHandler;
+
+  // 1: Basic smoke test. Can we add an event listener and will it be called?
+  passed = false;
+  handler = () => passed = true;
+  addEventListener('test', handler);
+  emitEvent('test');
+  assert(passed, 'Handler was not called');
+  removeEventListener('test', handler); // do this for test 2
+
+  // 2: Remove test. Does removing an event handler work? Try for 'message' (which is a special case) and arbitrary event 'test'
+  passed = false;
+  addEventListener('message', handler);
+  removeEventListener('message', handler);
+  emitEvent('message');
+  emitEvent('test');
+  assert(!passed, 'Event listener was not removed');
+
+  // 3: Unmarshaling test. If a 'message' event has a data property with KVIN marshaled data, we should unmarhsal that data property
+  // and pass it to the event handlers. 
+  passed =  false;
+  handler = (data) => {
+    if (data.testing === 123)
+      passed = true;
+  }
+  addEventListener('message', handler);
+  emitEvent('message', { data: KVIN.marshal({ testing: 123 }) });
+  assert(passed, 'Handler was not called or data was not unmarshaled');
+  removeEventListener('message', handler);
+
+  // 4: Multiple handlers test. If multiple handlers are registered, they should all be called. If there is a data property then it will
+  // be unmarshaled same as the test before.
+  passed = [];
+  handler = (data) => { 
+    if (data.testing === 123)
+      passed.push(true);
+  };
+  otherHandler = handler.bind({}); // Clones the function
+  addEventListener('message', handler);
+  addEventListener('message', otherHandler);
+  emitEvent('message', { data: KVIN.marshal({ testing: 123 }) });
+  assert(passed.length === 2, 'Event was not emitted or data was not unmarshaled');
+  removeEventListener('message', handler);
+  removeEventListener('message', otherHandler);
+
+  // 5: Removing with multiple handlers. If there are multiple handler's registered, does removing a specific one work?
+  let handlerCalled = false;
+  let otherHandlerCalled = false;
+  handler = () => handlerCalled = true;
+  otherHandler = () => otherHandlerCalled = true;
+  addEventListener('message', handler);
+  addEventListener('message', otherHandler);
+  removeEventListener('message', handler);
+  emitEvent('message');
+  assert(!handlerCalled && otherHandlerCalled, 'Did not remove correct handler, removed both, or did not remove at all');
+  removeEventListener('message', otherHandler);
+
+  // 6: Immutability of data. When the unmarshaling of the data object occurs, it should remain immutable to prevent event listeners
+  // from interfering with one another's operation.
+  handler = (data) => { data.param = 2; assert(data.param === 1, 'Data not immutable'); };
+  otherHandler = (data) => { assert(data.param === 1, 'Data not immutable'); };
+  addEventListener('message', handler);
+  addEventListener('message', otherHandler);
+  emitEvent('message', { data: KVIN.marshal({ param: 1 })});
+}
+main();
