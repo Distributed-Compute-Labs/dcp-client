@@ -13,27 +13,28 @@
  *
  *  How does this guarantee the timing is correct?
  *
- *  After the first run of the work function. More javascripts can be run with only two kinds of events. A macro task
+ *  After the first run of the work function, more JavaScript can be run with only two kinds of events: A macro task
  *  becomes ready or the stack is empty and a micro task is put onto the stack. If we time each function that executes
  *  on the macro task and micro task queue, then we will know how much CPU resource they utilized. 
  *
- *  Timing macrotasks are easy, within the environment of web workers, the only macro tasks that occur are setTimeout
- *  and their friends, we simply make every function time itself.
+ *  Timing macrotasks are easy, within the environment of web workers, we have explicit control over the macro tasks that
+ *  can occur, webGPU and the Timeout functions being the two macrotask sources. We can time the callback functions to these
+ *  directly for accurate measurements of macrotasks.
  *
- *  Timing microtasks would also be easy with one exception. A microtask is created via call to the Promise constructor,
- *  which we can just time that. A promise's that depend on the completion of another promise is either crated with the
- *  call to the promise constructor---which we time, or via `then`. The callback of `then` is effectively what will get
- *  put onto the stack when empty, this is guaranteed by the fact that promise crated `then` will be run asynchronously
- *  even if the previous promise is already resolved when called. If we timed that, we will have tracked all CPU resource
- *  usage.
+ *  A microtask is created via call to the Promise constructor, and while we can time most microtasks, those created using 
+ *  async functions cannot be wrapped (without running babel on all work functions to convert async functions to Promises).
+ *  In order to accurately measure all microtasks, we recognize that all microtasks must run directly after a macrotask, queue
+ *  for directly after the macrotask finishes (see https://html.spec.whatwg.org/multipage/webappapis.html#event-loop-processing-model).
+ *  With this, to time a macrotasks and all microtasks it creates, we can:
+ *    1. start a timer
+ *    2. Add an event onto the macrotask queue, to run after this current macrotask
+ *    3. Run the macrotask
+ *    4. <All microtasks will run>
+ *    5. When the event we put onto the macrotask queue is executed, stop our timer
+ *  At this point, we have an accurate measurement of the total CPU time of our computation for that pass of the event loop. The next
+ *  macrotask can be run, repeating this cycle until the work function resolves.
  *
- *  `async` (not `await`, `await` is fine) presents a challenge, although you can await any thennable. The promise crated
- *  via the async keyword will always be the native `Promise` class even if you erase `Promise` from `globalThis`. This 
- *  could be solved via running babel on all work functions and convert them into using Promise and then instead of `async`.
- *  This could be considered in the future but a more brute force strategy is used right now. We simply take the wall time
- *  measurement, and put anything we can't explain into the CPU time.
- *
- *  Since no IO is allowed in work function as of May 2023, the only source of this error is Timeouts have no CPU workloads
+ *  Since no IO is allowed in work function as of Feb 2024, the only source of this error is Timeouts have no CPU workloads
  *  at the same time, causing the JS thread to wait. Which means the error should be small. Once the IO is allowed, as long
  *  as IO are tracked well, the error should remain small.
  *
