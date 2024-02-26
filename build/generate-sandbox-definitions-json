@@ -18,7 +18,7 @@ const target = '../generated/sandbox-definitions.json';
 console.log(`Generating sandbox definitions in ${target}`);
 
 /** All sandbox types use the base files */
-var base = [
+const base = [
   'script-load-wrapper',
   'timer-classes',
   'wrap-event-listeners',
@@ -26,11 +26,13 @@ var base = [
   'lift-webgl',
   'lift-wasm',
   'lift-webgpu',
+  'worktimes',
   'access-lists',
   'bravojs-init',
   'bravojs/bravo.js',
   'bravojs-env',
-  'calculate-capabilities'
+  'pyodide-core',
+  'calculate-capabilities',
 ];
 
 o.browser = [].concat(base);

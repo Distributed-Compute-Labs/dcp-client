@@ -22,7 +22,7 @@ if (typeof globalThis === 'undefined')
   throw new Error('globalThis is undefined');
 
 // check if all the polyfills are present as properties of globalThis
-const polyfills = ['globalThis', 'location', 'performance', 'importScripts', 'WorkerGlobalScope', 'btoa', 'atob', 'Blob'];
+const polyfills = ['globalThis', 'location', 'performance', 'importScripts', 'self', 'btoa', 'atob', 'Blob'];
 for (const property of polyfills)
 {
   if (typeof globalThis[property] === 'undefined')
