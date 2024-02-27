@@ -224,11 +224,13 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
     }
   }
 
-  // Want to use the wrapped versions of these after all gpu functions are wrapped.
-  const originalGPUQueue = GPUQueue;
-  const originalGPUQueueProto = GPUQueue.prototype;
-  const originalSubmitDone = GPUQueue.prototype.onSubmittedWorkDone;
-  const originalRequestDevice = GPUAdapter.prototype.requestDevice;
+  // Want to use the original of these after all gpu functions are wrapped.
+  const underlyingGPUQueue = GPUQueue;
+  const underlyingGPUQueueProto = GPUQueue.prototype;
+  const underlyingOnSubmittedWorkDone = GPUQueue.prototype.onSubmittedWorkDone;
+  const underlyingSubmit = GPUQueue.prototype.submit;
+  const underlyingRequestDevice = GPUAdapter.prototype.requestDevice;
+  const underlyingDestroy = GPUDevice.prototype.destroy;
 
   // some of them will get re-wrapped, that's fine, we always refer to the original function
   const requiredWrappingGPUClasses = [
@@ -251,11 +253,19 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
 
   requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
 
+  let locked = false;
+  const gpuQueueRegistry = [];
+  protectedStorage.webGPU = {
+    lock: () => { locked = true; },
+    unlock: () => { locked = false; },
+    waitAllCommandToFinish: () => { return Promise.allSettled(gpuQueueRegistry.map((q) => q.onSubmittedWorkDone())); },
+  };
+
   // currently, the only queue exposed is the default queue
   GPUAdapter.prototype.requestDevice = async function requestDevice(...args)
   {
-    const device = await originalRequestDevice.call(this, ...args);
-    globalTrackers.webGPUQueueRegistry.add(device.queue);
+    const device = await underlyingRequestDevice.call(this, ...args);
+    gpuQueueRegistry.push(device.queue);
     return device;
   }
 
@@ -266,30 +276,34 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
    */
   GPUQueue = function GPUQueue$$constructor(...args)
   {
-    const queue = new originalGPUQueue(...args);
-    // always register the queue with the global tracker
-    globalTrackers.webGPUQueueRegistry.add(queue);
+    const queue = new underlyingGPUQueue(...args);
+    gpuQueueRegistry.push(queue);
     return queue;
   }
-  GPUQueue.prototype = originalGPUQueueProto;
+  GPUQueue.prototype = underlyingGPUQueueProto;
   GPUQueue.prototype.constructor = GPUQueue;
 
-
-  GPUQueue.prototype.onSubmittedWorkDone = function onSubmittedWorkDone(...args)
+  // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
+  GPUQueue.prototype.submit = function submit(commandBuffers)
   {
-    const that = this;
-    const original = originalSubmitDone.call(that, ...args);
-    return original;
+    if (locked)
+      throw new Error('Attempted to submit webGPU queue after work function resolved');
+    underlyingSubmit.call(this, commandBuffers);
+
+    const submitTime = performance.now();
+    underlyingOnSubmittedWorkDone.call(this).then(() => {
+      const completedAt = performance.now();
+      const duration = new TimeInterval();
+      duration.overrideInterval(submitTime, completedAt);
+      webGPUTimer.push(duration);
+    });
   }
 
-
-  // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
-  GPUQueue.prototype.submit = function submit(...args)
+  GPUDevice.prototype.destroy = function destroy()
   {
-    return globalTrackers.webGPUQueueRegistry.addSubmission(
-      this,
-      ...args
-    );
+    const idx = gpuQueueRegistry.indexOf(this.queue);
+    gpuQueueRegistry.splice(idx);
+    underlyingDestroy();
   }
 });
 

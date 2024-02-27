@@ -51,156 +51,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
   {
     /** @typedef {import("./timer-classes.js").TimeThing} TimeThing */
     const TimeThing = protectedStorage.TimeThing;
-    /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
-    const TimeInterval = protectedStorage.TimeInterval;
-
-
-    // stash a copy so we don't end up recursively calling with no base case
-    // optional chaining used here to get around the issue of old platforms having such symbols defined, the end effect
-    // is all the operations performed on them become no-ops
-    const realSubmit = globalThis.GPUQueue?.prototype?.submit;
-    const realOnSubmittedWorkDone = globalThis.GPUQueue?.prototype?.onSubmittedWorkDone;
-    const realGPUDeviceDestory = globalThis.GPUDevice?.prototype?.destroy;
-    /**
-     * @class WebGPUQueueRegistry
-     * @property {Array<GPUQueue>} queues - list of all tracked instances of `GPUQueue`
-     * @property {TimeThing} webGPUIntervals - collection of time slice for time spent on GPU
-     * @property {Array<EventTarget>} eventTargets - list of the event targets used to book keep the usage of GPU
-     * @function add
-     * @function addSubmission
-     * @function unsafePopQueue
-     * @function waitAllCommandToFinish
-     * @function reset
-     *
-     * Each elem of queues with index `i` should have its corresponding EventTarget at eventTargets[i]. Entity component
-     * system style.
-     */
-    class WebGPUQueueRegistry
-    {
-      /**
-       * @constructor
-       * @param {TimeThing} webGPUIntervals
-       * @returns {GPUQueueRegistery}
-       */
-      constructor(webGPUIntervals)
-      {
-        /** @type Array<GPUQueue> */
-        this.queues = [];
-
-        /** @type TimeThing */
-        this.webGPUIntervals = webGPUIntervals;
-
-        // slaps roof, this thing can act as so many different concurrency primitives
-        /** @type Array<EventTarget> */
-        this.eventTargets = [];
-
-        // Lock to prevent webGPU work from occurring after the work function promise resolves
-        this.locked = false;
-      }
-
-      /**
-       * Add a queue to the registry, returns the newly registered queue.
-       * @param {GPUQueue} queue
-       * @returns {GPUQueue}
-       */
-      add(queue)
-      {
-        this.queues.push(queue);
-
-        const eventTarget = new EventTarget();
-        eventTarget.addEventListener('submission', this.#recordCommandDuration);
-        this.eventTargets.push(eventTarget);
-
-        return queue;
-      }
-
-      async #recordCommandDuration(customEvent)
-      {
-        const {submittedAt, gpuQueue, timeIntervals} = customEvent.detail;
-        // Since the standard guarantees this promise resolves in FIFO in line with submit, and we always queue up this
-        // promise immediately after someone submits, we are guaranteed to resolve to the promise corresponding to the
-        // commands they just submitted.
-        // When the user calls `onSubmittedWorkDone` from their work function, our promise will have already been
-        // resolved and theirs just resolves as soon as the event loop is free, they don't know anything had happened.
-        await realOnSubmittedWorkDone.call(gpuQueue);
-
-        const completedAt = performance.now();
-        const duration = new TimeInterval();
-        duration.overrideInterval(submittedAt, completedAt);
-
-        timeIntervals.push(duration);
-      }
-
-      /**
-       * Add a submission to the registry.
-       *
-       * @param {GPUQueue} queue the Queue you wish to submit to
-       * @param {GPUCommandBuffer[]} commandBuffers the command buffers you wish to submit
-       * @returns {undefined}
-       */
-      addSubmission(queue, commandBuffers)
-      {
-        if (this.locked)
-          throw new Error('Attempted to submit webGPU queue after work function resolved');
-        // we assume the queue is always already in the registry, should be enforced by changing all the
-        // places where a queue can be created to use the registry
-        const idx = this.queues.indexOf(queue);
-        const eventTarget = this.eventTargets.at(idx);
-
-        const submittedAt = performance.now();
-        // actually submit on the underlying queue
-        realSubmit.call(queue, commandBuffers);
-
-        // queues up a promise that calls `onSubmittedWorkDone` on the promise and record how long the command took
-        eventTarget.dispatchEvent(new CustomEvent('submission', {
-          detail: {
-            submittedAt: submittedAt,
-            gpuQueue: queue,
-            timeIntervals: this.webGPUIntervals,
-          }
-        }));
-      }
-
-      /** 
-       * *Immediately* removes the queue from metric tracking, it's *your* responsibility to ensure that there won't be
-       * any new commands submitted. It will *not* reset the webGPU time duration lists! It simply removes the `queue` 
-       * from tracking.
-       */
-      unsafePopQueue(queue)
-      {
-        const idx = this.queues.indexOf(queue);
-        if (idx === -1)
-          return;
-
-        // remove the listener and drop all references to the `EventTarget`, GC will clean it up
-        const eventTarget = this.eventTargets.at(idx);
-        eventTarget.removeEventListener('submission', this.#recordCommandDuration);
-        this.queues.splice(idx);
-        this.eventTargets.splice(idx);
-      }
-
-      async waitAllCommandToFinish()
-      {
-        return await Promise.allSettled(this.queues.map((q) => q.onSubmittedWorkDone()));
-      }
-
-      reset()
-      {
-        while (this.queues.length)
-          this.unsafePopQueue(this.queues[0]);
-      }
-
-      lock()
-      {
-        this.locked = true;
-      }
-
-      unlock()
-      {
-        this.locked = false;
-      }
-    }
-
 
     /**
      * @class GlobalTrackers
@@ -224,15 +74,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         this.webGPUIntervals = new TimeThing();
         this.cpuIntervals    = new TimeThing();
         this.webGLIntervals  = new TimeThing();
-        this.webGPUQueueRegistry = new WebGPUQueueRegistry(this.webGPUIntervals);
-
-        /** @type {Array<GPUDevice>} */
-        // Why is this a list?
-        // Because you can get more than one devices by requesting with different adapter options
-        // 
-        // Why do we need to keep track of it?
-        // So we can call `destroy` on it when we wish to reset our tracking state 
-        this.gpuDevices = [];
       }
 
       /**
@@ -246,16 +87,8 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       async reset()
       {
-        // remove them first before clearing the commands
-        // this is safe when webGPU symbols are not defined, because the queue will be empty, so the body is never
-        // called, hence it's safe
-        for (const device of this.gpuDevices)
-          realGPUDeviceDestory.call(device);
-        this.gpuDevices = [];
-
-        // very important that this is called before resetting the intervals themselves since the registry hold
-        // references to the intervals below
-        this.webGPUQueueRegistry.reset();
+        if (protectedStorage.webGPU)
+          protectedStorage.webGPU.reset();
 
         // it's *very* important that we delegate the work of resetting to the intervals rather than just assigning each
         // of them with new instances. These `TimeThing`s are being shared to different modules, if we just re-assign,
@@ -293,12 +126,9 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       async getMetrics()
       {
-        // remove them first before clearing the commands
-        for (const device of this.gpuDevices)
-          realGPUDeviceDestory.call(device);
-
         // flush all commands that were already enqueued
-        await this.webGPUQueueRegistry.waitAllCommandToFinish();
+        if (protectedStorage.webGPU)
+          await protectedStorage.webGPU.waitAllCommandToFinish();
 
         const webGPUTime = this.webGPUIntervals.duration();
         const webGLTime = this.webGLIntervals.duration();

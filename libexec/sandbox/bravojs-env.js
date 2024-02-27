@@ -410,7 +410,8 @@ prepPyodide`);
     try {
       // reset the device states and flush all pending tasks
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
-      protectedStorage.bigBrother.globalTrackers.webGPUQueueRegistry.lock();
+      if (protectedStorage.webGPU)
+        protectedStorage.webGPU.lock();
 
       // Let microtask queue finish before getting metrics. With all event-loop possibilities locked,
       // only the microtask could trigger new code, so waiting for a setTimeout guarantees everything's done
@@ -449,7 +450,8 @@ prepPyodide`);
   function runWorkFunction(datum)
   {
     protectedStorage.unlockTimers();
-    protectedStorage.bigBrother.globalTrackers.webGPUQueueRegistry.unlock();
+    if (protectedStorage.webGPU)
+      protectedStorage.webGPU.unlock();
 
     // reset the time used for feature detection
     protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
