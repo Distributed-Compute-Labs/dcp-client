@@ -87,9 +87,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
        */
       async reset()
       {
-        if (protectedStorage.webGPU)
-          protectedStorage.webGPU.reset();
-
         // it's *very* important that we delegate the work of resetting to the intervals rather than just assigning each
         // of them with new instances. These `TimeThing`s are being shared to different modules, if we just re-assign,
         // they all end up with stales copies and the entire state becomes corrupted

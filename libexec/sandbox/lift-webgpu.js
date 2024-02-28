@@ -303,7 +303,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   {
     const idx = gpuQueueRegistry.indexOf(this.queue);
     gpuQueueRegistry.splice(idx);
-    underlyingDestroy();
+    underlyingDestroy.call(this);
   }
 });
 
