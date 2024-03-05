@@ -145,7 +145,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     });
   }
 
-  function workerBootstrap$work$reject(reason = 'noReasonGiven') {
+  function workerBootstrap$work$reject(reason) {
     protectedStorage.workRejectReason = reason; // Memoize reason
     throw Symbol.for('workReject');
   }
