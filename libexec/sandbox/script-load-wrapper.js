@@ -87,7 +87,7 @@
         delete self.wrapScriptLoading;
 
         // The private '__sandboxLoaded' event is used by dcp-native; do not remove.
-	// Otherwise, do not use __sandboxLoaded.
+        // Otherwise, do not use __sandboxLoaded.
         ring0PostMessage({
           request: '__sandboxLoaded', // SAVE
         });

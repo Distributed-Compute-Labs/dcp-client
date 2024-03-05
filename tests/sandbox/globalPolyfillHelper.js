@@ -39,6 +39,7 @@ exports.init = function init(files, outputTesting)
   self = global;
   global.KVIN = require('kvin');
   global.performance = { now: Date.now };
+  const unmarshal = KVIN.unmarshal;
 
   // postMessage is:
   //   a) expected to be a symbol in the evaluator
@@ -48,7 +49,7 @@ exports.init = function init(files, outputTesting)
   // eslint-disable-next-line vars-on-top
   global.postMessage = (line) =>
   {
-    line = KVIN.unmarshal(line)
+    line = unmarshal(line)
     if (typeof outputTesting === 'function')
       outputTesting(line);
   }
@@ -68,7 +69,12 @@ exports.init = function init(files, outputTesting)
   {
     if (eventsListening[event])
       for (let cb of eventsListening[event])
-        process.nextTick(() => cb.call(null, data));
+        cb.call(null, data);
+  }
+  global.removeEventListener = (event, listener) =>
+  {
+    const listenerIdx = eventsListening[event].indexOf(listener);
+    eventsListening[event].splice(listenerIdx, 1);
   }
 
   const indirectEval = eval

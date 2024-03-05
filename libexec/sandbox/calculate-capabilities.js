@@ -48,29 +48,12 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         return arguments[0];
       });`
 
-      webgpu =
-        typeof GPU !== 'undefined' ||
-        (typeof navigator !== 'undefined' &&
-          typeof navigator.gpu !== 'undefined');
+      webgpu = Boolean(globalThis.navigator?.gpu);
 
       if (webgpu) {
         try {
-          // if we're in a standalone, we need to initialize a window before requesting adapter
-          // These symbols will have to be updated as the webGPU spec keeps updating and as we update our evaluator
-          if (typeof WebGPUWindow !== 'undefined') {
-            const gpuWindow = new WebGPUWindow({
-              width: 640,
-              height: 480,
-              title: 'DCP-evaluator',
-              visible: false,
-            });
-            
-            const adapter = await GPU.requestAdapter({ window: gpuWindow });
-            await adapter.requestDevice(adapter.extensions);
-          } else {
-            const adapter = await navigator.gpu.requestAdapter();
-            await adapter.requestDevice();
-          }
+          const adapter = await navigator.gpu.requestAdapter();
+          await adapter.requestDevice();
         } catch (err) {
           // if glfw fails or the symbols exist but webgpu hasn't been
           // properly enabled (mozilla)
@@ -119,7 +102,7 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
       }
 
       if(eval(testCode)(1) !== 1)
-        useStrict = false;      
+        useStrict = false;
 
       return {
         engine: {
@@ -150,9 +133,11 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
     addEventListener('message', async (event) => {
       try {
         if (event.request === 'describe') {
+          const worktimes = globalThis.worktimes;
           const capabilities = await getCapabilities();
           ring2PostMessage({
             capabilities,
+            worktimes,
             request: 'describe',
           });
         }

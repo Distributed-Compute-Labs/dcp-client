@@ -373,11 +373,17 @@ function magicView(node, seen)
  *
  * Returns false is the file simply does not exist.
  *
+ * Setting `DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION` to a non-empty value disables
+ * the security check.
+ *
  * @param {string} fullPath    the full path to the file to check
  * @param {object} statBuf     [optional] existing stat buf for the file
  */
 function checkConfigFileSafePerms(fullPath, statBuf)
 {
+  if (process.env.DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION)
+    return true;
+
   const fun = checkConfigFileSafePerms;
 
   if (!fs.existsSync(fullPath))
