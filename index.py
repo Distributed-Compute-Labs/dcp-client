@@ -52,7 +52,7 @@ async def load_dcp_client(callback):
         dcp_client_modules['utils']['expandPath'] = os.path.expanduser;
 
         if (callback):
-            cb_retval = callback()
+            cb_retval = await callback()
     except Exception as error:
         print('Error loading bundle:', error)
     await pm.wait() # blocks until all asynchronous calls finish
