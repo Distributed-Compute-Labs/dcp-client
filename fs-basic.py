@@ -1,4 +1,4 @@
-# @file        dcp-support.py
+# @file        fs-basic.py
 #              Python polyfills for OS-level functionality needed by dcp-client
 #
 # @author      Wes Garland, wes@distributive.network
@@ -44,3 +44,7 @@ exports['dirname']     = os.path.dirname
 exports['absPath']     = os.path.isabs
 exports['joinPath']    = os.path.join
 exports['pathSep']     = os.path.sep
+exports['readDir']     = os.listdir
+exports['rm']          = os.remove
+exports['rmdir']       = os.rmdir
+exports['fileSize']    = lambda filename: os.stat(filename).st_size
