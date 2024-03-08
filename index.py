@@ -38,7 +38,11 @@ fs_basic    = pm.require('./fs-basic');
 async def load_dcp_client(callback):
     cb_retval = None
     try:
-        dcp_config_js = urllib.request.urlopen('https://scheduler.distributed.computer/etc/dcp-config.js').read().decode();
+        scheduler_location = os.getenv('DCP_SCHEDULER_LOCATION')
+        if (scheduler_location == None):
+            scheduler_location = 'https://scheduler.distributed.computer'
+        bundle_location = scheduler_location + '/etc/dcp-config.js'
+        dcp_config_js = urllib.request.urlopen(bundle_location).read().decode();
         pm.eval('globalThis.window = {}; globalThis.dcpConfig =' + dcp_config_js);
         pm.eval('delete globalThis.window') # we might need to keep window?
         pm.eval('globalThis.dcpConfig.build = "debug";'); # we should fix the bundle so that this is not necessary
@@ -54,7 +58,7 @@ async def load_dcp_client(callback):
         if (callback):
             cb_retval = await callback()
     except Exception as error:
-        print('Error loading bundle:', error)
+        print('Error loading bundle:', error, bundle_location)
     await pm.wait() # blocks until all asynchronous calls finish
     return cb_retval
 
