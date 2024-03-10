@@ -1,9 +1,6 @@
 # @file        index.py
 #              PythonMonkey loader for the dcp-client package.
 #
-#              Question: should this by a PythonMonkey .py CommonJS Module, or a Python module?
-#                        It is current a CJS module.
-#
 #              During module initialization, we load dist/dcp-client-bundle.js from the
 #              same directory as this file, and setup a minimum compatibility environment
 #              for dcp-client to execute in.
@@ -38,21 +35,22 @@ fs_basic    = pm.require('./fs-basic');
 async def load_dcp_client(callback):
     cb_retval = None
     try:
+        here = { 'filename': __file__, 'fromPythonFrame': True }
         scheduler_location = os.getenv('DCP_SCHEDULER_LOCATION')
         if (scheduler_location == None):
             scheduler_location = 'https://scheduler.distributed.computer'
         bundle_location = scheduler_location + '/etc/dcp-config.js'
         dcp_config_js = urllib.request.urlopen(bundle_location).read().decode();
-        pm.eval('globalThis.window = {}; globalThis.dcpConfig =' + dcp_config_js);
-        pm.eval('delete globalThis.window') # we might need to keep window?
-        pm.eval('globalThis.dcpConfig.build = "debug";'); # we should fix the bundle so that this is not necessary
-        pm.eval('globalThis.crypto = {};');
+        pm.eval('globalThis.window = {}; globalThis.dcpConfig =' + dcp_config_js, { 'filename': bundle_location });
+        pm.eval('delete globalThis.window', here) # we might need to keep window?
+        pm.eval('globalThis.dcpConfig.build = "debug";', here); # we should fix the bundle so that this is not necessary
+        pm.eval('globalThis.crypto = {};', here);
         pm.globalThis['crypto']['getRandomValues'] = dcp_support['getRandomValues']
 
         bundle_code = fs_basic['readFile'](dcp_client_bundle_filename)
-        dcp_client_modules = pm.eval(bundle_code)
-        pm.eval('globalThis')['dcp'] = dcp_client_modules;
-        pm.eval('Object.assign')(pm.globalThis.dcp['fs-basic'], fs_basic);
+        dcp_client_modules = pm.eval(bundle_code, { 'filename': dcp_client_bundle_filename })
+        pm.eval('globalThis', here)['dcp'] = dcp_client_modules;
+        pm.eval('Object.assign', here)(pm.globalThis.dcp['fs-basic'], fs_basic);
         dcp_client_modules['utils']['expandPath'] = os.path.expanduser;
 
         if (callback):
@@ -64,6 +62,6 @@ async def load_dcp_client(callback):
 
 def init(callback):
     asyncio.run(load_dcp_client(callback))
-    
+
 # exports of dcp-client python-language CommonJS module
 exports['init'] = init;
