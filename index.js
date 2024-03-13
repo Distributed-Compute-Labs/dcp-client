@@ -1066,7 +1066,7 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   const home = process.env.DCP_HOMEDIR || os.homedir();
   let programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
-  const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
+  const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : process.cwd();
   var   remoteConfig, remoteConfigKVIN;
   const internalConfig = require('dcp/dcp-config'); /* needed to resolve dcpConfig.future - would like to eliminate this /wg */
   const defaultConfig = Object.assign({}, bootstrapConfig);
