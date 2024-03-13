@@ -381,13 +381,12 @@ function magicView(node, seen)
  */
 function checkConfigFileSafePerms(fullPath, statBuf)
 {
-  if (process.env.DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION)
-    return true;
-
   const fun = checkConfigFileSafePerms;
 
   if (!fs.existsSync(fullPath))
     return false;
+  if (process.env.DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION)
+    return true;
   if (!fun.selfStat)
     fun.selfStat = fs.statSync(module.filename);
   if (!fun.mainStat)
