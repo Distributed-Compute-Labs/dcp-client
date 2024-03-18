@@ -28,8 +28,6 @@ import asyncio
 
 # @todo determine dcp_client_bundle_filename inside JS via require.resolve
 dcp_client_bundle_filename = os.path.dirname(__file__) + "/dist/dcp-client-bundle.js"
-dcp_support = pm.require("./dcp-support");
-fs_basic    = pm.require("./fs-basic");
 
 # load dcp-client, then run the callback function
 async def load_dcp_client(*args, **kwargs):

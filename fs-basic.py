@@ -32,12 +32,7 @@ exports['writeFile']  = writeFile
 exports['getMode']    = getMode
 exports['fileExists'] = fileExists
 exports['dirExists']  = dirExists
-exports['constants']  = pm.eval("""'use strict';
-({
-  W_OK: 2,   // todo - check python docs for symbols, win32..
-  R_OK: 4,
-})
-""")
+exports['constants']  = { 'W_OK': os.W_OK, 'R_OK': os.R_OK }
 exports['pathResolve'] = os.path.join
 exports['basename']    = os.path.basename
 exports['dirname']     = os.path.dirname
