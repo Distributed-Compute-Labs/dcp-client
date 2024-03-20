@@ -11,9 +11,9 @@ def readFile(filename) -> str:
     with open(filename, "r", encoding="utf8") as fileHnd:
         return fileHnd.read()
 
-def writeFile(filename) -> str:
+def writeFile(filename, contents):
     with open(filename, "w", encoding="utf8") as fileHnd:
-        fileHnd.write(str)
+        fileHnd.write(contents)
 
 def getMode(filename) -> int:
     return os.stat(filename).st_mode
