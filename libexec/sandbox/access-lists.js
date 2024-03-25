@@ -701,7 +701,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
             },
             configurable: false
           });
-        } else if (prop in blockList) {
+        } else if (blockList.hasOwnProperty(prop)) {
           let isSet = false;
           let blocked = blockList[prop];
           let propValue = obj[prop];
