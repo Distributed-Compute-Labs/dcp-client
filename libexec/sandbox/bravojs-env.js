@@ -234,7 +234,7 @@ prepPyodide`);
       else if (typeof pythonSliceHandler !== 'function')
         throw new Error('ENOSLICEHANDLER: Slice Handler must be a function');
 
-      const sliceHandlerResult = await pythonSliceHandler(datum);
+      const sliceHandlerResult = await pythonSliceHandler(pyodide.toPy(datum));
 
       // if it is a PyProxy, convert its value to JavaScript
       if (sliceHandlerResult.toJs)

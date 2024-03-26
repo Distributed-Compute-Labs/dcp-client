@@ -18,7 +18,7 @@ function worktimes$$fn(protectedStorage, _ring2PostMessage)
 
   const worktimes = [
     { name: 'map-basic', versions: ['1.0.0'] },
-    { name: 'pyodide',   versions: ['0.23.2'] },
+    { name: 'pyodide',   versions: ['0.24.0'] },
   ];
 
   function registerWorktime(name, version)
