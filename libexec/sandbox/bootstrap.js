@@ -17,8 +17,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       postMessageSentTime = 0,
       throttledProgress = 0, // how many progress events were throttled since last update
       indeterminateProgress = true, // If there hasn't been a determinate call to progress since last update
-      flushedLastConsoleMessage = false, // flag used to determine if flushedLastLog() was called by client
-      lastConsoleMessage = null; // cache of the last message received throguh a console event
+      lastConsoleLog = null; // cache of the last message received through a console event
 
   addEventListener('message', async (event) => {
     try {
@@ -49,7 +48,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
         postMessageSentTime = 0;
         throttledProgress = 0;
         indeterminateProgress = true;
-        flushedLastConsoleMessage = false;
+        lastConsoleLog = null;
         ring2PostMessage({ request: 'resetStateDone' });
       }
     } catch (error) {
@@ -127,7 +126,7 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
       throttledProgress++;
     }
 
-    flushConsoleMessages(null);
+    protectedStorage.dispatchSameConsoleMessage();
     return true;
   }
 
@@ -163,13 +162,60 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     reject: workerBootstrap$work$reject,
   };
 
-  function workerBootstrap$console(level, ...args) {
-    flushConsoleMessages({
-        level,
-        message: args,
-        fileName: undefined,
-        lineNumber: undefined});
+  /**
+   * Polyfills the `console[method]` functions in the work function by
+   * dispatching 'console' events to the worker to be propogated/emitted to
+   * connected clients.
+   *
+   * Subsequent console messages that are identical are treated as special
+   * cases. Their dispatch is delayed for as long as possible. See
+   * `protectedStorage.dispatchSameConsoleMessage()` for the events triggering
+   * their dispatch.
+   */
+  function workerBootstrap$console(level, ...args)
+  {
+    const newConsoleLog = { level, message: args };
+
+    // The first console message.
+    if (lastConsoleLog === null)
+    {
+      dispatchNewConsoleMessage();
+      return;
+    }
+
+    // Subsequent console messages.
+    if (
+      newConsoleLog.level === lastConsoleLog.level
+      && areArraysEqual(newConsoleLog.message, lastConsoleLog.message)
+    )
+    {
+      // Delay/batch the dispatch of the same log(s).
+      lastConsoleLog.same += 1;
+      return;
+    }
+
+    protectedStorage.dispatchSameConsoleMessage();
+    dispatchNewConsoleMessage();
+
+    function dispatchNewConsoleMessage()
+    {
+      newConsoleLog.same = 1;
+      postMessage({ request: 'console', payload: newConsoleLog });
+      lastConsoleLog = newConsoleLog;
+    }
+
+    // Checks to see whether 2 arrays are identical.
+    function areArraysEqual(array1, array2)
+    {
+      if (array1.length !== array2.length)
+        return false;
+      for (let k = 0; k < array1.length; k++)
+        if (array1[k] !== array2[k])
+          return false;
+      return true;
+    }
   }
+
   // Polyfill console with our own function. Prevents console statements
   // within a user's work function from being displayed in a worker's console, and
   // will properly send it back to the user
@@ -181,33 +227,20 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     error:  workerBootstrap$console.bind(null, 'error'),
   };
 
-  // Function caches the most recent console message and counts how many identical messages are received
-  // Once a different message is received (or when the slice completes) it is sent along with the counter value
-  function flushConsoleMessages(data){
-    if(lastConsoleMessage != null && data != null && lastConsoleMessage.message == data.message && lastConsoleMessage.level == data.level){
-      lastConsoleMessage.same++;
-    } else {
-      if(lastConsoleMessage != null){
-        postMessage({
-          request: 'console',
-          payload: lastConsoleMessage
-        });
-        lastConsoleMessage = null;
-      }
-
-      if(data != null){
-        data.same = 1;
-        lastConsoleMessage = data;
-      }
-    }
+  /**
+   * Dispatches the most recent duplicate console message.
+   *
+   * Based on the spec, this occurs when a new different message is logged (see
+   * `workerBootstrap$console`), the worker terminates (hence
+   * `protectedStorage`), or a progress update event is emitted (see
+   * `self.progress`); whichever comes first.
+   */
+  protectedStorage.dispatchSameConsoleMessage = function workerBootstrap$dispatchSameConsoleMessage() {
+    if (!(lastConsoleLog?.same > 1))
+      return;
+    // Avoid sending duplicate console message data over the network.
+    delete lastConsoleLog.message;
+    postMessage({ request: 'console', payload: lastConsoleLog });
+    lastConsoleLog = null;
   };
-  // Ensure all console statements will be sent after a job completes
-  protectedStorage.flushLastLog = function workerBootstrap$flushLastLog(){
-    if(!flushedLastConsoleMessage){
-        flushConsoleMessages(null); 
-        flushedLastConsoleMessage = true;
-    } else{
-      throw new Error('client should not be calling flushLastLog');
-    }
-  }
 });
