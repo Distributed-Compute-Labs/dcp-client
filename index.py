@@ -29,7 +29,7 @@ import asyncio
 # @todo determine dcp_client_bundle_filename inside JS via require.resolve
 dcp_client_bundle_filename = os.path.dirname(__file__) + "/dist/dcp-client-bundle.js"
 
-# load dcp-client, then run the callback function
+# load dcp-client, then optionally run a callback function
 async def load_dcp_client(*args, **kwargs):
     if len(args) == 1:
         callback = args[0]
@@ -37,6 +37,9 @@ async def load_dcp_client(*args, **kwargs):
             raise Exception("callback must be callable")
     elif len(args) != 0:
         raise Exception("invalid arguments; expected 0 or 1")
+    else:
+        callback = None
+        
     cb_retval = None
 
     def fetch(url):
@@ -49,7 +52,7 @@ async def load_dcp_client(*args, **kwargs):
 
     here = { "filename": __file__, "fromPythonFrame": True }
     dcp_client_modules = pm.eval("""'use strict';(
-function iife(callback, kwargs, fetch, require, bootstrapRequire)
+function iife(kwargs, fetch, require, bootstrapRequire)
 {
   const fsBasic = require('./fs-basic');
   const dcpSupport = require('./dcp-support');
@@ -96,7 +99,7 @@ function iife(callback, kwargs, fetch, require, bootstrapRequire)
   Object.assign(dcpClientExports['fs-basic'], fsBasic);
   return dcpClientExports;
 }) /* iife */;
-""", here)(*args, kwargs, fetch, pm.createRequire(__file__), pm.bootstrap.require)
+""", here)(kwargs, fetch, pm.createRequire(__file__), pm.bootstrap.require)
 
     dcp_client_modules["utils"]["expandPath"] = os.path.expanduser
 
@@ -110,4 +113,4 @@ def init(*args, **kwargs):
     asyncio.run(load_dcp_client(*args, **kwargs))
 
 # exports of dcp-client python-language CommonJS module
-exports["init"] = init;
+exports["init"] = init
