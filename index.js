@@ -111,7 +111,7 @@ function evalScriptInSandbox(filename, sandbox)
     throw e
   }
 
-  return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
+  return runSandboxedCode(sandbox, code, { filename, lineOffset: 0 });
 }
 
 /**
@@ -128,7 +128,7 @@ function evalFileInIIFE(filename, sandbox)
 {
   const prologue = '(function __dynamic_evalFile__IIFE(' + Object.keys(sandbox).join(',') + '){ return ';
   const epilogue = '\n});';
-  const options = { filename, lineNumber: 0 };
+  const options = { filename, lineOffset: 0 };
   
   debug('dcp-client:evalFileInIIFE')('evaluating', filename);
   const fileContents = fs.readFileSync(path.resolve(distDir, filename), 'utf8');

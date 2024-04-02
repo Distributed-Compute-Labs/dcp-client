@@ -65,5 +65,3 @@ async function main() {
 require('../..')
   .init(SCHEDULER_URL)
   .then(main)
-  .catch(console.error)
-  .finally(process.exit);
