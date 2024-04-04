@@ -32,6 +32,7 @@ exports['writeFile']  = writeFile
 exports['getMode']    = getMode
 exports['fileExists'] = fileExists
 exports['dirExists']  = dirExists
+exports['mkdir']      = mkdir
 exports['constants']  = { 'W_OK': os.W_OK, 'R_OK': os.R_OK }
 exports['pathResolve'] = os.path.join
 exports['basename']    = os.path.basename
