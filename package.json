@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "author": "Distributive",
-  "main": "index.js",
+  "main": "index",
   "directories": {
     "example": "examples"
   },
