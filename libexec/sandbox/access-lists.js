@@ -906,12 +906,38 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
       applyAccessLists(g, allowList, blockList);
 
-    if (typeof navigator === 'undefined')
+    if (typeof navigator === 'undefined' || !navigator.userAgent)
       navigator = { userAgent: 'not a browser' };
     else
     {
       const navPolyFill = {
-        userAgent:  navigator.userAgent || 'not a browser', 
+        // Depricated but kept for compatiability
+        appCodeName: navigator.appCodeName,
+        appName: navigator.appName,
+        appVersion: navigator.appVersion,
+        platform: navigator.platform,
+        product: navigator.product,
+
+        // Enabled
+        userAgent:  navigator.userAgent, 
+        deviceMemory: navigator.deviceMemory,
+        globalPrivaryControl: navigator.globalPrivaryControl,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        language: navigator.language,
+        languages: navigator.languages,
+        locks: navigator.locks,
+        mediaCapabilities: navigator.mediaCapabilities,
+        onLine: navigator.onLine,
+        permissions: navigator.permissions,
+        userAgentData: navigator.userAgentData,
+
+        // *** Disabled for security reasons ***
+        // usb: navigator.usb,
+        // connection: navigator.connection,
+        // onLine: navigator.onLine,
+        // serial: navigator.serial,
+        // serviceWorker: navigator.serviceWorker,
+        // storage: navigator.storage,
       };
       if (navigator.gpu)
         navPolyFill.gpu = navigator.gpu;
