@@ -20,10 +20,12 @@ console.log(`Generating sandbox definitions in ${target}`);
 /** All sandbox types use the base files */
 const base = [
   'script-load-wrapper',
-  'wrap-event-listeners',
   'timer-classes',
+  'wrap-event-listeners',
   'event-loop-virtualization',
-  'unique-timing',
+  'lift-webgl',
+  'lift-wasm',
+  'lift-webgpu',
   'worktimes',
   'access-lists',
   'bravojs-init',
