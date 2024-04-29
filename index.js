@@ -60,6 +60,9 @@ const bootstrapConfig = {
 const bundleSandbox = {
   URL,
   URLSearchParams,
+  // GPU,
+  // GPUDevice,
+  // GPUAdapter,
   Function,
   Object,
   Array,
