@@ -88,12 +88,8 @@ function iife(kwargs, fetch, require, bootstrapRequire)
   const bundleFilename = require.resolve('./dist/dcp-client-bundle');
   debug('dcp-client:bundle')('loading bundle', bundleFilename);
   const bundleCode = fsBasic.readFile(bundleFilename);
-  debug('dcp-client:bundle')('evaluating bundle', bundleFilename);
-  /** @todo after PM #298:
+  debug('dcp-client:bundle')('evaluating bundle', bundleFilename);                             
   const dcpClientExports = vm.runInContext(bundleCode, undefined, { "filename": bundleFilename });
-  */
-  require = undefined;
-  const dcpClientExports = eval(bundleCode);
   debug('dcp-client:bundle')('loaded bundle', bundleFilename);
   globalThis.dcp = dcpClientExports;
   Object.assign(dcpClientExports['fs-basic'], fsBasic);
