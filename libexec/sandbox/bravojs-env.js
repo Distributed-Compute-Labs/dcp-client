@@ -386,14 +386,12 @@ prepPyodide`);
    *                                    as its argument the error that it rejected with.
    * @returns   unused promise   
    */
-  async function runWorkFunction_inner(datum, successCallback, errorCallback)
+  async function runWorkFunction_inner(datum, wallDuration, successCallback, errorCallback)
   {
     /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
-    const TimeInterval = protectedStorage.TimeInterval;
     var rejection = false;
     var result;
     let metrics;
-    const wallDuration = new TimeInterval();
     try
     {
       /* module.main.job is the work function; left by assign message */ 
@@ -455,11 +453,12 @@ prepPyodide`);
 
     // reset the time used for feature detection
     protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
+    const wallDuration = new protectedStorage.TimeInterval();
 
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result, metrics) => reportResult(result, metrics), (rejection, metrics) => reportError(rejection, metrics)));
+    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, wallDuration, (result, metrics) => reportResult(result, metrics), (rejection, metrics) => reportError(rejection, metrics)));
   }
 }); /* end of fn */
