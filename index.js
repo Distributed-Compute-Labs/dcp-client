@@ -908,6 +908,9 @@ function handleInitArgs(initArgv)
  *                                                      - parseArgv; false => not parse cli for scheduler/wallet
  *                                                      - bundleLocation (URL or string)
  *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
+ *                                                      - configName: filename to load as part of default dcpConfig
+ *                                                      - dcpConfig: object to include as part of default dcpConfig
+ *                                                      - enableSourceMaps: boolean to activate legible error stack traces
  */
 /**
  * Form 4
@@ -922,6 +925,7 @@ function handleInitArgs(initArgv)
  *                                                      - reportErrors; false => throw, else=>console.log, exit(1)
  *                                                      - configName: filename to load as part of default dcpConfig
  *                                                      - dcpConfig: object to include as part of default dcpConfig
+ *                                                      - enableSourceMaps: boolean to activate legible error stack traces
  */
 exports.init = async function dcpClient$$init() {
   var { initConfig, options } = handleInitArgs(arguments);
@@ -949,6 +953,9 @@ exports.init = async function dcpClient$$init() {
       throw error;
     }
   }
+
+  if (process.env.DCP_CLIENT_ENABLE_SOURCEMAPS || options.enableSourceMaps)
+    require('source-map-support').install();
 
   return initTail(configFrags, options, finalBundleCode, finalBundleURL);
 }

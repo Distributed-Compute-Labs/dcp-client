@@ -44,6 +44,7 @@
     "regedit": "^3.0.3",
     "semver": "^7.3.5",
     "webpack": "5.92.0",
+    "source-map-support": "0.5.21",
     "webpack-cli": "^4.7.2",
     "yargs": "16.2.0"
   },
