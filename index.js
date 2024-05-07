@@ -60,6 +60,9 @@ const bootstrapConfig = {
 const bundleSandbox = {
   URL,
   URLSearchParams,
+  // GPU,
+  // GPUDevice,
+  // GPUAdapter,
   Function,
   Object,
   Array,
@@ -111,7 +114,7 @@ function evalScriptInSandbox(filename, sandbox)
     throw e
   }
 
-  return runSandboxedCode(sandbox, code, { filename, lineNumber: 0 });
+  return runSandboxedCode(sandbox, code, { filename, lineOffset: 0 });
 }
 
 /**
@@ -128,7 +131,7 @@ function evalFileInIIFE(filename, sandbox)
 {
   const prologue = '(function __dynamic_evalFile__IIFE(' + Object.keys(sandbox).join(',') + '){ return ';
   const epilogue = '\n});';
-  const options = { filename, lineNumber: 0 };
+  const options = { filename, lineOffset: 0 };
   
   debug('dcp-client:evalFileInIIFE')('evaluating', filename);
   const fileContents = fs.readFileSync(path.resolve(distDir, filename), 'utf8');
@@ -381,13 +384,12 @@ function magicView(node, seen)
  */
 function checkConfigFileSafePerms(fullPath, statBuf)
 {
-  if (process.env.DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION)
-    return true;
-
   const fun = checkConfigFileSafePerms;
 
   if (!fs.existsSync(fullPath))
     return false;
+  if (process.env.DCP_CLIENT_ALLOW_INSECURE_CONFIGURATION)
+    return true;
   if (!fun.selfStat)
     fun.selfStat = fs.statSync(module.filename);
   if (!fun.mainStat)
@@ -1066,7 +1068,7 @@ exports.createConfigFragments = async function dcpClient$$createConfigFragments(
   const home = process.env.DCP_HOMEDIR || os.homedir();
   let programName = options.programName;
   const configScope = cliOpts.configScope || process.env.DCP_CONFIG_SCOPE || options.configScope;
-  const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : undefined;
+  const progDir = process.mainModule ? path.dirname(process.mainModule.filename) : process.cwd();
   var   remoteConfig, remoteConfigKVIN;
   const internalConfig = require('dcp/dcp-config'); /* needed to resolve dcpConfig.future - would like to eliminate this /wg */
   const defaultConfig = Object.assign({}, bootstrapConfig);
