@@ -14,7 +14,6 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
   // This file starts at ring 2, but transitions to ring 3 partway through it.
   const ring2PostMessage = self.postMessage; 
   let ring3PostMessage;
-  let totalTime;
 
   bravojs.ww = {}
   bravojs.ww.allDeps = []
@@ -74,7 +73,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
-          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), async function mainModule(require, exports, module) {
+          module.declare(message.job.dependencies, async function mainModule(require, exports, module) {
             try {
               if (exports.hasOwnProperty('job'))
                 throw new Error("Tried to assign sandbox when it was already assigned"); /* Should be impossible - might happen if throw during assign? */
@@ -234,7 +233,7 @@ prepPyodide`);
       else if (typeof pythonSliceHandler !== 'function')
         throw new Error('ENOSLICEHANDLER: Slice Handler must be a function');
 
-      const sliceHandlerResult = await pythonSliceHandler(datum);
+      const sliceHandlerResult = await pythonSliceHandler(pyodide.toPy(datum));
 
       // if it is a PyProxy, convert its value to JavaScript
       if (sliceHandlerResult.toJs)
@@ -328,33 +327,18 @@ prepPyodide`);
   };
 
   /* Report metrics to sandbox/supervisor */
-  async function reportTimes ()
+  function reportTimes (metrics)
   {
-    const timers = protectedStorage.timers;
-    const webGL = timers.webGL.duration();
-    const webGPU = await timers.webGPU.duration();
-
-    timers.cpu.mostRecentInterval.stop();
-    let CPU = timers.cpu.duration();
-    CPU -= webGL; // webGL is synchronous gpu usage, subtract that from cpu time.
-
-    totalTime.stop();
-    const total = totalTime.length;
-
-    timers.cpu.reset();
-    timers.webGL.reset();
-    timers.webGPU.reset();
-    protectedStorage.clearAllTimers();
-
+    const { total, webGL, webGPU, CPU } = metrics;
     ring3PostMessage({ request: 'measurement', total, webGL, webGPU, CPU });
   }
 
   /* Report an error from the work function to the supervisor */
-  function reportError (error)
+  function reportError (error, metrics)
   {
     let err = { message: 'initial state', name: 'initial state' };
 
-    for (const prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
+    for (let prop of [ 'message', 'name', 'code', 'stack', 'lineNumber', 'columnNumber' ])
     {
       try
       {
@@ -368,25 +352,28 @@ prepPyodide`);
       err['message'] = protectedStorage.workRejectReason;
       err['name'] = 'EWORKREJECT';
       err['stack'] = 'Slice was rejected in the sandbox by work.reject'
-      reportTimes().then(() => ring3PostMessage({ request: 'workError', error: err }));
+      reportTimes(metrics);
+      ring3PostMessage({ request: 'workError', error: err });
     }
     else
-    {
       ring3PostMessage({request: 'workError', error: err});
-    }
   }
 
   /**
    * Report a result from work function and metrics to the supervisor.
    * @param     result  the value that the work function returned promise resolved to
    */
-  function reportResult (result)
+  function reportResult (result, metrics)
   {
-    reportTimes().then(() => {
+    try
+    {
+      reportTimes(metrics);
       ring3PostMessage({ request: 'complete', result });
-    }).catch((error) => {
+    }
+    catch (error)
+    {
       ring3PostMessage({ request: 'sandboxError', error });
-    });
+    }
   }
   
   /**
@@ -399,11 +386,12 @@ prepPyodide`);
    *                                    as its argument the error that it rejected with.
    * @returns   unused promise   
    */
-  async function runWorkFunction_inner(datum, successCallback, errorCallback)
+  async function runWorkFunction_inner(datum, wallDuration, successCallback, errorCallback)
   {
+    /** @typedef {import("./timer-classes.js").TimeInterval} TimeInterval */
     var rejection = false;
     var result;
-    
+    let metrics;
     try
     {
       /* module.main.job is the work function; left by assign message */ 
@@ -414,22 +402,39 @@ prepPyodide`);
       rejection = error;
     }
 
-    /* try to flush any pending tasks on the microtask queue, then flush any
-     * repeating message that hasn't been dispatched yet.
-     */
-    try { await tryFlushMicroTaskQueue(); } catch(e) {};
-    protectedStorage.dispatchSameConsoleMessage();
-    try
-    {
+
+    // flush any pending console events, especially in the case of a repeating message that hasn't been emitted yet 
+    try { protectedStorage.dispatchSameConsoleMessage(); } catch(e) {};
+    try {
+      // reset the device states and flush all pending tasks
       protectedStorage.lockTimers(); // lock timers so no new timeouts will be run.
-      await new Promise(r => protectedStorage.realSetTimeout(r)); // flush microtask queue
+      if (protectedStorage.webGPU)
+        protectedStorage.webGPU.lock();
+
+      // Let microtask queue finish before getting metrics. With all event-loop possibilities locked,
+      // only the microtask could trigger new code, so waiting for a setTimeout guarantees everything's done
+      await new Promise((r) => protectedStorage.realSetTimeout.call(globalThis, r, 1));
+
+      metrics = await protectedStorage.bigBrother.globalTrackers.getMetrics();
+
+      await protectedStorage.bigBrother.globalTrackers.reset();
+    } catch (e) {
+      ring3PostMessage({ request: 'sandboxError', error: e });
+    } finally {
+      protectedStorage.clearAllTimeouts();
+      // due to the nature of the micro task queue, await, our `reset()` cancels all the things that could cause new
+      // tasks, and we wait for all pending task to finish in `reset()`, we are guaranteed to have an empty task queue
+      // now. Hence it's ok to stop the wall clock measurement now
+      wallDuration.stop();
+
+      // safety: wallDuration is always stopped, `length` will not throw
+      metrics = { ...metrics, total: wallDuration.length };
     }
-    catch(e) {}
 
     if (rejection)
-      errorCallback(rejection);
+      errorCallback(rejection, metrics);
     else
-      successCallback(result);
+      successCallback(result, metrics);
 
     /* CPU time measurement ends when this function's return value is resolved or rejected */
   }
@@ -442,22 +447,18 @@ prepPyodide`);
    */
   function runWorkFunction(datum)
   {
-    // Measure performance directly before and after the job to get as accurate total time as
-    totalTime = new protectedStorage.TimeInterval();
-
-    // Guarantee CPU timers are cleared before the main work function runs.
-    // This is necessary because the GPU object has been wrapped to make setTimeout calls to
-    // allow for measurement. However, when these timeouts are invoked during capability
-    // calculations, they are erroneously measured as CPU time. This can cause CPU time > total time
-    // and CPUDensity > 1
-    protectedStorage.timers.cpu.reset();
-    protectedStorage.timers.webGPU.reset(); // also reset other timers for saftey
-    protectedStorage.timers.webGL.reset();
     protectedStorage.unlockTimers();
+    if (protectedStorage.webGPU)
+      protectedStorage.webGPU.unlock();
+
+    // reset the time used for feature detection
+    protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
+    const wallDuration = new protectedStorage.TimeInterval();
+
     /* Use setTimeout trampoline to
      * 1. shorten stack
      * 2. initialize the event loop measurement code
      */
-    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, (result) => reportResult(result), (rejection) => reportError(rejection)));
+    protectedStorage.setTimeout(() => runWorkFunction_inner(datum, wallDuration, (result, metrics) => reportResult(result, metrics), (rejection, metrics) => reportError(rejection, metrics)));
   }
 }); /* end of fn */
