@@ -73,7 +73,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
           protectedStorage.sandboxConfig = message.sandboxConfig;
           Object.assign(self.work.job.public, message.job.public); /* override locale-specific defaults if specified */
           // Load bravojs' module.main with the work function
-          module.declare(message.job.dependencies || (message.job.requireModules /* deprecated */), async function mainModule(require, exports, module) {
+          module.declare(message.job.dependencies, async function mainModule(require, exports, module) {
             try {
               if (exports.hasOwnProperty('job'))
                 throw new Error("Tried to assign sandbox when it was already assigned"); /* Should be impossible - might happen if throw during assign? */
