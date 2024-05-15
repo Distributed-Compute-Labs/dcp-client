@@ -349,7 +349,7 @@ prepPyodide`);
     }
 
     if (error === Symbol.for('workReject')) {
-      reportTimes().then(() => ring3PostMessage({ request: 'workReject', reason: protectedStorage.workRejectReason }));
+      reportTimes(metrics).then(() => ring3PostMessage({ request: 'workReject', reason: protectedStorage.workRejectReason }));
     }
     else
       ring3PostMessage({request: 'workError', error: err});
