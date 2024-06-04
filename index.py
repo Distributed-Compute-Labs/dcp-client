@@ -30,16 +30,10 @@ import asyncio
 dcp_client_bundle_filename = os.path.dirname(__file__) + "/dist/dcp-client-bundle.js"
 
 # load dcp-client, then optionally run a callback function
-async def load_dcp_client(*args, **kwargs):
-    if len(args) == 1:
-        callback = args[0]
-        if callable(callback) != True:
-            raise Exception("callback must be callable")
-    elif len(args) != 0:
-        raise Exception("invalid arguments; expected 0 or 1")
-    else:
-        callback = None
-        
+async def load_dcp_client(callback=None, **kwargs):
+    if callback is not None and not callable(callback):
+        raise Exception("callback must be callable")
+
     cb_retval = None
 
     def fetch(url):
