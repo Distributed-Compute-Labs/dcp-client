@@ -7,25 +7,25 @@
 import os
 import pythonmonkey as pm
 
-def readFile(filename) -> str:
+def readFile(filename: str) -> str:
     with open(filename, "r", encoding="utf8") as fileHnd:
         return fileHnd.read()
 
-def writeFile(filename, contents):
+def writeFile(filename: str, contents: str) -> None:
     with open(filename, "w", encoding="utf8") as fileHnd:
         fileHnd.write(contents)
 
-def getMode(filename) -> int:
+def getMode(filename: str) -> int:
     return os.stat(filename).st_mode
 
-def fileExists(filename) -> bool:
+def fileExists(filename: str) -> bool:
     return os.path.isfile(filename)
 
-def dirExists(dirname) -> bool:
+def dirExists(dirname: str) -> bool:
     return os.path.isdir(dirname)
 
-def mkdir(dirname) -> bool:
-    return os.makedirs(filename)
+def mkdir(dirname: str) -> None:
+    return os.makedirs(dirname)
 
 exports['readFile']   = readFile
 exports['writeFile']  = writeFile
