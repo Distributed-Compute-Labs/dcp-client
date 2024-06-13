@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- 
+    -- @file      simple-job.html
+    --
+    -- Sample web page showing how to deploy a simple DCP job.
+    --
+    -- @author Wes Garland, wes@kingsds.network
+    -- @author Kevin Yu, kevin@distributive.network
+    -- @date   Aug 2019, April 2020
+    --
+    -->
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Load dcp-client into `window.dcp`. -->
+    <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+
+    <script>
+      /**
+       * Setup event listeners for jobs
+       *
+       * @param {object} job - the job handle object
+       * @returns {void} 
+       */
+      function addJobEventListeners(job) 
+      {
+        // Log the job's assigned id.
+        job.on('accepted', ({ id }) => console.log(`Job accepted with id ${id}`));
+
+        // Log returned slice results
+        job.on('result', (result) => console.log('Received result:', result));
+      }
+
+      /**
+       * Main function to deploy a job
+       *
+       * @returns {void} 
+       */
+      async function start() 
+      {
+        const { compute } = window.dcp;
+
+        // Creates a Job for the distributed computer. 
+        // https://docs.dcp.dev/specs/compute-api.html#compute-for
+        const job = compute.for(
+          [1, 2, 3, 4, 5],
+          (datum) => {
+            // If a progress event is not emitted within 30 seconds, 
+            // the scheduler will throw an ENOPROGRESS error.
+            progress();
+            return datum * 2;
+          },
+        );
+        
+        // Listen for job emitted events
+        addJobEventListeners(job);
+
+        // Deploy job
+        const results = await job.exec(compute.marketRate);
+        console.log('Job completed, here are the results: ', Array.from(results));
+      }
+    </script>
+  </head>
+  <body onload="start()">
+    <p
+      style="text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px;">
+      This is a simple vanilla web job deployment example. <br />Look in your browser's console for output.
+    </p>
+  </body>
+</html>

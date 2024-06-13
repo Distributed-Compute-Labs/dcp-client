@@ -1,81 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
   <!--
-  -- @file    dcp-worker.html - Sample web page showing how to implement a
-  --                            trivial DCP worker.
-  --
-  -- @author  Wes Garland <wes@distributive.network>
-  -- @author  Bryan Hoang <bryan@distributive.network>
-  -- @date    Aug. 2019, Sept. 2022
-  -->
+    -- @file    simple-worker.html - Sample web page showing how to implement a trivial DCP worker.
+    --
+    -- @author  Wes Garland <wes@distributive.network>
+    -- @author  Bryan Hoang <bryan@distributive.network>
+    -- @author  Kevin Yu <kevin@distributive.network>
+    -- @date    Aug. 2019, Sept. 2022
+    -->
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Load dcp-client into `window.dcp`. -->
     <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
-    <script type="module">
-      const {
-        wallet,
-        worker: { Worker: DCPWorker },
-      } = window.dcp;
 
-      // The maximum number of sanxboxes to have working in parallel.
-      const defaultMaxSliceCount = 1;
-
-      // What bank account the worker will send its earned funds to.
-      const paymentAddress = (await wallet.get()).address;
-
-      // What identity the worker will use to communicate to the scheduler.
-      const identity = await wallet.getId();
-
-      const worker = new DCPWorker({
-        defaultMaxSliceCount,
-        paymentAddress,
-        // TODO: Change to `identityAddress` once the API is updated.
-        identity,
-      });
-
-      // Attaching event listeners to see what's going on.
-      worker.on('start', () => {
-        console.log('Worker started working!');
-      });
-
-      worker.on('sandbox', (sandbox) => {
-        sandbox.on('ready', (event) => {
-          console.log('sandbox ready', event);
+    <script>
+      function addWorkerEventListeners(worker) 
+      {
+        // The start event fires after the worker is ready to fetch tasks, but
+        // before the first task has been fetched.
+        worker.on('start', () => {
+          console.log('Worker ready to fetch tasks');
         });
 
-        sandbox.on('start', ({ sandbox, job }) => {
-          const { name = '', description = '', link = '' } = job;
-          console.log(
-            `Sandbox ${sandbox.id} started slice for job with`,
-            `Name: "${name}",`,
-            `Description: "${description}", and`,
-            `Link: "${link}"`,
-          );
+        // The fetch event is fired when the worker has fetched a task from the
+        // task distributor.
+        worker.on('fetch', (task) => {
+          if (task.slices)
+            console.log(`Worker has fetched ${Object.keys(task.slices).length} slices`);
         });
 
-        sandbox.on('progress', (event) => {
-          console.log(`Sandbox ${sandbox.id} progress`, event);
+        // The sandbox event is emitted when a new sandbox is created. The event
+        // handler receives as its sole argument an EventEmitter which is used
+        // to emit sandbox events
+        worker.on('sandbox', (sandbox) => {
+          // The progress event is fired to indicate progress throughout a job
+          // this is triggered by the progress() call in the work function,
+          // however, quickly-repeating calls to progress() may be composited
+          // into a single event.
+          sandbox.on('progress', (event) => {
+            console.log('Sandbox progress', event);
+          });
         });
 
-        const sandboxEmit = sandbox.emit.bind(sandbox);
-      });
+        // After a result is sent to the result-submitter for consideration
+        worker.on('payment', (event) => {
+          console.log('Work payment', event);
+        });
 
-      worker.on('payment', ({ accepted, payment }) => {
-        if (accepted) {
-          console.log(`You earned ${payment} DCC!`);
-        } else {
-          console.log('the result you computed was not accepted.');
-        }
-      });
+        // Result event is fired immediately after the worker sends a result to
+        // the the result data sink
+        worker.on('result', (event) => {
+          console.log('Worker has sent a result back to the scheduler');
+        });
 
-      // Starting the worker.
-      await worker.start();
+        // Worker has stopped working and no new results will be sent to the
+        // result submitter or the result data sink and no more slices will be
+        // returned to the scheduler
+        worker.on('end', () => {
+          console.log('Worker has stopped working');
+        });
+
+        // Log errors
+        worker.on('error', console.error);
+      }
+
+      async function start() 
+      {
+        const {
+          wallet,
+          worker: { Worker: DCPWorker },
+        } = window.dcp;
+
+        // Bank account funds will deposit into
+        const paymentAddress = (await wallet.get()).address;
+
+        // Retrieve auth keystore object
+        const identity = await wallet.getId();
+
+        // Instantiate DCP worker
+        const worker = new DCPWorker(
+          identity,
+          {
+            cores: { cpu: 1 },
+            paymentAddress,
+          }
+        );
+
+        // Listen for work emitted events
+        addWorkerEventListeners(worker);
+
+        // Start the worker
+        await worker.start();
+      }
     </script>
   </head>
-  <body>
-    This is a minimal vanilla web DCP Worker example. Look in your browser's
-    console for output.
+  <body onload="start()">
+    <p
+      style="text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px;">
+      This is a simple vanilla web DCP Worker example. <br />Look in your browser's
+      console for output.
+    </p>
   </body>
 </html>
