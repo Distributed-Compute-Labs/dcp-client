@@ -46,8 +46,6 @@ o.native.splice(2, 0, 'native-event-loop');
 
 for (let type in o) {
   o[type].unshift('kvin/kvin.js');
-  if (type === 'native')
-    o[type].unshift('url-polyfill/url-polyfill.js');
   if (type !== 'node')
     o[type].unshift('deny-node');
   o[type].push('bootstrap');
