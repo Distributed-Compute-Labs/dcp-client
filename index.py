@@ -41,7 +41,6 @@ async def load_dcp_client(callback=None, **kwargs):
             import urllib.request
             return urllib.request.urlopen(url).read().decode()
         except Exception as error:
-            print("Error loading", url)
             raise error
 
     here = { "filename": __file__, "fromPythonFrame": True }
