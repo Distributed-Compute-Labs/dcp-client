@@ -14,7 +14,7 @@ const files = [
   require.resolve(sandboxScripts + 'access-lists.js'),
 ];
 
-require('./globalPolyfillHelper').init(files, ()=>{});
+require('../../test-helpers/globalPolyfillHelper').init(files, ()=>{});
 // we are now in an environment that has had the access-lists script applied to it
 
 // check if globalThis is defined 

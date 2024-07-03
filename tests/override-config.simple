@@ -6,7 +6,7 @@
  * @date        Sep 2022
  */
 'use strict';
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 const dcpClient = require('..');
 
 async function main()
@@ -20,6 +20,6 @@ async function main()
 }
 
 dcpClient.init({/*dcpConfig*/}, {
-  configName:  './etc/dcp-config',
+  configName:  '../test-helpers/etc/dcp-config',
   configScope: 'config-simple-test',
 }).then(main);

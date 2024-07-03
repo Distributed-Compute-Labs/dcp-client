@@ -19,7 +19,7 @@ const files = [
   require.resolve(sandboxScripts + 'access-lists.js'),
 ];
 
-require('./globalPolyfillHelper').init(files, ()=>{});
+require('../../test-helpers/globalPolyfillHelper').init(files, ()=>{});
 emitEvent('message', {request: 'applyRequirements', requirements: {environment: {}}});
 
 setTimeout(() => {
