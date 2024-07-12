@@ -58,6 +58,10 @@
     "npm": ">=7"
   },
   "overrides": {
-    "@azure/msal-node": "2.2.0"
+    "@kingsds/socket.io-client": {
+      "@kingsds/engine.io-client": {
+        "ws": "8.17.1"
+      }
+    }
   }
 }
