@@ -176,7 +176,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       const event = events.shift();
       if (event.eventType === 'timer')
       {
-        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0, event.args);
+        serviceEvents.executingTimeout = realSetTimeout(event.fn, 0);
         if (event.recur)
         {
           event.when = Date.now() + event.recur;
