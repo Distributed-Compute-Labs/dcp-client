@@ -1,4 +1,5 @@
-/** 
+#! /usr/bin/env node
+/**
  * @file      simple-job-es6.mjs
  *
  *            Sample NodeJS application showing how to deploy a simple DCP job using ES6 modules.

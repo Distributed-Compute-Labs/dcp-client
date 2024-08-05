@@ -1,4 +1,5 @@
-/** 
+#! /usr/bin/env node
+/**
  * @file      simple-worker.js
  *
  *            Simple NodeJS application showing how to implement a simple DCP worker using the native evaluator.

@@ -1,4 +1,5 @@
-/** 
+#! /usr/bin/env node
+/**
  * @file      simple-job.js
  *
  *            Sample NodeJS application showing how to deploy a simple DCP job.

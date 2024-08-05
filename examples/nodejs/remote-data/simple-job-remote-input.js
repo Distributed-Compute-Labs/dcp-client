@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 /**
  * @file   simple-job-remote-input.js 
  *          
