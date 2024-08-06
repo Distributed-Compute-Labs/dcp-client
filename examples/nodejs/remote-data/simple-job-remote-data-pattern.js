@@ -1,29 +1,30 @@
 #! /usr/bin/env node
 /**
- * @file   simple-job-remote-data-pattern.js
+ * @file    simple-job-remote-data-pattern.js
  *
- *         Simple NodeJS application showing how to use RemoteDataPattern class that works for slices which their uri's has similar patterns
- *         For more information please refer to:
- *         https://gitlab.com/Distributed-Compute-Protocol/dcp-docs-wes/-/blob/wip/scheduler/remote-storage.md#data-movement
+ *          Simple NodeJS application showing how to use RemoteDataPattern class that works for slices which their uri's has similar patterns
+ *          For more information please refer to:
+ *          https://gitlab.com/Distributed-Compute-Protocol/dcp-docs-wes/-/blob/wip/scheduler/remote-storage.md#data-movement
  * 
- *         *********************************** NOTE 1 ***********************************
- *         Your keystore should be placed in your home directory in .dcp/default.keystore.
- *         When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
+ *          *********************************** NOTE 1 ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  * 
- *         *********************************** NOTE 2 ***********************************
- *         Executing Job with DCP Worker
+ *          *********************************** NOTE 2 ***********************************
+ *          Executing Job with DCP Worker
  * 
- *         - Run the following commands in your terminal:
- *           ```
- *              npm add --global dcp-worker
- *              dcp-worker --allowedOrigins http://localhost:<port number>
- *           ```
+ *          Run the following commands in your terminal:
+ *          ```
+ *          npm add --global dcp-worker
+ *          dcp-worker --allowedOrigins http://localhost:<port number>
+ *          ```
  *            
- * @authors
- *   - Nazila Akhavan <nazila@kingsds.network>
- *   - Kevin Yu <kevin@distributive.network>
- * @date   Sep. 2021, June 2024
+ * @author  Nazila Akhavan <nazila@distributive.network>
+ * @author  Kevin Yu       <kevin@distributive.network>
+ * @date    Sep. 2021, June 2024
  */
+
+'use strict';
 
 const http = require('http');
 const port = 1234;
@@ -69,7 +70,8 @@ function startBackendServer()
  * @param {object} job - the job handle object
  * @returns {void} 
  */
-function addJobEventListeners(job) {
+function addJobEventListeners(job)
+{
   // Log the job's assigned id.
   job.on('accepted', ({ id }) => console.log(`Job accepted with id ${id}`));
 
@@ -82,7 +84,8 @@ function addJobEventListeners(job) {
  *
  * @returns {void} 
  */
-async function main() {
+async function main()
+{
   const compute = require('dcp/compute');
   
   // Start up server to host slice data  

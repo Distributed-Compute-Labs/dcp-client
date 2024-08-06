@@ -1,28 +1,29 @@
 #! /usr/bin/env node
 /**
- * @file   simple-job-remote-input.js 
+ * @file    simple-job-remote-input.js 
  *          
- *         Sample NodeJS application showing how to deploy a simple DCP job with remote input data 
- *         that is serialized with either json or kvin (https://github.com/wesgarland/kvin).
+ *          Sample NodeJS application showing how to deploy a simple DCP job with remote input data 
+ *          that is serialized with either json or kvin (https://github.com/wesgarland/kvin).
  *
- *         *********************************** NOTE 1 ***********************************
- *         Your keystore should be placed in your home directory in .dcp/default.keystore.
- *         When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
+ *          *********************************** NOTE 1 ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  * 
- *         *********************************** NOTE 2 ***********************************
- *         Executing Job with DCP Worker
+ *          *********************************** NOTE 2 ***********************************
+ *          Executing Job with DCP Worker
  * 
- *         - Run the following commands in your terminal:
- *         ```
- *            npm add --global dcp-worker
- *            dcp-worker --allowedOrigins http://localhost:<port number>
- *         ```
+ *          Run the following commands in your terminal:
+ *          ```
+ *          npm add --global dcp-worker
+ *          dcp-worker --allowedOrigins http://localhost:<port number>
+ *          ```
  * 
- * @authors
- *   - Nazila Akhavan <nazila@kingsds.network>
- *   - Kevin Yu <kevin@distributive.network>
- * @date   June 2024
+ * @author  Nazila Akhavan <nazila@distributive.network>
+ * @author  Kevin Yu       <kevin@distributive.network>
+ * @date    June 2024
  */
+
+'use strict';
 
 // Serialization library for JavaScript types for transmission over a network
 const kvin = require('kvin');
@@ -35,7 +36,8 @@ const portB = 2345;
  * 
  * @returns {void} 
  */
-function startBackendServerA() {
+function startBackendServerA()
+{
   const serverA = http.createServer((req, res) => {
     // Set appropriate headers so workers on web can fetch data
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,7 +57,8 @@ function startBackendServerA() {
  * 
  * @returns {void} 
  */
-function startBackendServerB() {
+function startBackendServerB()
+{
   const serverB = http.createServer((req, res) => {
     // Set appropriate headers so workers on web can fetch data
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -76,7 +79,8 @@ function startBackendServerB() {
  * @param {object} job - the job handle object
  * @returns {void} 
  */
-function addJobEventListeners(job) {
+function addJobEventListeners(job)
+{
   // Log the job's assigned id.
   job.on('accepted', ({ id }) => console.log(`Job accepted with id ${id}`));
 

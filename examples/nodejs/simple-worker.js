@@ -1,28 +1,30 @@
 #! /usr/bin/env node
 /**
- * @file      simple-worker.js
+ * @file    simple-worker.js
  *
- *            Simple NodeJS application showing how to implement a simple DCP worker using the native evaluator.
- *            Look at https://gitlab.com/Distributed-Compute-Protocol/dcp-native/-/releases to download the evaluator 
- *            and start it using one of the dcp-evaluator-* scripts from the dcp-worker npm package.
+ *          Simple NodeJS application showing how to implement a simple DCP worker using the native evaluator.
+ *          Look at https://gitlab.com/Distributed-Compute-Protocol/dcp-native/-/releases to download the evaluator 
+ *          and start it using one of the dcp-evaluator-* scripts from the dcp-worker npm package.
  *           
- *            *********************************** NOTE 1 ***********************************
- *            Your keystore should be placed in your home directory in .dcp/default.keystore.
- *            When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
+ *          *********************************** NOTE 1 ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  *  
- *            *********************************** NOTE 2 ***********************************
- *            Executing Job with DCP Worker
+ *          *********************************** NOTE 2 ***********************************
+ *          Executing Job with DCP Worker
  * 
- *            - Run the following commands in your terminal:
- *            ```
- *               npm add --global dcp-worker
- *               dcp-worker --allowedOrigins http://localhost:<port number>
- *            ```
+ *          Run the following commands in your terminal:
+ *          ```
+ *          npm add --global dcp-worker
+ *          dcp-worker --allowedOrigins http://localhost:<port number>
+ *          ```
  * 
- * @author    Wes Garland, wes@kingsds.network
- * @author    Kevin Yu <kevin@distributive.network>
- * @date      Aug 2019, April 2020
+ * @author  Wes Garland  <wes@distributive.network
+ * @author  Kevin Yu     <kevin@distributive.network>
+ * @date    Aug 2019, April 2020, June 2024
 */
+
+'use strict';
 
 /**
  * Setup event listeners for jobs

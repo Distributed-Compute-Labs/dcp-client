@@ -1,17 +1,19 @@
 #! /usr/bin/env node
 /**
- * @file      simple-job.js
+ * @file    simple-job.js 
+ *          
+ *          Sample NodeJS application showing how to deploy a simple DCP job.
  *
- *            Sample NodeJS application showing how to deploy a simple DCP job.
- * 
- *            *********************************** NOTE ***********************************
- *            Your keystore should be placed in your home directory in .dcp/default.keystore.
- *            When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
+ *          *********************************** NOTE ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
 * 
- * @author    Wes Garland, wes@kingsds.network
- * @author    Kevin Yu <kevin@distributive.network>
- * @date      Aug 2019, April 2020
+ * @author  Wes Garland <wes@distributive.network>
+ * @author  Kevin Yu    <kevin@distributive.network>
+ * @date    Aug 2019, April 2020, June 2024
  */
+
+'use strict';
 
 /**
  * Setup event listeners for jobs

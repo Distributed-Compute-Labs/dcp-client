@@ -1,15 +1,15 @@
 #! /usr/bin/env node
 /**
- * @file      simple-job-es6.mjs
+ * @file    simple-job-es6.mjs
+ * 
+ *          Sample NodeJS application showing how to deploy a simple DCP job using ES6 modules.
  *
- *            Sample NodeJS application showing how to deploy a simple DCP job using ES6 modules.
+ *          *********************************** NOTE ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  * 
- *            *********************************** NOTE ***********************************
- *            Your keystore should be placed in your home directory in .dcp/default.keystore.
- *            When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
- * 
- * @author    Kevin Yu <kevin@distributive.network>
- * @date      June 2024
+ * @author  Kevin Yu <kevin@distributive.network>
+ * @date    June 2024
  */
 
 import { init } from '../../index.js';
@@ -34,7 +34,8 @@ function addJobEventListeners(job)
  *
  * @returns {void} 
  */
-async function main() {
+async function main() 
+{
   const { compute } = await init();
 
   // Creates a Job for the distributed computer.
@@ -56,4 +57,4 @@ async function main() {
   console.log(results);
 }
 
-main();
+await main();

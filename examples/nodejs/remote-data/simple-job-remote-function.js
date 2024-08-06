@@ -1,25 +1,27 @@
 #! /usr/bin/env node
 /**
- * @file      simple-job-remote-function.js
+ * @file    simple-job-remote-function.js
  *
- *            Simple NodeJS application showing how to implement a simple remote work-function.
+ *          Simple NodeJS application showing how to implement a simple remote work-function.
  *           
- *            *********************************** NOTE 1 ***********************************
- *            Your keystore should be placed in your home directory in .dcp/default.keystore.
- *            When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
+ *          *********************************** NOTE 1 ***********************************
+ *          Your keystore should be placed in your home directory in .dcp/default.keystore.
+ *          When using the dcp-client API in NodeJS, this keystore will be used for communicating over DCP.
  *            
- *            *********************************** NOTE 2 ***********************************
- *            Executing Job with DCP Worker
+ *          *********************************** NOTE 2 ***********************************
+ *          Executing Job with DCP Worker
  * 
- *            - Run the following commands in your terminal:
- *            ```
- *               npm add --global dcp-worker
- *               dcp-worker --allowedOrigins http://localhost:<port number>
- *            ```
+ *          Run the following commands in your terminal:
+ *          ```
+ *          npm add --global dcp-worker
+ *          dcp-worker --allowedOrigins http://localhost:<port number>
+ *          ```
  *
- * @auth Kevin Yu <kevin@distributive.network>
- * @date June 2024
+ * @author  Kevin Yu <kevin@distributive.network>
+ * @date    June 2024
  */
+
+'use strict';
 
 const http = require('http');
 const port = 1234;
