@@ -5,8 +5,8 @@
     --
     -- @author  Wes Garland <wes@distributive.network>
     -- @author  Bryan Hoang <bryan@distributive.network>
-    -- @author  Kevin Yu <kevin@distributive.network>
-    -- @date    Aug. 2019, Sept. 2022
+    -- @author  Kevin Yu    <kevin@distributive.network>
+    -- @date    Aug. 2019, Sept. 2022, July 2024
     -->
   <head>
     <meta charset="utf-8" />
@@ -16,6 +16,8 @@
     <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
 
     <script>
+      'use strict';
+      
       function addWorkerEventListeners(worker) 
       {
         // The start event fires after the worker is ready to fetch tasks, but

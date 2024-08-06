@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <!-- 
-    -- @file      simple-job.html
+    -- @file  simple-job.html - Sample web page showing how to deploy a simple DCP job.
     --
-    -- Sample web page showing how to deploy a simple DCP job.
-    --
-    -- @author Wes Garland, wes@kingsds.network
-    -- @author Kevin Yu, kevin@distributive.network
-    -- @date   Aug 2019, April 2020
+    -- @author Wes Garland, <wes@distributive.network>
+    -- @author Kevin Yu,    <kevin@distributive.network>
+    -- @date   Aug 2019, April 2020, July 2024
     --
     -->
   <head>
@@ -18,12 +16,8 @@
     <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
 
     <script>
-      /**
-       * Setup event listeners for jobs
-       *
-       * @param {object} job - the job handle object
-       * @returns {void} 
-       */
+      'use strict';
+
       function addJobEventListeners(job) 
       {
         // Log the job's assigned id.
@@ -33,11 +27,6 @@
         job.on('result', (result) => console.log('Received result:', result));
       }
 
-      /**
-       * Main function to deploy a job
-       *
-       * @returns {void} 
-       */
       async function start() 
       {
         const { compute } = window.dcp;
