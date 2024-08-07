@@ -19,7 +19,7 @@
  *          dcp-worker --allowedOrigins http://localhost:<port number>
  *          ```
  * 
- * @author  Wes Garland  <wes@distributive.network
+ * @author  Wes Garland  <wes@distributive.network>
  * @author  Kevin Yu     <kevin@distributive.network>
  * @date    Aug 2019, April 2020, June 2024
 */
