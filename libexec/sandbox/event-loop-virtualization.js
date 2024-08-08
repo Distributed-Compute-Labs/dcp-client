@@ -224,14 +224,10 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         }
       }
 
-      // if user supplies arguments, apply them to the callback function
-      if (arg)
-      {
-        args = Array.prototype.slice.call(arguments); // get a plain array from function arguments
-        args = args.slice(2);                         // slice the first two elements (callback & timeout), leaving an array of user arguments
-        let fn = callback;
-        callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
-      }
+      args = Array.prototype.slice.call(arguments); // get a plain array from function arguments
+      args = args.slice(2);                         // slice the first two elements (callback & timeout), leaving an array of user arguments
+      let fn = callback;
+      callback = () => fn.apply(fn, args);          // apply the arguments to the callback function
 
       events.serial = +events.serial + 1;
       timer = {
