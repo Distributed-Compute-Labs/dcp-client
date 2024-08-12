@@ -8,7 +8,7 @@
  */
 'use strict';
 
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 
 async function main() {
   await require('..').init();

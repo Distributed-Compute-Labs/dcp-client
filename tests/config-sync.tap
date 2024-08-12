@@ -10,7 +10,7 @@
 
 const dcpClient = require('..');
 const options = { programName: 'config.tap' };
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 
 dcpClient.initSync(options);
-require('./config.js');
+require('../test-helpers/config.js');
