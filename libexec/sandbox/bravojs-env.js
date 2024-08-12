@@ -246,7 +246,7 @@ prepPyodide`);
       const sliceHandlerResult = await pythonSliceHandler(pyodide.toPy(datum));
 
       // if it is a PyProxy, convert its value to JavaScript
-      if (sliceHandlerResult.toJs)
+      if (sliceHandlerResult?.toJs)
         return sliceHandlerResult.toJs();
 
       return sliceHandlerResult;
