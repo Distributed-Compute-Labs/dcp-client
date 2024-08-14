@@ -36,7 +36,7 @@ function outputTests(message)
     process.exitCode = 0;
 }
 
-require('./globalPolyfillHelper').init(files, outputTests);
+require('../../test-helpers/globalPolyfillHelper').init(files, outputTests);
 
 async function blobTests(blob)
 {

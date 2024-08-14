@@ -28,7 +28,7 @@ async function main()
   process.exitCode = 0;
 }
 
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 require('..').init().then(main).catch(err => {
   console.error(err);
   console.log('dcpConfig =', dcpConfig);

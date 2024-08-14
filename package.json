@@ -1,6 +1,6 @@
 {
   "name": "dcp-client",
-  "version": "4.4.6",
+  "version": "4.4.8",
   "description": "Core libraries for accessing DCP network",
   "keywords": [
     "dcp"
@@ -44,6 +44,7 @@
     "regedit": "^3.0.3",
     "semver": "^7.3.5",
     "webpack": "5.92.0",
+    "source-map-support": "0.5.21",
     "webpack-cli": "^4.7.2",
     "yargs": "16.2.0"
   },
@@ -58,6 +59,10 @@
     "npm": ">=7"
   },
   "overrides": {
-    "@azure/msal-node": "2.2.0"
+    "@kingsds/socket.io-client": {
+      "@kingsds/engine.io-client": {
+        "ws": "8.17.1"
+      }
+    }
   }
 }

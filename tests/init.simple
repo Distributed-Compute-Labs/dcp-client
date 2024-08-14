@@ -7,5 +7,5 @@
  * @date        Aug 2020
  */
 
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 require('..').init();

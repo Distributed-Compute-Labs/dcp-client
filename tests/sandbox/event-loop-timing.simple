@@ -38,7 +38,7 @@ function outputTests(message)
 
 
 const realSetTimeout = setTimeout;
-require('./globalPolyfillHelper').init(files, outputTests)
+require('../../test-helpers/globalPolyfillHelper').init(files, outputTests)
 
 // For some reason, setting `self.setTimeout` in event-loop-virtualization
 // doesn't clobber the supposedly-global `setTimeout` we are referencing in

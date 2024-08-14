@@ -15,7 +15,7 @@
 
 const process = require('process');
 const dcpClient = require('..');
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 
 require('..').initSync({autoUpdate: true});
-require('./autoupdate-check');
+require('../test-helpers/autoupdate-check');
