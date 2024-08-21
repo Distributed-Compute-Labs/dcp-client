@@ -7,5 +7,5 @@
  * @date                Jun 2022
  */
 
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 require('..').initSync();

@@ -31,5 +31,5 @@ async function main()
   console.log('test completed, dcpConfig.build=', dcpConfig.build);
 }
 
-require('./setup-testenv');
+require('../test-helpers/setup-testenv');
 require('..').init().then(main).catch(err => process.exitCode = 2);

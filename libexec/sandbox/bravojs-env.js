@@ -173,7 +173,17 @@ def prepPyodide(args):
     image = bytes(image)
     imageFile = io.BytesIO(image)
     tar = tarfile.open(mode='r', fileobj=imageFile)
-    tar.extractall()
+
+    # Don't overwrite directories which corrupts Pyodide's in memory filesystem
+    def safe_extract(tar, path="/"):
+      for member in tar.getmembers():
+          if member.isdir():
+              dir_path = os.path.join(path, member.name)
+              if not os.path.exists(dir_path):
+                  os.makedirs(dir_path)
+          else:
+              tar.extract(member, path)
+    safe_extract(tar)
 
   for item, value in args['environmentVariables'].items():
     os.environ[item] = value
@@ -236,7 +246,7 @@ prepPyodide`);
       const sliceHandlerResult = await pythonSliceHandler(pyodide.toPy(datum));
 
       // if it is a PyProxy, convert its value to JavaScript
-      if (sliceHandlerResult.toJs)
+      if (sliceHandlerResult?.toJs)
         return sliceHandlerResult.toJs();
 
       return sliceHandlerResult;
