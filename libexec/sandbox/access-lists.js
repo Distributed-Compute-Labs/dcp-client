@@ -58,7 +58,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'null',
     'Number',
     'Object',
-    'OffscreenCanvas',
     'onerror',
     'onmessage',
     'parseFloat',
@@ -126,190 +125,9 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     // WebAssembly symbols
     'WebAssembly',
 
-    // WebGL symbols
-    'WebGL2RenderingContext',
-    'WebGLTexture',
-    // All webGPU symbols are allowed
-    // some of these are actually just type aliases but inclusion shouldn't hurt
-    'GPU',
-    'GPUAdapter',
-    'GPUAdapterInfo',
-    'GPUAdapterLimits',
-    'GPUAdapterProperties',
-    'GPUAdapterRequestOptions',
-    'GPUAddressMode',
-    'GPUAutoLayoutMode',
-    'GPUBindGroup',
-    'GPUBindGroupDescriptor',
-    'GPUBindGroupEntry',
-    'GPUBindGroupLayout',
-    'GPUBindGroupLayoutDescriptor',
-    'GPUBindGroupLayoutEntry',
-    'GPUBindingCommandsMixin',
-    'GPUBindingResource',
-    'GPUBlendComponent',
-    'GPUBlendFactor',
-    'GPUBlendOperation',
-    'GPUBlendState',
-    'GPUBuffer',
-    'GPUBufferBinding',
-    'GPUBufferBindingLayout',
-    'GPUBufferBindingType',
-    'GPUBufferDescriptor',
-    'GPUBufferDynamicOffset',
-    'GPUBufferMapState',
-    'GPUBufferUsage',
-    'GPUBufferUsageFlags',
-    'GPUCanvasAlphaMode',
-    'GPUCanvasConfiguration',
-    'GPUCanvasContext',
-    'GPUColor',
-    'GPUColorDict',
-    'GPUColorTargetState',
-    'GPUColorWrite',
-    'GPUColorWriteFlags',
-    'GPUCommandBuffer',
-    'GPUCommandBufferDescriptor',
-    'GPUCommandEncoder',
-    'GPUCommandEncoderDescriptor',
-    'GPUCommandsMixin',
-    'GPUCompareFunction',
-    'GPUCompilationInfo',
-    'GPUCompilationMessage',
-    'GPUCompilationMessageType',
-    'GPUComputePassDescriptor',
-    'GPUComputePassEncoder',
-    'GPUComputePassTimestampLocation',
-    'GPUComputePassTimestampWrite',
-    'GPUComputePassTimestampWrites',
-    'GPUComputePipeline',
-    'GPUComputePipelineDescriptor',
-    'GPUCullMode',
-    'GPUDebugCommandsMixin',
-    'GPUDepthBias',
-    'GPUDepthStencilState',
-    'GPUDevice',
-    'GPUDeviceDescriptor',
-    'GPUDeviceLostInfo',
-    'GPUDeviceLostReason',
-    'GPUError',
-    'GPUErrorFilter',
-    'GPUExtent3D',
-    'GPUExtent3DDict',
-    'GPUExtent3DDictStrict',
-    'GPUExtent3DStrict',
-    'GPUExternalTexture',
-    'GPUExternalTextureBindingLayout',
-    'GPUExternalTextureDescriptor',
-    'GPUFeatureName',
-    'GPUFilterMode',
-    'GPUFlagsConstant',
-    'GPUFragmentState',
-    'GPUFrontFace',
-    'GPUImageCopyBuffer',
-    'GPUImageCopyExternalImage',
-    'GPUImageCopyTexture',
-    'GPUImageCopyTextureTagged',
-    'GPUImageDataLayout',
-    'GPUIndex32',
-    'GPUIndexFormat',
-    'GPUIntegerCoordinate',
-    'GPUInternalError',
-    'GPULoadOp',
-    'GPUMapMode',
-    'GPUMapModeFlags',
-    'GPUMipmapFilterMode',
-    'GPUMultisampleState',
-    'GPUObjectBase',
-    'GPUObjectDescriptorBase',
-    'GPUOrigin2D',
-    'GPUOrigin2DDict',
-    'GPUOrigin2DDictStrict',
-    'GPUOrigin2DStrict',
-    'GPUOrigin3D',
-    'GPUOrigin3DDict',
-    'GPUOutOfMemoryError',
-    'GPUPipelineBase',
-    'GPUPipelineConstantValue',
-    'GPUPipelineDescriptorBase',
-    'GPUPipelineError',
-    'GPUPipelineErrorInit',
-    'GPUPipelineErrorReason',
-    'GPUPipelineLayout',
-    'GPUPipelineLayoutDescriptor',
-    'GPUPowerPreference',
-    'GPUPrimitiveState',
-    'GPUPrimitiveTopology',
-    'GPUProgrammableStage',
-    'GPUQuerySet',
-    'GPUQuerySetDescriptor',
-    'GPUQueryType',
-    'GPUQueue',
-    'GPUQueueDescriptor',
-    'GPURenderBundle',
-    'GPURenderBundleDescriptor',
-    'GPURenderBundleEncoder',
-    'GPURenderBundleEncoderDescriptor',
-    'GPURenderCommandsMixin',
-    'GPURenderPassColorAttachment',
-    'GPURenderPassDepthStencilAttachment',
-    'GPURenderPassDescriptor',
-    'GPURenderPassEncoder',
-    'GPURenderPassLayout',
-    'GPURenderPassTimestampLocation',
-    'GPURenderPassTimestampWrite',
-    'GPURenderPassTimestampWrites',
-    'GPURenderPipeline',
-    'GPURenderPipelineDescriptor',
-    'GPURequestAdapterOptions',
-    'GPUSampleMask',
-    'GPUSampler',
-    'GPUSamplerBindingLayout',
-    'GPUSamplerBindingType',
-    'GPUSamplerDescriptor',
-    'GPUShaderModule',
-    'GPUShaderModuleCompilationHint',
-    'GPUShaderModuleDescriptor',
-    'GPUShaderStage',
-    'GPUShaderStageFlags',
-    'GPUSignedOffset32',
-    'GPUSize32',
-    'GPUSize64',
-    'GPUStencilFaceState',
-    'GPUStencilOperation',
-    'GPUStencilValue',
-    'GPUStorageTextureAccess',
-    'GPUStorageTextureBindingLayout',
-    'GPUStoreOp',
-    'GPUSupportedFeatures',
-    'GPUSupportedLimits',
-    'GPUTexture',
-    'GPUTextureAspect',
-    'GPUTextureBindingLayout',
-    'GPUTextureDescriptor',
-    'GPUTextureDimension',
-    'GPUTextureFormat',
-    'GPUTextureSampleType',
-    'GPUTextureUsage',
-    'GPUTextureUsageFlags',
-    'GPUTextureView',
-    'GPUTextureViewDescriptor',
-    'GPUTextureViewDimension',
-    'GPUUncapturedErrorEvent',
-    'GPUUncapturedErrorEventInit',
-    'GPUValidationError',
-    'GPUVertexAttribute',
-    'GPUVertexBufferLayout',
-    'GPUVertexFormat',
-    'GPUVertexState',
-    'GPUVertexStepMode',
     'HTMLCanvasElement',
     'HTMLVideoElement',
     'Navigator',
-    'NavigatorGPU',
-    'OffscreenCanvas',
-    'WebGPUWindow',
-    'WGSLLanguageFeatures',
     'WorkerNavigator',
 
 
@@ -321,6 +139,21 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     'Blob',
     'addEventListener',
     'removeEventListener',
+  ]);
+
+  const navigatorAllowList = new Set([
+    // Deprecated but kept for compatibility
+    'appCodeName',
+    'appName',
+    'appVersion',
+    'platform',
+    'product',
+
+    'userAgent', 
+    'deviceMemory',
+    'hardwareConcurrency',
+    'onLine',
+    'userAgentData',
   ]);
 
   // Origin time for performance polyfill
@@ -809,25 +642,201 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     }
   }
 
+  const webGLSymbols = [
+    'WebGL2RenderingContext',
+    'WebGLTexture',
+    'OffscreenCanvas',
+  ];
 
-  // Set values to true to disallow access to symbols
-  const blockList = {
-    OffscreenCanvas: false,
-    WebGPUWindow: false,
-    GPU: false,
-  };
+  const webGPUSymbols = [
+    'WebGPUWindow',
+    'GPU',
+    'GPU',
+    'GPUAdapter',
+    'GPUAdapterInfo',
+    'GPUAdapterLimits',
+    'GPUAdapterProperties',
+    'GPUAdapterRequestOptions',
+    'GPUAddressMode',
+    'GPUAutoLayoutMode',
+    'GPUBindGroup',
+    'GPUBindGroupDescriptor',
+    'GPUBindGroupEntry',
+    'GPUBindGroupLayout',
+    'GPUBindGroupLayoutDescriptor',
+    'GPUBindGroupLayoutEntry',
+    'GPUBindingCommandsMixin',
+    'GPUBindingResource',
+    'GPUBlendComponent',
+    'GPUBlendFactor',
+    'GPUBlendOperation',
+    'GPUBlendState',
+    'GPUBuffer',
+    'GPUBufferBinding',
+    'GPUBufferBindingLayout',
+    'GPUBufferBindingType',
+    'GPUBufferDescriptor',
+    'GPUBufferDynamicOffset',
+    'GPUBufferMapState',
+    'GPUBufferUsage',
+    'GPUBufferUsageFlags',
+    'GPUCanvasAlphaMode',
+    'GPUCanvasConfiguration',
+    'GPUCanvasContext',
+    'GPUColor',
+    'GPUColorDict',
+    'GPUColorTargetState',
+    'GPUColorWrite',
+    'GPUColorWriteFlags',
+    'GPUCommandBuffer',
+    'GPUCommandBufferDescriptor',
+    'GPUCommandEncoder',
+    'GPUCommandEncoderDescriptor',
+    'GPUCommandsMixin',
+    'GPUCompareFunction',
+    'GPUCompilationInfo',
+    'GPUCompilationMessage',
+    'GPUCompilationMessageType',
+    'GPUComputePassDescriptor',
+    'GPUComputePassEncoder',
+    'GPUComputePassTimestampLocation',
+    'GPUComputePassTimestampWrite',
+    'GPUComputePassTimestampWrites',
+    'GPUComputePipeline',
+    'GPUComputePipelineDescriptor',
+    'GPUCullMode',
+    'GPUDebugCommandsMixin',
+    'GPUDepthBias',
+    'GPUDepthStencilState',
+    'GPUDevice',
+    'GPUDeviceDescriptor',
+    'GPUDeviceLostInfo',
+    'GPUDeviceLostReason',
+    'GPUError',
+    'GPUErrorFilter',
+    'GPUExtent3D',
+    'GPUExtent3DDict',
+    'GPUExtent3DDictStrict',
+    'GPUExtent3DStrict',
+    'GPUExternalTexture',
+    'GPUExternalTextureBindingLayout',
+    'GPUExternalTextureDescriptor',
+    'GPUFeatureName',
+    'GPUFilterMode',
+    'GPUFlagsConstant',
+    'GPUFragmentState',
+    'GPUFrontFace',
+    'GPUImageCopyBuffer',
+    'GPUImageCopyExternalImage',
+    'GPUImageCopyTexture',
+    'GPUImageCopyTextureTagged',
+    'GPUImageDataLayout',
+    'GPUIndex32',
+    'GPUIndexFormat',
+    'GPUIntegerCoordinate',
+    'GPUInternalError',
+    'GPULoadOp',
+    'GPUMapMode',
+    'GPUMapModeFlags',
+    'GPUMipmapFilterMode',
+    'GPUMultisampleState',
+    'GPUObjectBase',
+    'GPUObjectDescriptorBase',
+    'GPUOrigin2D',
+    'GPUOrigin2DDict',
+    'GPUOrigin2DDictStrict',
+    'GPUOrigin2DStrict',
+    'GPUOrigin3D',
+    'GPUOrigin3DDict',
+    'GPUOutOfMemoryError',
+    'GPUPipelineBase',
+    'GPUPipelineConstantValue',
+    'GPUPipelineDescriptorBase',
+    'GPUPipelineError',
+    'GPUPipelineErrorInit',
+    'GPUPipelineErrorReason',
+    'GPUPipelineLayout',
+    'GPUPipelineLayoutDescriptor',
+    'GPUPowerPreference',
+    'GPUPrimitiveState',
+    'GPUPrimitiveTopology',
+    'GPUProgrammableStage',
+    'GPUQuerySet',
+    'GPUQuerySetDescriptor',
+    'GPUQueryType',
+    'GPUQueue',
+    'GPUQueueDescriptor',
+    'GPURenderBundle',
+    'GPURenderBundleDescriptor',
+    'GPURenderBundleEncoder',
+    'GPURenderBundleEncoderDescriptor',
+    'GPURenderCommandsMixin',
+    'GPURenderPassColorAttachment',
+    'GPURenderPassDepthStencilAttachment',
+    'GPURenderPassDescriptor',
+    'GPURenderPassEncoder',
+    'GPURenderPassLayout',
+    'GPURenderPassTimestampLocation',
+    'GPURenderPassTimestampWrite',
+    'GPURenderPassTimestampWrites',
+    'GPURenderPipeline',
+    'GPURenderPipelineDescriptor',
+    'GPURequestAdapterOptions',
+    'GPUSampleMask',
+    'GPUSampler',
+    'GPUSamplerBindingLayout',
+    'GPUSamplerBindingType',
+    'GPUSamplerDescriptor',
+    'GPUShaderModule',
+    'GPUShaderModuleCompilationHint',
+    'GPUShaderModuleDescriptor',
+    'GPUShaderStage',
+    'GPUShaderStageFlags',
+    'GPUSignedOffset32',
+    'GPUSize32',
+    'GPUSize64',
+    'GPUStencilFaceState',
+    'GPUStencilOperation',
+    'GPUStencilValue',
+    'GPUStorageTextureAccess',
+    'GPUStorageTextureBindingLayout',
+    'GPUStoreOp',
+    'GPUSupportedFeatures',
+    'GPUSupportedLimits',
+    'GPUTexture',
+    'GPUTextureAspect',
+    'GPUTextureBindingLayout',
+    'GPUTextureDescriptor',
+    'GPUTextureDimension',
+    'GPUTextureFormat',
+    'GPUTextureSampleType',
+    'GPUTextureUsage',
+    'GPUTextureUsageFlags',
+    'GPUTextureView',
+    'GPUTextureViewDescriptor',
+    'GPUTextureViewDimension',
+    'GPUUncapturedErrorEvent',
+    'GPUUncapturedErrorEventInit',
+    'GPUValidationError',
+    'GPUVertexAttribute',
+    'GPUVertexBufferLayout',
+    'GPUVertexFormat',
+    'GPUVertexState',
+    'GPUVertexStepMode',
+    'WGSLLanguageFeatures',
+  ];
+  // elements to be blocked from the navigator
+  const navigatorWebGPUSymbols = [
+    'gpu',
+  ];
 
   /**
-   * Applies a allow list and a block list of properties to an object. After this function, if someone tries
-   * to access non-allowed or blocked properties, a warning is logged and it will return undefined. The allow
-   * list and block list are not mutually exclusive. If an item is in both lists, then the block list will be
-   * enacted upon it.
-   *
+   * Applies a allow list to an object. After this function, non-allowed properties will 
+   * appear undefined. 
    * @param {object} obj - The object, which will have the allow list applied to its properties.
    * @param {Set} allowList - A set of properties to allow people to access.
-   * @param {Object} blockList - An object of property names mapping to booleans to indicate whether access is allowed or not.
    */
-  function applyAccessLists(obj, allowList, blockList = {}) {
+  function applyAccessLists(obj, allowList) {
     if (!obj) { return; }
     Object.getOwnPropertyNames(obj).forEach(function (prop) {
       if (Object.getOwnPropertyDescriptor(obj, prop)?.configurable) {
@@ -842,24 +851,6 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
                 return undefined;
             },
             set: function setProtectedProperty(value) {
-              propValue = value;
-              isSet = true;
-            },
-            configurable: false
-          });
-        } else if (blockList.hasOwnProperty(prop)) {
-          let isSet = false;
-          let blocked = blockList[prop];
-          let propValue = obj[prop];
-          Object.defineProperty(obj, prop, {
-            get: function () {
-              if (blocked && !isSet) {
-                return undefined;
-              } else {
-                return propValue;
-              }
-            },
-            set: function (value) {
               propValue = value;
               isSet = true;
             },
@@ -894,9 +885,10 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
   }
 
   /**
-   * Applies the allowList and blockList to all global scopes.
+   * Applies the allowList.
    * This must be called after the requirements are assigned to the sandbox
-   * so that the blockList is accessible to modify w/o adding it to the allowList.
+   * so that symbols only accessible if specific requirements are set (such as webGPU)
+   * can be added to the allowList.
    */
   function applyAllAccessLists() {
     // We need to apply the access lists to global, and the entirety of global's prototype chain
@@ -904,45 +896,12 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
 
     var global = typeof globalThis === 'undefined' ? self : globalThis;
     for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
-      applyAccessLists(g, allowList, blockList);
+      applyAccessLists(g, allowList);
 
     if (typeof navigator === 'undefined' || !navigator.userAgent)
       navigator = { userAgent: 'not a browser' };
-    else
-    {
-      const navPolyFill = {
-        // Depricated but kept for compatiability
-        appCodeName: navigator.appCodeName,
-        appName: navigator.appName,
-        appVersion: navigator.appVersion,
-        platform: navigator.platform,
-        product: navigator.product,
-
-        // Enabled
-        userAgent:  navigator.userAgent, 
-        deviceMemory: navigator.deviceMemory,
-        globalPrivaryControl: navigator.globalPrivaryControl,
-        hardwareConcurrency: navigator.hardwareConcurrency,
-        language: navigator.language,
-        languages: navigator.languages,
-        locks: navigator.locks,
-        mediaCapabilities: navigator.mediaCapabilities,
-        onLine: navigator.onLine,
-        permissions: navigator.permissions,
-        userAgentData: navigator.userAgentData,
-
-        // *** Disabled for security reasons ***
-        // usb: navigator.usb,
-        // connection: navigator.connection,
-        // onLine: navigator.onLine,
-        // serial: navigator.serial,
-        // serviceWorker: navigator.serviceWorker,
-        // storage: navigator.storage,
-      };
-      if (navigator.gpu)
-        navPolyFill.gpu = navigator.gpu;
-      navigator = navPolyFill;
-    }
+    for (let n = navigator; Object.getPrototypeOf(n); n = Object.getPrototypeOf(n))
+      applyAccessLists(n, navigatorAllowList);
   }
 
   /* Polyfill section of workerBootstrap */
@@ -991,9 +950,18 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
         // apply restrictions to the environment based on the requirements.
         // Assume the scheduler gave us a nicely-shaped req object.
         const requirements = event.requirements;
-        blockList.OffscreenCanvas = !requirements.environment.offscreenCanvas;
-        blockList.WebGPUWindow = !requirements.environment.webgpu;
-        blockList.GPU = !requirements.environment.webgpu;
+        if (requirements.environment.offscreenCanvas)
+        {
+          for (let symbol of webGLSymbols)
+            allowList.add(symbol);
+        }
+        if (requirements.environment.webgpu)
+        {
+          for (let symbol of webGPUSymbols)
+            allowList.add(symbol);
+          for (let symbol of navigatorWebGPUSymbols)
+            navigatorAllowList.add(symbol)
+        }
 
         if (event.worktime && protectedStorage.worktimeGlobals[event.worktime])
           allowWorktimeSymbols(protectedStorage.worktimeGlobals[event.worktime]);
