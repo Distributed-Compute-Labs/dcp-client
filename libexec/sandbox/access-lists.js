@@ -898,7 +898,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
     for (let g = global; Object.getPrototypeOf(g); g = Object.getPrototypeOf(g))
       applyAccessLists(g, allowList);
 
-    if (typeof navigator === 'undefined' || !navigator.userAgent)
+    if (typeof navigator === 'undefined')
       navigator = { userAgent: 'not a browser' };
     for (let n = navigator; Object.getPrototypeOf(n); n = Object.getPrototypeOf(n))
       applyAccessLists(n, navigatorAllowList);
