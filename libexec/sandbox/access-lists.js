@@ -899,9 +899,39 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
       applyAccessLists(g, allowList);
 
     if (typeof navigator === 'undefined')
-      navigator = { userAgent: 'not a browser' };
-    for (let n = navigator; Object.getPrototypeOf(n); n = Object.getPrototypeOf(n))
-      applyAccessLists(n, navigatorAllowList);
+      global.navigator = { userAgent: 'not a browser' };
+
+    /**
+     * Replace the navigator object with a polyfill that only has symbols we are explicitly allowing access to.
+     * On web workers, the navigator is an attribute of the WorkerGlobalScope interface, which is inherited by the
+     * DedicatedWorkerGlobalScope, the global context (globalThis) in the web worker.
+     * In the native evaluator, the navigator is an attribute of the global object directly.
+     * 
+     * On all tested platforms, navigator is non-writable, but is configurable, so we can delete & redefine the
+     * navigator. In the case where navigator is also non-configurable, we will fall back on applying the access list
+     * to the original navigator, to only allow access to allowed properties. 
+     */
+    var owner;
+    if (Object.getOwnPropertyDescriptor(global, 'navigator')) // native
+      owner = global;
+    else // web worker
+      owner = Object.getPrototypeOf(Object.getPrototypeOf(global));
+
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(owner, 'navigator');
+
+    if (!navigatorDescriptor?.configurable)
+    {
+      for (let n = navigator; Object.getPrototypeOf(n); n = Object.getPrototypeOf(n))
+        applyAccessLists(n, navigatorAllowList);
+      return;
+    }
+
+    const polyNavigator = {};
+    for (let prop  of navigatorAllowList)
+      polyNavigator[prop] = navigator[prop];
+
+    delete owner.navigator;
+    owner.navigator = polyNavigator;
   }
 
   /* Polyfill section of workerBootstrap */
