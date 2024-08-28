@@ -1,18 +1,9 @@
-# @file    CODEOWNERS - Defines who develops and maintains a feature, and own
-#          the resulting files or directories in the repository.
-#
-#          See https://docs.gitlab.com/ee/user/project/code_owners.html
-#
-# @author  Bryan Hoang <bryan@distributive.network>
-# @date    August 2022
-
-# Username mapping:
-# @wesgarland -> Wes Garland <wes@distributive.network>
-
-
-[]
+# @file   CODEOWNERS - machine-generated via dcp-docs-wes git@gitlab.com:Distributed-Compute-Protocol/dcp-docs-wes.git 62c77c644fa6129f36e61c727a2b2d0dff9ce6ff
+# @author wes@people
 
 [Brandon]
+/publish-docs.sh @BChristieDistributive
+/catalog-info.yaml @BChristieDistributive
 
 [Eddie]
 /package-lock.json @eroosenmaallen
@@ -21,48 +12,43 @@
 /dist/dcp-client-bundle.js @eroosenmaallen @wesgarland
 
 [Wes]
-/ns-map.js @wesgarland
-/lib/ @wesgarland
-/README.md @wesgarland
-/.npmrc @wesgarland
-/dist/ @wesgarland
-/favicon.ico @wesgarland
-/etc/ @wesgarland
-/test-pseudo-root/ @wesgarland
-/windows-registry.js @wesgarland
-/dcp-client.css @wesgarland
+/templates/ @wesgarland
 /assets/ @wesgarland
-/build/ @wesgarland
+/test-pseudo-root/ @wesgarland
+/etc/ @wesgarland
+/examples/ @wesgarland
 /tests/ @wesgarland
-/.npmignore @wesgarland
+/build/ @wesgarland
+/docs/ @wesgarland
+/lib/ @wesgarland
+/libexec/ @wesgarland
+/dist/dcp-client-bundle.js.map @wesgarland
+/dist/dcp-modal-style.css @wesgarland
 /bin/ @wesgarland
 /.eslintrc.json @wesgarland
-/index.js @wesgarland
-/libexec/ @wesgarland
+/.git @wesgarland
+/.gitignore @wesgarland
+/.gitlab-ci.yml @wesgarland
+/.npmignore @wesgarland
+/.npmrc @wesgarland
 /.tidelift @wesgarland
 /LICENSE.md @wesgarland
-/docs/ @wesgarland
-/cors-proxy.html @wesgarland
-/.gitlab-ci.yml @wesgarland
-/.gitignore @wesgarland
-/init-common.js @wesgarland
-/dcp-client.js @wesgarland
+/README.md @wesgarland
 /cjs2-shim.js @wesgarland
-/examples/ @wesgarland
-/templates/ @wesgarland
+/cors-proxy.html @wesgarland
+/dcp-client.css @wesgarland
+/dcp-client.js @wesgarland
+/dcp-support.py @wesgarland
+/favicon.ico @wesgarland
+/fs-basic.py @wesgarland
 /generated/ @wesgarland
-/templates/ @wesgarland
-/assets/ @wesgarland
-/test-pseudo-root/ @wesgarland
-/etc/ @wesgarland
-/examples/ @wesgarland
-/tests/ @wesgarland
-/build/ @wesgarland
-/docs/ @wesgarland
-/lib/ @wesgarland
-/libexec/ @wesgarland
-/dist/ @wesgarland
-/bin/ @wesgarland
+/index.js @wesgarland
+/index.py @wesgarland
+/init-common.js @wesgarland
+/licenses/ @wesgarland
+/ns-map.js @wesgarland
+/test-helpers/ @wesgarland
+/windows-registry.js @wesgarland
 
 [Wes or Eddie]
 /package.json @wesgarland @eroosenmaallen
