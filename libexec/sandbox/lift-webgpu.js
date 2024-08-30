@@ -224,13 +224,9 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
     }
   }
 
-  // Want to use the original of these after all gpu functions are wrapped.
-  const underlyingGPUQueue = GPUQueue;
-  const underlyingGPUQueueProto = GPUQueue.prototype;
+  // Want to use the submit/onSubmittedWorkDone original functions for timing.
   const underlyingOnSubmittedWorkDone = GPUQueue.prototype.onSubmittedWorkDone;
   const underlyingSubmit = GPUQueue.prototype.submit;
-  const underlyingRequestDevice = GPUAdapter.prototype.requestDevice;
-  const underlyingDestroy = GPUDevice.prototype.destroy;
 
   // some of them will get re-wrapped, that's fine, we always refer to the original function
   const requiredWrappingGPUClasses = [
