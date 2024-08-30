@@ -145,8 +145,22 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
     });
   }
 
-  function workerBootstrap$work$reject(reason = 'false') {
-    protectedStorage.workRejectReason = reason; // Memoize reason
+  /**
+   * Syntax: work.reject(stringReason, retryCount = 0)
+   *  - Old work.reject(stringReason) is equivalent to work.reject(stringReason, 0)
+   *  - Old work.reject(false) is essentially equivalent to work.reject('false', 1)
+   */
+  function workerBootstrap$work$reject(reason, retryCount) {
+    if (typeof retryCount === 'undefined')
+    {
+      level = 0;
+      if (reason === false)
+      {
+        level = 1;
+        reason = 'false';
+      }
+    }
+    protectedStorage.workRejectState = { reason, level };
     throw Symbol.for('workReject');
   }
 
