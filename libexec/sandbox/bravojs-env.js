@@ -359,11 +359,8 @@ prepPyodide`);
     }
 
     if (error === Symbol.for('workReject')) {
-      err['message'] = protectedStorage.workRejectReason;
-      err['name'] = 'EWORKREJECT';
-      err['stack'] = 'Slice was rejected in the sandbox by work.reject'
       reportTimes(metrics);
-      ring3PostMessage({ request: 'workError', error: err });
+      ring3PostMessage({ request: 'workReject', reason: protectedStorage.workRejectReason });
     }
     else
       ring3PostMessage({request: 'workError', error: err});
