@@ -153,10 +153,10 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
   function workerBootstrap$work$reject(reason, retryCount) {
     if (typeof retryCount === 'undefined')
     {
-      level = 0; // Default
+      retryCount = 0; // Default
       if (reason === false) // Back-compat
       {
-        level = 1;
+        retryCount = 1;
         reason = 'false';
       }
     }
