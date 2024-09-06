@@ -146,21 +146,21 @@ self.wrapScriptLoading({ scriptName: 'bootstrap', finalScript: true }, function 
   }
 
   /**
-   * Syntax: work.reject(stringReason, retryCount = 0)
+   * Syntax: work.reject(stringReason, retries = 0)
    *  - Old work.reject(stringReason) is equivalent to work.reject(stringReason, 0)
    *  - Old work.reject(false) is essentially equivalent to work.reject('false', 1)
    */
-  function workerBootstrap$work$reject(reason, retryCount) {
-    if (typeof retryCount === 'undefined')
+  function workerBootstrap$work$reject(reason, retries) {
+    if (typeof retries === 'undefined')
     {
-      retryCount = 0; // Default
+      retries = 0; // Default
       if (reason === false) // Back-compat
       {
-        retryCount = 1;
+        retries = 1;
         reason = 'false';
       }
     }
-    protectedStorage.workRejectState = { reason, retryCount };
+    protectedStorage.workRejectState = { reason, retries };
     throw Symbol.for('workReject');
   }
 
