@@ -52,7 +52,7 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, function nativeEvent
     {
       sortTimers();
       let timer = timers.shift();
-      let now = performance.now();
+      let now = Date.now();
       if (!timer)
         throw new Error('Logic error: trying to run timer when no timer exists') /* should be impossible */
       if (timer.when > now)  /* should be impossible, but at least we can handle this */
@@ -65,7 +65,7 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, function nativeEvent
 
       if (timer.recur)
       {
-        timer.when = performance.now() + timer.recur;
+        timer.when = Date.now() + timer.recur;
         timers.push(timer);
       }
 
@@ -101,7 +101,7 @@ self.wrapScriptLoading({ scriptName: 'native-event-loop' }, function nativeEvent
       timers.serial = +timers.serial + 1;
       timer = {
         fn: callback,
-        when: performance.now() + (+timeout || 0),
+        when: Date.now() + (+timeout || 0),
         serial: timers.serial,
         valueOf: function () { return this.serial; }
       }
