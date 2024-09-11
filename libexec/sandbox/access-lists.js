@@ -985,7 +985,7 @@ self.wrapScriptLoading({ scriptName: 'access-lists', ringTransition: true }, fun
           for (let symbol of webGLSymbols)
             allowList.add(symbol);
         }
-        if (requirements.environment.webgpu)
+        if (requirements.environment.webgpu && !protectedStorage.forceDisableWebGPU)
         {
           for (let symbol of webGPUSymbols)
             allowList.add(symbol);

@@ -66,6 +66,29 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   if ((typeof navigator === 'undefined') || !('gpu' in navigator))
     return;
 
+
+  const submitDescriptor    = Object.getOwnPropertyDescriptor(GPUQueue.prototype, 'submit');
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis,         'navigator');
+  const GPUDescriptor       = Object.getOwnPropertyDescriptor(globalThis,         'GPU');
+
+  // Fatal: globalThis.navigator OR globalThis.GPU are non-writable/configurable. This would prevent these scripts from being able
+  // to block access to webgpu for jobs that do not explicitly require it - allowing jobs to bypass scheduling decisions based
+  // on gpu availability must crash the sandbox, may want to stop the worker as well
+  if (!(  (GPUDescriptor.writable       || GPUDescriptor.configurable )
+       && (navigatorDescriptor.writable || navigatorDescriptor.configurable)))
+  {
+    throw new Error('gpu symbol non-writable, fatal');
+  }
+
+  // Non-fatal: GPUQueue.prototype.submit is non-writable/configurable. This would prevent our gpu timing code from functioning
+  // properly, so we cannot use webGPU for this sandbox, however by writing over the navigator.gpu and globalThis.GPU symbols,
+  // we can fully block webGPU access, allowing the sandbox to live for CPU-compute purposes.
+  if (!(submitDescriptor.writable || submitDescriptor.configurable))
+  {
+    protectedStorage.forceDisableWebGPU = true;
+    return;
+  }
+
   const TimeInterval = protectedStorage.TimeInterval;
   const globalTrackers = protectedStorage.bigBrother.globalTrackers;
   const webGPUTimer = globalTrackers.webGPUIntervals;
