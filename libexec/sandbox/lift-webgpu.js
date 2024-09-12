@@ -77,7 +77,7 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   if (!(  (GPUDescriptor.writable       || GPUDescriptor.configurable )
        && (navigatorDescriptor.writable || navigatorDescriptor.configurable)))
   {
-    throw new Error('gpu symbol non-writable, fatal');
+    close();
   }
 
   // Non-fatal: GPUQueue.prototype.submit is non-writable/configurable. This would prevent our gpu timing code from functioning

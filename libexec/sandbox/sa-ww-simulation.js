@@ -69,6 +69,12 @@ try {
       send({type: 'workerMessage', message });
     }
 
+    self.close = function close()
+    {
+      writeln('DIE: worker close called');
+      die();
+    }
+
     self.addEventListener = function workerControl$$Worker$addEventListener (type, listener) {
       if (typeof eventListeners[type] === 'undefined') { eventListeners[type] = [] }
       eventListeners[type].push(listener)
