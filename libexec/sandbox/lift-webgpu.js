@@ -74,9 +74,10 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
   // Fatal: globalThis.navigator OR globalThis.GPU are non-writable/configurable. This would prevent these scripts from being able
   // to block access to webgpu for jobs that do not explicitly require it - allowing jobs to bypass scheduling decisions based
   // on gpu availability must crash the sandbox, may want to stop the worker as well
-  if (!(  (GPUDescriptor.writable       || GPUDescriptor.configurable )
+  if (!((GPUDescriptor.writable || GPUDescriptor.configurable )
        && (navigatorDescriptor.writable || navigatorDescriptor.configurable)))
   {
+    postMessage({ request: 'unrecoverable-evaluator', message: 'webgpu exists but is not wrapable' });
     close();
   }
 
