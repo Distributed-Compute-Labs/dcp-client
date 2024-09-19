@@ -358,12 +358,11 @@ prepPyodide`);
       catch(e){};
     }
 
-    if (error === Symbol.for('workReject')) {
-      reportTimes(metrics);
-      ring3PostMessage({ request: 'workReject', reason: protectedStorage.workRejectReason });
-    }
+    reportTimes(metrics); // Report metrics for both 'workReject' and 'workError'.
+    if (error === Symbol.for('workReject'))
+      ring3PostMessage({ request: 'workReject', workRejectData: protectedStorage.workRejectState });
     else
-      ring3PostMessage({request: 'workError', error: err});
+      ring3PostMessage({ request: 'workError', error: err });
   }
 
   /**
