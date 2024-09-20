@@ -122,7 +122,7 @@ self.wrapScriptLoading({ scriptName: 'bravojs-env', ringTransition: true }, func
       {
         try
         {
-          runWorkFunction(message.data);
+          await runWorkFunction(message.data);
         }
         catch (error)
         {
@@ -427,7 +427,6 @@ prepPyodide`);
     } catch (e) {
       ring3PostMessage({ request: 'sandboxError', error: e });
     } finally {
-      protectedStorage.clearAllTimeouts();
       // due to the nature of the micro task queue, await, our `reset()` cancels all the things that could cause new
       // tasks, and we wait for all pending task to finish in `reset()`, we are guaranteed to have an empty task queue
       // now. Hence it's ok to stop the wall clock measurement now
@@ -451,15 +450,15 @@ prepPyodide`);
    *
    * @param {datam}     an element of the input set
    */
-  function runWorkFunction(datum)
+  async function runWorkFunction(datum)
   {
-    protectedStorage.unlockTimers();
-    if (protectedStorage.webGPU)
-      protectedStorage.webGPU.unlock();
-
     // reset the time used for feature detection
     protectedStorage.bigBrother.globalTrackers.resetRecordedTime();
     const wallDuration = new protectedStorage.TimeInterval();
+
+    if (protectedStorage.webGPU)
+      protectedStorage.webGPU.unlock();
+    await protectedStorage.unlockTimers();
 
     /* Use setTimeout trampoline to
      * 1. shorten stack

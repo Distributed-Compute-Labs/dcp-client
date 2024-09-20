@@ -147,14 +147,57 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     const cpuTimer = protectedStorage.bigBrother.globalTrackers.cpuIntervals;
     const events = [];
     events.serial = 0;
+    const lockedEvents = [];
     let timersLocked = false;
 
     protectedStorage.realSetTimeout = realSetTimeout;
-    protectedStorage.lockTimers = function lockTimers() { timersLocked = true; }
-    protectedStorage.unlockTimers = function unlockTimers() { timersLocked = false; }
+    protectedStorage.lockTimers = function lockTimers() {
+      timersLocked = true;
+      // Do not run any more timeouts, hold them for when the next slice arrives
+      lockedEvents.push(...events);
+      events.length = 0;
+    }
 
-    function sortEvents() {
-      events.sort(function (a, b) { return a.when - b.when; });
+    protectedStorage.unlockTimers = function unlockTimers() {
+      timersLocked = false;
+      if (lockedEvents.length === 0)
+        return;
+
+      let resolveService;
+      function serviceLockedEvents()
+      {
+        let interval = new protectedStorage.TimeInterval();
+        cpuTimer.push(interval);
+
+        const event = lockedEvents.shift();
+        if (event.recur)
+        {
+          event.when = Date.now() + event.recur;
+          events.push(event);
+        }
+
+        // Run function then get end measurement for time
+        realSetTimeout(event.fn, 0);
+        realSetTimeout(endOfRealEventCycle,1);
+        function endOfRealEventCycle()
+        {
+          interval.stop();
+          if (lockedEvents.length)
+            realSetTimeout(serviceLockedEvents, lockedEvents[0].when - Date.now());
+          else
+            resolveService();
+        }
+      }
+      const p$lockedEventsServiced = new Promise((resolve) => {
+        resolveService = resolve;
+        serviceLockedEvents();
+      });
+
+      return p$lockedEventsServiced;
+    }
+
+    function sortEvents(ev) {
+      ev.sort(function (a, b) { return a.when - b.when; });
     }
 
     /*
@@ -164,15 +207,16 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     */
     function serviceEvents()
     {
+      if (events.length === 0)
+        return;
       serviceEvents.timeout = null;
       serviceEvents.nextTimeout = null;
       serviceEvents.servicing = true;
-      serviceEvents.sliceIsFinished = false;
 
       serviceEvents.interval = new protectedStorage.TimeInterval();
       cpuTimer.push(serviceEvents.interval);
 
-      sortEvents();
+      sortEvents(events);
       const event = events.shift();
       if (event.eventType === 'timer')
       {
@@ -181,7 +225,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         {
           event.when = Date.now() + event.recur;
           events.push(event);
-          sortEvents();
+          sortEvents(events);
         }
       }
       // Can add handles for events to the event loop as needed (ie messages)
@@ -193,7 +237,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         serviceEvents.servicing = false;
         serviceEvents.interval.stop();
 
-        if (!serviceEvents.sliceIsFinished && events.length)
+        if (events.length)
         {
           serviceEvents.nextTimeout = events[0].when
           serviceEvents.timeout = realSetTimeout(serviceEvents, events[0].when - Date.now());
@@ -209,10 +253,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
      *  @returns                    {object} A value which may be used as the timeoutId parameter of clearTimeout()
      */
     setTimeout = function eventLoop$$Worker$setTimeout(callback, timeout, arg) {
-      // Work function has resolved, Don't let client init any new timeouts.
-      if (timersLocked)
-        return {};
-
       timeout = timeout || 0;
       let timer, args;
       if (typeof callback === 'string')
@@ -237,8 +277,16 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
         serial: events.serial,
         valueOf: function () { return this.serial; }
       }
+
+      // Work function has resolved, Don't let client init any new timeouts.
+      if (timersLocked)
+      {
+        lockedEvents.push(timer);
+        return timer;
+      }
+
       events.push(timer);
-      sortEvents();
+      sortEvents(events);
       if (!serviceEvents.servicing)
       {
         if (!serviceEvents.nextTimeout)
@@ -335,22 +383,6 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
     self.queueMicrotask = function eventLoop$$Worker$queueMicrotask(callback) {
       Promise.resolve().then(callback);
     };
-
-    /**
-     * Clear all pending timeouts, including those ones generated via setInterval
-     */
-    function clearAllTimeouts()
-    {
-      events.length = 0;
-      realClearTimeout(serviceEvents.timeout);
-      realClearTimeout(serviceEvents.measurerTimeout);
-      realClearTimeout(serviceEvents.executingTimeout);
-      serviceEvents.timeout = null;
-      serviceEvents.nextTimeout = null;
-      serviceEvents.servicing = false;
-      serviceEvents.sliceIsFinished = false;
-    }
-    protectedStorage.clearAllTimeouts = clearAllTimeouts;
 
     protectedStorage.timedQueueMicrotask = queueMicrotask;
   })(self.setTimeout, self.setInterval, self.setImmediate, self.clearTimeout, self.clearInterval, self.clearImmediate, self.queueMicrotask, protectedStorage);
