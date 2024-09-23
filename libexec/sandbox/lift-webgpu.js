@@ -76,9 +76,15 @@ self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(pr
     if ((typeof navigator === 'undefined') || !('gpu' in navigator))
       return;
 
+    // Determine who owns the navigator descriptor - slightly different in native vs web workers
+    var navigatorOwner;
+    if (Object.getOwnPropertyDescriptor(globalThis, 'navigator')) // native
+      navigatorOwner = globalThis;
+    else // web worker
+      navigatorOwner = Object.getPrototypeOf(Object.getPrototypeOf(globalThis));
 
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(navigatorOwner,     'navigator');
     const submitDescriptor    = Object.getOwnPropertyDescriptor(GPUQueue.prototype, 'submit');
-    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis,         'navigator');
     const GPUDescriptor       = Object.getOwnPropertyDescriptor(globalThis,         'GPU');
 
     // Fatal: globalThis.navigator OR globalThis.GPU are non-writable/configurable. This would prevent these scripts from being able
