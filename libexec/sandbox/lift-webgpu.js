@@ -63,218 +63,259 @@
  *  @date       May 2023
  */
 self.wrapScriptLoading({ scriptName: 'lift-webgpu' }, function liftWebGPU$$fn(protectedStorage, ring0PostMessage) {
-  if ((typeof navigator === 'undefined') || !('gpu' in navigator))
-    return;
-
-  const TimeInterval = protectedStorage.TimeInterval;
-  const globalTrackers = protectedStorage.bigBrother.globalTrackers;
-  const webGPUTimer = globalTrackers.webGPUIntervals;
-
-  /**
-   * Factories to create wrappers for all webGPU function (except submit & onSubmittedWorkDone) to time them when they
-   * are run, recording the duration of the function calls on the webGPU timer.
-   */
-  function webGPUAsyncTimingFactory(fn)
+  protectedStorage.webGPUInitialization = async function webGPUInitialization()
   {
-    return function promiseWebGPUWrapper(...args)
+    // dcp-native lazy-loading for webgpu.
+    if (typeof initWebGPU === 'function')
     {
-      const duration = new TimeInterval();
-      const original = fn.apply(this, args);
-      original.finally(() => webGPUTimer.push(duration.stop()));
-      return original;
+      const webgpuReady = await initWebGPU();
+      if (!webgpuReady)
+        return;
     }
-  }
 
-  function webGPUSyncTimingFactory(fn)
-  {
-    return function syncWebGPUWrapper(...args)
-    {
-      const duration = new TimeInterval();
-      const ret = fn.apply(this, args);
-      webGPUTimer.push(duration.stop());
-      return ret;
-    }
-  }
-
-  /**
-   * Wrap various webGPU functions such that their usage will be tracked
-   *
-   */
-  function liftWebGPUPrototype(GPUClass)
-  {
-    // the standard dictates these functions will return promises
-    const promiseReturningFunctions = new Set([
-      'requestDevice',
-      'requestAdapterInfo',
-      'createComputePipelineAsync',
-      'createRenderPipelineAsync',
-      'mapAsync', // this would overestimate in some cases, a potential discussion
-      'getCompilationInfo',
-      'onSubmittedWorkDone',
-      'popErrorScope',
-      'requestAdapter',
-    ]);
-
-    // TODO: consider what to do with 'destroy'
-    // while they appear to be blocking, the meat of the work happens on the gpu driver thread
-    const blockingFunctions = new Set([
-      // GPU
-      'getPreferedCanvasFormat',
-
-      // GPUDevice
-      'createBuffer',
-      'createTexture',
-      'createSampler',
-      'importExternalTexture',
-      'createBindGroupLayout',
-      'createPipelineLayout',
-      'createBindGroup',
-      'createShaderModule',
-      'createComputePipeline',
-      'createRenderPipeline',
-      'createCommandEncoder',
-      'createRenderBundleEncoder',
-      'createQuerySet',
-
-      // GPUBuffer 
-      'getMappedRange',
-      'unmap',
-
-      // GPUTexture
-      'createView',
-
-      // GPUPipelineBase 
-      'getBindGroupLayout',
-
-      // GPUDebugCommandsMixin 
-      'pushDebugGroup',
-      'popDebugGroup',
-      'insertDebugWorker',
-
-      // GPUCommandEncoder
-      'beginRenderPass',
-      'beginComputePass',
-      'copyBufferToBuffer',
-      'copyBufferToTexture',
-      'copyTextureToBuffer',
-      'copyTextureToTexture',
-      'clearBuffer',
-      'writeTimestamp',
-      'resolveQuerySet',
-      'finish',
-
-      // GPUBindingsCommandMixin
-      'setBindGroup',
-
-      // GPUComputePassEncoder
-      'setPipeline',
-      'dispatchWorkgroups',
-      'dispatchWorkgroupsIndirect',
-      'end',
-
-      // GPURenderPassEncoder
-      'setViewPort',
-      'setScissorRect',
-      'setBlendConstant',
-      'setStencilReference',
-      'beginOcclusionQuery',
-      'endOcclusionQuery',
-      'executeBundles',
-      'end',
-
-      // GPURenderCommandsMixin
-      'setPipeline',
-      'setIndexBuffer',
-      'draw',
-      'drawIndexed',
-      'drawIndirect',
-      'drawIndexedIndirect',
-
-      // GPURenderBundleEncoder
-      'finish',
-
-      // GPUCanvasContext
-      'configure',
-      'unconfigure',
-
-      // GPUQueue
-      'writeBuffer',
-      'writeTexture',
-      'copyExternalImageToTexture',
-
-      'pushErrorScope',
-    ]);
-
-    // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
-    if (!self[GPUClass].prototype)
+    if ((typeof navigator === 'undefined') || !('gpu' in navigator))
       return;
 
-    for (let prop of Object.keys(self[GPUClass].prototype))
+    // Determine who owns the navigator descriptor - slightly different in native vs web workers
+    var navigatorOwner;
+    if (Object.getOwnPropertyDescriptor(globalThis, 'navigator')) // native
+      navigatorOwner = globalThis;
+    else // web worker
+      navigatorOwner = Object.getPrototypeOf(Object.getPrototypeOf(globalThis));
+
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(navigatorOwner,     'navigator');
+    const submitDescriptor    = Object.getOwnPropertyDescriptor(GPUQueue.prototype, 'submit');
+    const GPUDescriptor       = Object.getOwnPropertyDescriptor(globalThis,         'GPU');
+
+    // Fatal: globalThis.navigator OR globalThis.GPU are non-writable/configurable. This would prevent these scripts from being able
+    // to block access to webgpu for jobs that do not explicitly require it - allowing jobs to bypass scheduling decisions based
+    // on gpu availability must crash the sandbox, may want to stop the worker as well
+    if (!((GPUDescriptor.writable || GPUDescriptor.configurable )
+         && (navigatorDescriptor.writable || navigatorDescriptor.configurable)))
     {
-      if (promiseReturningFunctions.has(prop))
+      postMessage({ request: 'unrecoverable-evaluator', message: 'webgpu exists but is not wrapable' });
+      close();
+    }
+
+    // Non-fatal: GPUQueue.prototype.submit is non-writable/configurable. This would prevent our gpu timing code from functioning
+    // properly, so we cannot use webGPU for this sandbox, however by writing over the navigator.gpu and globalThis.GPU symbols,
+    // we can fully block webGPU access, allowing the sandbox to live for CPU-compute purposes.
+    if (!(submitDescriptor.writable || submitDescriptor.configurable))
+    {
+      protectedStorage.forceDisableWebGPU = true;
+      return;
+    }
+
+    const TimeInterval = protectedStorage.TimeInterval;
+    const globalTrackers = protectedStorage.bigBrother.globalTrackers;
+    const webGPUTimer = globalTrackers.webGPUIntervals;
+
+    /**
+     * Factories to create wrappers for all webGPU function (except submit & onSubmittedWorkDone) to time them when they
+     * are run, recording the duration of the function calls on the webGPU timer.
+     */
+    function webGPUAsyncTimingFactory(fn)
+    {
+      return function promiseWebGPUWrapper(...args)
       {
-        const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = webGPUAsyncTimingFactory(fn);
-      }
-      else if (blockingFunctions.has(prop))
-      {
-        const fn = self[GPUClass].prototype[prop];
-        self[GPUClass].prototype[prop] = webGPUSyncTimingFactory(fn);
+        const duration = new TimeInterval();
+        const original = fn.apply(this, args);
+        original.finally(() => webGPUTimer.push(duration.stop()));
+        return original;
       }
     }
+
+    function webGPUSyncTimingFactory(fn)
+    {
+      return function syncWebGPUWrapper(...args)
+      {
+        const duration = new TimeInterval();
+        const ret = fn.apply(this, args);
+        webGPUTimer.push(duration.stop());
+        return ret;
+      }
+    }
+
+    /**
+     * Wrap various webGPU functions such that their usage will be tracked
+     *
+     */
+    function liftWebGPUPrototype(GPUClass)
+    {
+      // the standard dictates these functions will return promises
+      const promiseReturningFunctions = new Set([
+        'requestDevice',
+        'requestAdapterInfo',
+        'createComputePipelineAsync',
+        'createRenderPipelineAsync',
+        'mapAsync', // this would overestimate in some cases, a potential discussion
+        'getCompilationInfo',
+        'onSubmittedWorkDone',
+        'popErrorScope',
+        'requestAdapter',
+      ]);
+
+      // TODO: consider what to do with 'destroy'
+      // while they appear to be blocking, the meat of the work happens on the gpu driver thread
+      const blockingFunctions = new Set([
+        // GPU
+        'getPreferedCanvasFormat',
+
+        // GPUDevice
+        'createBuffer',
+        'createTexture',
+        'createSampler',
+        'importExternalTexture',
+        'createBindGroupLayout',
+        'createPipelineLayout',
+        'createBindGroup',
+        'createShaderModule',
+        'createComputePipeline',
+        'createRenderPipeline',
+        'createCommandEncoder',
+        'createRenderBundleEncoder',
+        'createQuerySet',
+
+        // GPUBuffer 
+        'getMappedRange',
+        'unmap',
+
+        // GPUTexture
+        'createView',
+
+        // GPUPipelineBase 
+        'getBindGroupLayout',
+
+        // GPUDebugCommandsMixin 
+        'pushDebugGroup',
+        'popDebugGroup',
+        'insertDebugWorker',
+
+        // GPUCommandEncoder
+        'beginRenderPass',
+        'beginComputePass',
+        'copyBufferToBuffer',
+        'copyBufferToTexture',
+        'copyTextureToBuffer',
+        'copyTextureToTexture',
+        'clearBuffer',
+        'writeTimestamp',
+        'resolveQuerySet',
+        'finish',
+
+        // GPUBindingsCommandMixin
+        'setBindGroup',
+
+        // GPUComputePassEncoder
+        'setPipeline',
+        'dispatchWorkgroups',
+        'dispatchWorkgroupsIndirect',
+        'end',
+
+        // GPURenderPassEncoder
+        'setViewPort',
+        'setScissorRect',
+        'setBlendConstant',
+        'setStencilReference',
+        'beginOcclusionQuery',
+        'endOcclusionQuery',
+        'executeBundles',
+        'end',
+
+        // GPURenderCommandsMixin
+        'setPipeline',
+        'setIndexBuffer',
+        'draw',
+        'drawIndexed',
+        'drawIndirect',
+        'drawIndexedIndirect',
+
+        // GPURenderBundleEncoder
+        'finish',
+
+        // GPUCanvasContext
+        'configure',
+        'unconfigure',
+
+        // GPUQueue
+        'writeBuffer',
+        'writeTexture',
+        'copyExternalImageToTexture',
+
+        'pushErrorScope',
+      ]);
+
+      // Iterating through all things 'GPU' on global object, some may not be classes. Skip those without a prototype.
+      if (!self[GPUClass].prototype)
+        return;
+
+      for (let prop of Object.keys(self[GPUClass].prototype))
+      {
+        if (promiseReturningFunctions.has(prop))
+        {
+          const fn = self[GPUClass].prototype[prop];
+          self[GPUClass].prototype[prop] = webGPUAsyncTimingFactory(fn);
+        }
+        else if (blockingFunctions.has(prop))
+        {
+          const fn = self[GPUClass].prototype[prop];
+          self[GPUClass].prototype[prop] = webGPUSyncTimingFactory(fn);
+        }
+      }
+    }
+
+    // Want to use the submit/onSubmittedWorkDone original functions for timing.
+    const underlyingOnSubmittedWorkDone = GPUQueue.prototype.onSubmittedWorkDone;
+    const underlyingSubmit = GPUQueue.prototype.submit;
+
+    // some of them will get re-wrapped, that's fine, we always refer to the original function
+    const requiredWrappingGPUClasses = [
+      'GPU',
+      'GPUAdapter',
+      'GPUDevice',
+      'GPUBuffer',
+      'GPUTexture',
+      'GPUShaderModule',
+      'GPUComputePipeline',
+      'GPURenderPipeline',
+      'GPUCommandEncoder',
+      'GPUComputePassEncoder',
+      'GPURenderPassEncoder',
+      'GPURenderBundleEncoder',
+      'GPUQueue',
+      'GPUQuerySet',
+      'GPUCanvasContext',
+    ];
+
+    requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
+
+    let locked = false;
+    const submittedDonePromises = [];
+    protectedStorage.webGPU = {
+      lock: () => { locked = true; },
+      unlock: () => { locked = false; },
+      waitAllCommandToFinish: () => { return Promise.allSettled(submittedDonePromises); },
+    };
+
+    // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
+    GPUQueue.prototype.submit = function submit(commandBuffers)
+    {
+      if (locked)
+        throw new Error('Attempted to submit webGPU queue after work function resolved');
+      underlyingSubmit.call(this, commandBuffers);
+
+      const submitTime = performance.now();
+      const submitDonePromise = underlyingOnSubmittedWorkDone.call(this).then(() => {
+        const idx = submittedDonePromises.indexOf(submitDonePromise);
+        submittedDonePromises.splice(idx);
+
+        const completedAt = performance.now();
+        const duration = new TimeInterval();
+        duration.overrideInterval(submitTime, completedAt);
+        webGPUTimer.push(duration);
+      });
+      submittedDonePromises.push(submitDonePromise);
+    }
+
   }
-
-  // Want to use the submit/onSubmittedWorkDone original functions for timing.
-  const underlyingOnSubmittedWorkDone = GPUQueue.prototype.onSubmittedWorkDone;
-  const underlyingSubmit = GPUQueue.prototype.submit;
-
-  // some of them will get re-wrapped, that's fine, we always refer to the original function
-  const requiredWrappingGPUClasses = [
-    'GPU',
-    'GPUAdapter',
-    'GPUDevice',
-    'GPUBuffer',
-    'GPUTexture',
-    'GPUShaderModule',
-    'GPUComputePipeline',
-    'GPURenderPipeline',
-    'GPUCommandEncoder',
-    'GPUComputePassEncoder',
-    'GPURenderPassEncoder',
-    'GPURenderBundleEncoder',
-    'GPUQueue',
-    'GPUQuerySet',
-    'GPUCanvasContext',
-  ];
-
-  requiredWrappingGPUClasses.forEach(liftWebGPUPrototype);
-
-  let locked = false;
-  const submittedDonePromises = [];
-  protectedStorage.webGPU = {
-    lock: () => { locked = true; },
-    unlock: () => { locked = false; },
-    waitAllCommandToFinish: () => { return Promise.allSettled(submittedDonePromises); },
-  };
-
-  // our submit keeps a global tracker of all submissions, so we can track the time of each submission 
-  GPUQueue.prototype.submit = function submit(commandBuffers)
-  {
-    if (locked)
-      throw new Error('Attempted to submit webGPU queue after work function resolved');
-    underlyingSubmit.call(this, commandBuffers);
-
-    const submitTime = performance.now();
-    const submitDonePromise = underlyingOnSubmittedWorkDone.call(this).then(() => {
-      const idx = submittedDonePromises.indexOf(submitDonePromise);
-      submittedDonePromises.splice(idx);
-
-      const completedAt = performance.now();
-      const duration = new TimeInterval();
-      duration.overrideInterval(submitTime, completedAt);
-      webGPUTimer.push(duration);
-    });
-    submittedDonePromises.push(submitDonePromise);
-  }
-
 });

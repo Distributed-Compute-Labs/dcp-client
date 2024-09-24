@@ -48,12 +48,15 @@ self.wrapScriptLoading({ scriptName: 'calculate-capabilities' }, function calcul
         return arguments[0];
       });`
 
-      webgpu = Boolean(globalThis.navigator?.gpu);
+      await protectedStorage.webGPUInitialization();
+      if (!protectedStorage.forceDisableWebGPU)
+        webgpu = Boolean(globalThis.navigator?.gpu);
 
       if (webgpu) {
         try {
           const adapter = await navigator.gpu.requestAdapter();
-          await adapter.requestDevice();
+          const device = await adapter.requestDevice();
+          device.destroy();
         } catch (err) {
           // if glfw fails or the symbols exist but webgpu hasn't been
           // properly enabled (mozilla)

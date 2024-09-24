@@ -57,6 +57,7 @@ function iife(kwargs, fetch, require, bootstrapRequire)
   const configLocation = kwargs.config || python.getenv('DCP_CONFIG_LOCATION') || schedulerLocation + '/etc/dcp-config.js';
   globalThis.window = globalThis; /** @todo fix in pythonmonkey */
   globalThis.crypto = Object.assign({}, { getRandomValues: dcpSupport.getRandomValues }, globalThis.crypto);
+  globalThis.require = require;
 
   /** @todo extract baked-in defaults from bundle */
   if (!globalThis.dcpConfig)
