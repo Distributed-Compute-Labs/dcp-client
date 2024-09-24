@@ -291,6 +291,7 @@ self.wrapScriptLoading({ scriptName: 'event-loop-virtualization' }, function eve
       {
         if (!serviceEvents.nextTimeout)
         {
+          serviceEvents.nextTimeout = events[0].when;
           realSetTimeout(serviceEvents, events[0].when - Date.now());
         }
         else
