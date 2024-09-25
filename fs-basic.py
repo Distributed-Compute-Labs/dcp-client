@@ -5,7 +5,6 @@
 # @date        Feb 2024
 
 import os
-import sys
 import pythonmonkey as pm
 
 def readFile(filename: str) -> str:
@@ -45,9 +44,3 @@ exports['readDir']     = os.listdir
 exports['rm']          = os.remove
 exports['rmdir']       = os.rmdir
 exports['fileSize']    = lambda filename: os.stat(filename).st_size
-exports['stdin']        = sys.stdin
-exports['stdin'].isTTY  = sys.stdin.isatty()
-exports['stdout']       = sys.stdout
-exports['stdout'].isTTY = sys.stdout.isatty()
-exports['stderr']       = sys.stderr
-exports['stderr'].isTTY = sys.stderr.isatty()
